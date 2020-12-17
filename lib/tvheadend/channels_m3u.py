@@ -48,9 +48,9 @@ def get_channels_m3u(config, location, base_url):
 ####### CAM CAM CAM CAM new procedure
 # returns the service name used to sync with the EPG channel name
 def set_service_name(config, station_list, sid):
-    service_name = config['main']['servicename_prefix'] + \
+    service_name = config['epg']['epg_prefix'] + \
         str(station_list[sid]['channel']) + \
-        config['main']['servicename_suffix'] + \
+        config['epg']['epg_suffix'] + \
         " " + station_list[sid]['friendlyName']  #CAM
     return service_name
     ###### CAM End of method
