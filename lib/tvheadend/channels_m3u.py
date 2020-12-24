@@ -13,19 +13,17 @@ def get_channels_m3u(config, location, base_url):
     xmltvurl = ('%s%s/xmltv.xml' % ("http://", base_url))
 
     fakefile.write(
-                    "%s\n" % (
-                                FORMAT_DESCRIPTOR + " " +
-                                "url-tvg=\"" + xmltvurl + "\"" + " " +
-                                "x-tvg-url=\"" + xmltvurl + "\"")
-                    )
+            "%s\n" % (FORMAT_DESCRIPTOR)
+        )
     station_list = stations.get_dma_stations_and_channels(config, location)
+    index = 1
 
     for sid in station_list:
-
         fakefile.write(
                         "%s\n" % (
-                                    RECORD_MARKER + ":-1" + " " +
+                                    RECORD_MARKER + ":-1,"+ index + " " +
                                     "channelID=\"" + str(sid) + "\" " +
+                                    "tvg-num=\"" + str(station_list[sid]['channel']) + "\" " +
                                     "tvg-chno=\"" + str(station_list[sid]['channel']) + "\" " +
                                     "tvg-name=\"" + station_list[sid]['friendlyName'] + "\" " +
                                     "tvg-id=\"" + str(sid) + "\" " +
@@ -33,7 +31,6 @@ def get_channels_m3u(config, location, base_url):
                                     "group-title=\"Locast\"," + set_service_name(config, station_list, sid)  #CAM
                                  )
                       )
-
         fakefile.write(
                         "%s\n" % (
                                     (
@@ -42,15 +39,15 @@ def get_channels_m3u(config, location, base_url):
                                     )
                                  )
                       )
-
+        index += 1
     return fakefile.getvalue()
     
 ####### CAM CAM CAM CAM new procedure
 # returns the service name used to sync with the EPG channel name
 def set_service_name(config, station_list, sid):
-    service_name = config['main']['servicename_prefix'] + \
+    service_name = config['epg']['epg_prefix'] + \
         str(station_list[sid]['channel']) + \
-        config['main']['servicename_suffix'] + \
+        config['epg']['epg_suffix'] + \
         " " + station_list[sid]['friendlyName']  #CAM
     return service_name
     ###### CAM End of method
