@@ -1,0 +1,33 @@
+#######################################################################
+# OS: Ubuntu/Debian
+# File location: /lib/systemd/system/
+# Update ExecStart to point to location of tvh_main.py
+# Update User to set account to use to run service
+#
+# Once place, run the following command to add the service
+# sudo systemctl enable locast.service
+# sudo systemctl start locast.service
+#######################################################################
+
+[Unit]
+Description=Locast Service
+After=auditd.service syslog.target network.target local-fs.target
+
+[Service]
+Type=forked
+ExecStart=/usr/bin/python3 /home/hts/locast/tvheadend-locast/tvh_main.py
+StandardInput=tty-force
+
+# Disable Python's buffering of STDOUT and STDERR, so that output from the
+# service shows up immediately in systemd's logs
+Environment=PYTHONUNBUFFERED=1
+
+Restart=on-failure
+RestartSec=54s
+
+StandardInput=tty-force
+User=hts
+
+[Install]
+WantedBy=multi-user.target
+
