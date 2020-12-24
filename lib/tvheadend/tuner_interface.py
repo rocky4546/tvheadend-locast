@@ -17,7 +17,6 @@ from lib.templates import templates
 import lib.tvheadend.utils as utils
 import lib.tvheadend.channels_m3u as channels_m3u
 
-
 # with help from https://www.acmesystems.it/python_http
 # and https://stackoverflow.com/questions/21631799/how-can-i-pass-parameters-to-a-requesthandler
 class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
@@ -31,7 +30,6 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
     buffer_prev_time = None
     block_moving_avg = 0
     block_max_pts = 0
-    
 
 
     def do_GET(self):
@@ -343,6 +341,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
             i += 1
             prev_pkt_dts = next_pkt_pts
         return byte_offset
+
         
     def find_past_pkt_offset(self, ptsjson, block_max_pts):
         num_of_pkts = len(ptsjson['packets']) - 1    # index from 0 to len - 1
@@ -361,9 +360,6 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
             i += 1
         return byte_offset
 
-
-
-
         
     def is_time_to_refresh(self):
         if self.config['main']['is_free_account']:
@@ -374,7 +370,6 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     .format(self.config['freeaccount']['refresh_rate']))
                 return True
         return False
-
 
 
     #######
@@ -407,6 +402,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
         self.buffer_prev_time = time.time()
         return ffmpeg_process
 
+
     #######
     # returns the service name used to sync with the EPG channel name
     def set_service_name(self, station_list, sid):
@@ -431,7 +427,6 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             "pipe:1"]
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
         return ffmpeg_process
-    
     
 
 # mostly from https://github.com/ZeWaren/python-upnp-ssdp-example
