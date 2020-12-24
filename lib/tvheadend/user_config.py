@@ -70,9 +70,5 @@ class TVHUserConfig( lib.user_config.UserConfig ):
             "formatter_simple": {
         }})
         
-        
-        
-        
-        
         super().__init__(script_dir, opersystem, args)
 
