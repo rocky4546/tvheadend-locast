@@ -8,4 +8,4 @@ COPY lib/ /app/lib/
 COPY known_stations.json /app/
 RUN touch /app/is_container
 
-ENTRYPOINT ["python3", "/app/main.py"]
+ENTRYPOINT ["python3", "/app/tvh_main.py"]
