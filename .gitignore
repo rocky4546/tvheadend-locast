@@ -16,10 +16,10 @@ TODO.md
 config_future.ini
 dev/
 cache/*_epg
-cache/stations/*_stations.json*
-cache/stations/*_facilities.json*
-cache/stations/facilities.json*
 cache/*_epg.xml*
+cache/stations/*_stations.json*
+cache/stations/*facilities.json*
+cache/stations/facility.*
 *.ts
 lib/tvheadend/DevNotes.txt
 
