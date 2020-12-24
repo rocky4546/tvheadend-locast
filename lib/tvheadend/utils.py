@@ -4,7 +4,7 @@ import logging
 import logging.config
 
 def get_version_str():
-    return '0.7.0'
+    return '0.7.1'
 
 def logging_setup(config_file):
     logging.config.fileConfig(fname='config.ini')
