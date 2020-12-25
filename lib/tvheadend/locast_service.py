@@ -26,7 +26,7 @@ class LocastService( lib.locast_service.LocastService ):
 
     @handle_url_except
     def validate_user(self):
-        logging.debug("Validating User Info...")
+        logging.debug('Validating User Info...')
 
         # get user info and make sure we donated
         userReq = urllib.request.Request('https://api.locastnet.org/api/user/me',
@@ -38,19 +38,19 @@ class LocastService( lib.locast_service.LocastService ):
         userRes = json.load(userOpn)
         userOpn.close()
 
-        logging.debug("User didDonate: {}".format(userRes['didDonate']))
+        logging.debug('User didDonate: {}'.format(userRes['didDonate']))
         # Check if the user has donated, and we got an actual expiration date.
         if userRes['didDonate'] and userRes['donationExpire']: 
             donateExp = datetime.fromtimestamp(userRes['donationExpire'] / 1000)
-            logging.debug("User donationExpire: {}".format(donateExp))
+            logging.debug('User donationExpire: {}'.format(donateExp))
             if datetime.now() > donateExp:
                 logging.info("User's donation ad-free period has expired.")
                 self.config['main']['is_free_account'] = True #CAM
             else:
-                logging.info("User has an active subscription.")
+                logging.info('User has an active subscription.')
                 self.config['main']['is_free_account'] = False #CAM
         else:
-            logging.info("User is a free account.")
+            logging.info('User is a free account.')
             self.config['main']['is_free_account'] = True #CAM
         return True
 

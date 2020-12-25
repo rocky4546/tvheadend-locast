@@ -19,9 +19,9 @@ def epg_process(config, location):
     dummy_xml(config, location)
     try:
         while True:
-            time.sleep(config["main"]["epg_update_frequency"])
+            time.sleep(config['main']['epg_update_frequency'])
             
-            logging.debug("Fetching EPG for DMA " + str(location["DMA"]) + ".")
+            logging.info('Fetching EPG for DMA ' + str(location['DMA']) + '.')
             generate_epg_file(config, location)
             
     except KeyboardInterrupt:
@@ -29,15 +29,15 @@ def epg_process(config, location):
 
 
 def dummy_xml(config, location):
-    out_path = pathlib.Path(config["main"]["cache_dir"]).joinpath(str(location["DMA"]) + "_epg").with_suffix(".xml")
+    out_path = pathlib.Path(config['main']['cache_dir']).joinpath(str(location['DMA']) + '_epg').with_suffix('.xml')
     if os.path.exists(out_path):
         return
 
-    logging.debug("Creating Temporary Empty XMLTV File.")
+    logging.debug('Creating Temporary Empty XMLTV File.')
 
-    base_cache_dir = config["main"]["cache_dir"]
+    base_cache_dir = config['main']['cache_dir']
 
-    cache_dir = pathlib.Path(base_cache_dir).joinpath(str(location["DMA"]) + "_epg")
+    cache_dir = pathlib.Path(base_cache_dir).joinpath(str(location['DMA']) + '_epg')
     if not cache_dir.is_dir():
         cache_dir.mkdir()
 
@@ -53,12 +53,12 @@ def dummy_xml(config, location):
 
 def generate_epg_file(config, location):
 
-    base_cache_dir = config["main"]["cache_dir"]
+    base_cache_dir = config['main']['cache_dir']
 
-    out_path = pathlib.Path(base_cache_dir).joinpath(str(location["DMA"]) + "_epg").with_suffix(".xml")
-    out_lock_path = pathlib.Path(base_cache_dir).joinpath(str(location["DMA"]) + "_epg").with_suffix(".xml.lock")
+    out_path = pathlib.Path(base_cache_dir).joinpath(str(location['DMA']) + '_epg').with_suffix('.xml')
+    out_lock_path = pathlib.Path(base_cache_dir).joinpath(str(location['DMA']) + '_epg').with_suffix('.xml.lock')
 
-    cache_dir = pathlib.Path(base_cache_dir).joinpath(str(location["DMA"]) + "_epg")
+    cache_dir = pathlib.Path(base_cache_dir).joinpath(str(location['DMA']) + '_epg')
     if not cache_dir.is_dir():
         cache_dir.mkdir()
 
@@ -67,7 +67,7 @@ def generate_epg_file(config, location):
     # Make a date range to pull
     todaydate = datetime.datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0) # make sure we're dealing with UTC!
     dates_to_pull = [todaydate]
-    days_to_pull = int(config["main"]["epg_update_days"])
+    days_to_pull = int(config['main']['epg_update_days'])
     for x in range(1, days_to_pull - 1):
         xdate = todaydate + datetime.timedelta(days=x)
         dates_to_pull.append(xdate)
@@ -85,9 +85,9 @@ def generate_epg_file(config, location):
 
     for x_date in dates_to_pull:
         url = ('https://api.locastnet.org/api/watch/epg/' +
-               str(location["DMA"]) + "?startTime=" + x_date.isoformat())
+               str(location['DMA']) + '?startTime=' + x_date.isoformat())
 
-        result = get_cached(cache_dir, x_date.strftime("%m-%d-%Y"), url)
+        result = get_cached(cache_dir, x_date.strftime('%m-%d-%Y'), url)
         channel_info = json.loads(result)
 
         # List Channels First
@@ -137,7 +137,7 @@ def generate_epg_file(config, location):
 
                 event_genres = []
                 if 'genres' in event.keys():
-                    event_genres = event['genres'].split(",")
+                    event_genres = event['genres'].split(',')
 
                 # note we're returning everything as UTC, as the clients handle converting to correct timezone
                 prog_out = sub_el(out, 'programme', start=tm_start, stop=tm_end, channel=sid)
@@ -151,13 +151,13 @@ def generate_epg_file(config, location):
                     sub_el(prog_out, 'sub-title', lang='en', text=event['episodeTitle'])
 
                 if 'description' not in event.keys():
-                    event['description'] = "Unavailable"
+                    event['description'] = 'Unavailable'
                 elif event['description'] is None:
-                    event['description'] = "Unavailable"
+                    event['description'] = 'Unavailable'
                 elif config['epg']['description'] == 'extend':
                     # append the date created, original genre and episode info on top line
                     # format (date) genre / episode
-                    descr_add = ""
+                    descr_add = ''
                     date_str = date_parse(event, 'releaseDate', '%Y/%m/%d')
                     if date_str is not None:
                         descr_add = descr_add + '(' + date_str + ') '
@@ -193,11 +193,11 @@ def generate_epg_file(config, location):
                     sub_el(prog_out, 'category', lang='en', text=f)
                     sub_el(prog_out, 'genre', lang='en', text=f)
 
-                if event["preferredImage"] is not None:
-                    sub_el(prog_out, 'icon', src=event["preferredImage"])
+                if event['preferredImage'] is not None:
+                    sub_el(prog_out, 'icon', src=event['preferredImage'])
 
                 if 'rating' not in event.keys():
-                    event['rating'] = "N/A"
+                    event['rating'] = 'N/A'
                 r = ET.SubElement(prog_out, 'rating')
                 sub_el(r, 'value', text=event['rating'])
 
@@ -223,7 +223,7 @@ def generate_epg_file(config, location):
 
 
 def get_epg(config, location):
-    epg_path = pathlib.Path(config['main']['cache_dir']).joinpath(str(location["DMA"]) + "_epg.xml")
+    epg_path = pathlib.Path(config['main']['cache_dir']).joinpath(str(location['DMA']) + '_epg.xml')
     xml_lock = FileLock(str(epg_path) + '.lock')
 
     return_str = None
@@ -263,7 +263,7 @@ def get_cached(cache_dir, cache_key, url):
 def remove_stale_cache(cache_dir, todaydate):
     for p in cache_dir.glob('*'):
         try:
-            cachedate = datetime.datetime.strptime(str(p.name).replace('.json', ''), "%m-%d-%Y")
+            cachedate = datetime.datetime.strptime(str(p.name).replace('.json', ''), '%m-%d-%Y')
             if cachedate >= todaydate:
                 continue
         except:
