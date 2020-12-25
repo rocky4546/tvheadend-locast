@@ -14,7 +14,7 @@ Description=Locast Service
 After=auditd.service syslog.target network.target local-fs.target
 
 [Service]
-Type=forked
+#Type=forked
 ExecStart=/usr/bin/python3 /home/hts/locast/tvheadend-locast/tvh_main.py
 StandardInput=tty-force
 
@@ -26,6 +26,9 @@ Restart=on-failure
 RestartSec=54s
 
 StandardInput=tty-force
+StandardOutput=syslog+console
+StandardError=syslog+console
+SyslogIdentifier=locast
 User=hts
 
 [Install]
