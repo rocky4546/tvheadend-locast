@@ -130,12 +130,13 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
     def check_pts(self, videoData, station_list, sid):
         while True:
             # check the dts in videoData to see if we should throw it away
-            cmdpts = subprocess.Popen(['ffprobe', 
+            ffprobe_command = [self.config['player']['ffprobe_path'], 
                     '-print_format', 'json', 
                     '-v', 'quiet', '-show_packets',
                     '-select_streams', 'v:0',
                     '-show_entries', 'side_data=:packet=pts,pos',
-                    '-'],
+                    '-']
+            cmdpts = subprocess.Popen(ffprobe_command,
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             cmdpts.stdin.write(videoData)
             ptsout = cmdpts.communicate()[0]
@@ -148,20 +149,20 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
             elif pkt_len < int(self.config['freeaccount']['min_pkt_rcvd']):
                 # need to keep it from hitting bottom
                 self.bytes_per_read = int(self.bytes_per_read * 1.5) # increase buffer size by 50%
-                logging.debug('{} {} {}{}'.format(
-                    'Min pkts rcvd limit, adjusting read buffer to', 
+                logging.debug('{} {}  {}{}'.format(
+                    '### MIN pkts rcvd limit, adjusting READ BUFFER to =', 
                     self.bytes_per_read, 
-                    'pkts rcvd=', pkt_len))
+                    'Pkts Rcvd=', pkt_len))
             elif pkt_len > int(self.config['freeaccount']['max_pkt_rcvd']):
                 # adjust the byte read to keep the number of packets below 100
                 # do not adjust up if packets are too low.
                 self.bytes_per_read = int(self.bytes_per_read 
                     * int(self.config['freeaccount']['max_pkt_rcvd']) * 0.9
                     / pkt_len)
-                logging.debug('{} {} {}{}'.format(
-                    'Max pkts rcvd limit, adjusting read buffer to', 
+                logging.debug('{} {}  {}{}'.format(
+                    '### MAX pkts rcvd limit, adjusting READ BUFFER to =', 
                     self.bytes_per_read, 
-                    'pkts rcvd=', pkt_len))
+                    'Pkts Rcvd=', pkt_len))
                 
             try:
                 firstpts = ptsjson['packets'][0]['pts']
@@ -248,13 +249,13 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                         # some packets are in the past
                         if lastpts < self.block_max_pts:
                             # all packets are in the past, drop and reload
-                            logging.debug('############## Entire PTS buffer in the past lastpts={} vs max={}'.format(lastpts, self.block_max_pts))
+                            logging.debug('Entire PTS buffer in the past lastpts={} vs max={}'.format(lastpts, self.block_max_pts))
                             videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
                         else:
                             # a potion of the packets are in the past.
                             # find the point and then write the end of the buffer to the stream
                             byte_offset = self.find_past_pkt_offset(ptsjson, self.block_max_pts)
-                            logging.debug('############## {} {}{} {}'.format(
+                            logging.debug('{} {}{} {}'.format(
                                 'PTS buffer in the past.',
                                 ' Writing end bytes from offset=', byte_offset, 
                                 'out to client'))
@@ -266,6 +267,8 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                                 self.wfile.write(videoData[byte_offset:len(videoData)-1])
                             videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
                     else:
+                        
+                        block_delta_time = time.time() - self.block_prev_time
                         self.buffer_prev_time = time.time()
                         block_pts_delta = firstpts - self.block_prev_pts
                         self.block_prev_time = time.time()
@@ -275,7 +278,10 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             self.block_prev_pts = firstpts
                             self.block_moving_avg = 10 * block_pts_delta # 10 point moving average
                         self.block_moving_avg = self.block_moving_avg / 10*9 + block_pts_delta
-                        logging.debug('BLOCK PTS moving average = {}'.format(int(self.block_moving_avg/10)))
+                        logging.debug('BLOCK PTS moving average = {}   BLOCK DELTA time = {}'.format(
+                                int(self.block_moving_avg/10), block_delta_time)
+                                
+                            )
                         if lastpts > self.block_max_pts:
                             self.block_max_pts = lastpts
                         break
@@ -389,7 +395,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
         
         logging.debug('{}{}'.format(
             'Refresh Stream channelUri=',channelUri))
-        ffmpeg_process = self.open_ffmpeg_proc(channelUri,station_list, sid)
+        ffmpeg_process = self.open_ffmpeg_proc(channelUri, station_list, sid)
         # make sure the previous ffmpeg is terminated before exiting        
         self.buffer_prev_time = time.time()
         return ffmpeg_process
@@ -406,7 +412,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
   
     def open_ffmpeg_proc(self, channelUri, station_list, sid):
         ffmpeg_command = [self.config['main']['ffmpeg_path'],
-                            '-i', channelUri,
+                            '-i', str(channelUri),
                             '-c:v', 'copy',
                             '-c:a', 'copy',
                             '-f', 'mpegts',
@@ -414,7 +420,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             '-hide_banner',
                             '-loglevel', 'warning',
                             '-metadata', 'service_provider=Locast',
-                            '-metadata', 'service_name='+self.set_service_name(station_list, sid),
+                            '-metadata', 'service_name={}'.format(self.set_service_name(station_list, sid)),
                             '-copyts',
                             'pipe:1']
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
