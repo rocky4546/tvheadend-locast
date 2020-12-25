@@ -61,4 +61,3 @@ class TVHUserConfig( lib.user_config.UserConfig ):
                         each_section.lower(): {
                     }})
                     self.data[each_section.lower()][each_key.lower()] = each_val
-

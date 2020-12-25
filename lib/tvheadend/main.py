@@ -115,7 +115,13 @@ def main(script_dir):
             if config['main']['quiet_print']:
                 utils.enable_print()
 
+<<<<<<< HEAD
         logging.debug('Starting EPG thread...')
+=======
+        logging.debug("Starting First time EPG refresh...")
+        
+        logging.debug("Starting EPG thread...")
+>>>>>>> 76eab84098e1ef242e8751b0ec645fd1e5db5bbd
         epg2xml.generate_epg_file(config, location_info.location)
         epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location))
         epg_server.daemon = True
