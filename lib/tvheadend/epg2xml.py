@@ -273,8 +273,9 @@ def remove_stale_cache(cache_dir, todaydate):
 
 
 def tm_parse(tm):
-    tm = datetime.datetime.utcfromtimestamp(tm/1000.0)
-    tm = str(tm.strftime('%Y%m%d%H%M%S +0000'))
+    tm_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=tm/1000)
+    #tm = datetime.datetime.fromtimestamp(tm/1000.0) #does not work before 1970
+    tm = str(tm_date.strftime('%Y%m%d%H%M%S +0000'))
     return tm
 
 def date_parse(event, key, format_str):
@@ -282,8 +283,9 @@ def date_parse(event, key, format_str):
     if key not in event.keys() or event[key] is None:
         pass
     else:
-        dt = datetime.datetime.utcfromtimestamp(event[key]/1000.0)
-        dt_str = str(dt.strftime(format_str))
+        dt_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=event[key]/1000)
+        #dt = datetime.datetime.utcfromtimestamp(event[key]/1000.0) #does not work before 1970
+        dt_str = str(dt_date.strftime(format_str))
     return dt_str
 
 

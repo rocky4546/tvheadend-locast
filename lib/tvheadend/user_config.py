@@ -16,6 +16,7 @@ class TVHUserConfig( lib.user_config.UserConfig ):
         self.data['main'].update({
                     'quiet': True,  # disables all generic print from locast2plex and logging
                     'quiet_print': True,  # tries to disable all the print statements in locast2plex only
+                    'ffprobe_path': None, 
                 })
         self.data.update({
             'freeaccount': {
@@ -46,8 +47,10 @@ class TVHUserConfig( lib.user_config.UserConfig ):
         self.data.update({
             'player': {
                 'epg_suffix': '', # suffix added to the channel number for epg and service names
+                'ffprobe_path': None, 
         }})
         super().__init__(script_dir, opersystem, args)
+        self.tvh_config_adjustments(opersystem, script_dir)
     
     
     def import_config(self):
@@ -61,3 +64,22 @@ class TVHUserConfig( lib.user_config.UserConfig ):
                         each_section.lower(): {
                     }})
                     self.data[each_section.lower()][each_key.lower()] = each_val
+
+
+    def tvh_config_adjustments(self, opersystem, script_dir):
+        if not self.data["main"]["ffmpeg_path"]:
+            if opersystem in ["Windows"]:
+                base_ffmpeg_dir = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
+                self.data["main"]["ffmpeg_path"] = pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe')
+            else:
+                self.data["main"]["ffmpeg_path"] = "ffmpeg"
+
+        if not self.data["player"]["ffprobe_path"]:
+            if opersystem in ["Windows"]:
+                base_ffprobe_dir = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
+                self.data["player"]["ffprobe_path"] = pathlib.Path(base_ffprobe_dir).joinpath('ffprobe.exe')
+            else:
+                self.data["player"]["ffprobe_path"] = "ffprobe"
+
+
+
