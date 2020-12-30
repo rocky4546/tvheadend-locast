@@ -8,6 +8,7 @@ import urllib
 import pathlib
 import logging
 import sched, time, threading
+import socket
 from io import StringIO
 from http.server import HTTPServer
 
@@ -34,14 +35,39 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
 
     def do_GET(self):
-        base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
+        if self.config['main']['plex_accessible_ip'] == "0.0.0.0":
+            print(self.client_address[0], self.get_ip(self.client_address[0]))
+            base_url = self.get_ip(self.client_address[0]) + ':' + self.config['main']['plex_accessible_port']
+        else:
+            base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
         contentPath = self.path
 
         if contentPath == '/channels.m3u':
-            self.do_response(200, 'application/vnd.apple.mpegurl', channels_m3u.get_channels_m3u(self.config, self.location, base_url))
+            self.do_response(200, 'audio/x-mpegurl', channels_m3u.get_channels_m3u(self.config, self.location, base_url))
+
+        elif contentPath == '/playlist':
+            self.send_response(302)
+            self.send_header('Location', '/channels.m3u')
+            self.end_headers()
+
+        elif contentPath == '/lineup.json':  # TODO
+            station_list = stations.get_dma_stations_and_channels(self.config, self.location)
+
+            returnJSON = ''
+            for index, list_key in enumerate(station_list):
+                sid = str(list_key)
+                returnJSON = returnJSON + templates['jsonLineupItem'].format(station_list[sid]['channel'], station_list[sid]['friendlyName'], base_url + '/watch/' + sid)
+                if (index + 1) != len(station_list):
+                    returnJSON = returnJSON + ','
+
+            returnJSON = "[" + returnJSON + "]"
+            self.do_response(200, 'application/json', returnJSON)
+
+
         else:
             super().do_GET()
         return
+
 
     def do_tuning(self, sid):
         if self.config['main']['quiet_print']:
@@ -426,6 +452,12 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
         return ffmpeg_process
     
+    def get_ip(self, client_ip):
+        hostname = socket.gethostname()
+        IP = socket.gethostbyname(hostname)
+        return IP
+
+
 
 # mostly from https://github.com/ZeWaren/python-upnp-ssdp-example
 # and https://stackoverflow.com/questions/46210672/python-2-7-streaming-http-server-supporting-multiple-connections-on-one-port

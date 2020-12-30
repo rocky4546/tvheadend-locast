@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ calls the main rountine running in the tvheadend folder """
 import os
 import pathlib
