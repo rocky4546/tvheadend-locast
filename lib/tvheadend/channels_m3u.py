@@ -16,19 +16,18 @@ def get_channels_m3u(config, location, base_url):
             '%s\n' % (FORMAT_DESCRIPTOR)
         )
     station_list = stations.get_dma_stations_and_channels(config, location)
-    index = 1
 
     for sid in station_list:
         fakefile.write(
             '%s\n' % (
-                RECORD_MARKER + ':-1,'+ index + ' ' +
-                'channelID=\'' + str(sid) + '\' ' +
-                'tvg-num=\'' + str(station_list[sid]['channel']) + '\' ' +
-                'tvg-chno=\'' + str(station_list[sid]['channel']) + '\' ' +
+                RECORD_MARKER + ':-1' + ' ' +
+                'channelID=\'' + sid + '\' ' +
+                'tvg-num=\'' + station_list[sid]['channel'] + '\' ' +
+                'tvg-chno=\'' + station_list[sid]['channel'] + '\' ' +
                 'tvg-name=\'' + station_list[sid]['friendlyName'] + '\' ' +
-                'tvg-id=\'' + str(sid) + '\' ' +
+                'tvg-id=\'' + sid + '\' ' +
                 (('tvg-logo=\'' + station_list[sid]['logoUrl'] + '\' ') if 'logoUrl' in station_list[sid].keys() else '') +
-                'group-title=\'Locast\',' + set_service_name(config, station_list, sid)  #CAM
+                'group-title=\'Locast\',' + set_service_name(config, station_list, sid)
             )
         )
         fakefile.write(
@@ -39,7 +38,6 @@ def get_channels_m3u(config, location, base_url):
                 )
             )
         )
-        index += 1
     return fakefile.getvalue()
     
 ####### CAM CAM CAM CAM new procedure

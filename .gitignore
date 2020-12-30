@@ -1,6 +1,4 @@
 debug.bat
-ffplay.exe
-ffprobe.exe
 locastChannels.m3u8
 redebug.bat
 telly.exe
@@ -16,16 +14,16 @@ TODO.md
 config_future.ini
 dev/
 cache/*_epg
-<<<<<<< HEAD
 cache/stations/*_stations.json*
 cache/stations/*_facilities.json*
 cache/stations/facility.*
-=======
->>>>>>> 76eab84098e1ef242e8751b0ec645fd1e5db5bbd
 cache/*_epg.xml*
-cache/stations/*_stations.json*
 cache/stations/*facilities.json*
-cache/stations/facility.*
 *.ts
 lib/tvheadend/DevNotes.txt
+build/tvheadend*.exe
+ffmpeg/
+#IntelliJ
+.idea/
+tvheadend-locast.iml
 
