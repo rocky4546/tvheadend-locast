@@ -1,5 +1,6 @@
 # pylama:ignore=E722,E303,E302,E305
 import os
+import pip
 import sys
 import time
 import platform 
@@ -13,11 +14,17 @@ import lib.ssdp_server as ssdp_server
 import lib.tvheadend.tuner_interface as tuner_interface
 import lib.stations as stations 
 import lib.location as location
-import lib.tvheadend.user_config as user_config
 import lib.tvheadend.utils as utils
 import lib.tvheadend.epg2xml as epg2xml
-from lib.tvheadend.user_config import get_config
 from lib.l2p_tools import clean_exit
+
+try:
+    import cryptography
+except ImportError:
+    pip.main(['install', 'cryptography']) 
+
+import lib.tvheadend.user_config as user_config
+from lib.tvheadend.user_config import get_config
 
 
 if sys.version_info.major == 2 or sys.version_info < (3, 6):
@@ -45,7 +52,7 @@ def main(script_dir):
     configObj = get_config(script_dir, opersystem, args)
     config = configObj.data
     config['main']['quiet'] = utils.str2bool(config['main']['quiet'])
-    
+
     # if requested, stop all the print statements in locast2plex
     # from printing to standard out
     if config['main']['quiet']:
@@ -55,8 +62,12 @@ def main(script_dir):
 
     # setup global logging
     utils.logging_setup(configObj.config_file)
+    if config['main']['locast_password'] == 'UNKNOWN':
+        logging.critical("No password available.  Terminating process")
+        clean_exit(1)
+
     logging.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
-    
+
     if config['main']['quiet_print']:
         utils.block_print()
     location_info = location.DMAFinder(config)
