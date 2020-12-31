@@ -8,6 +8,7 @@ import platform
 import pathlib
 import base64
 import binascii
+import logging
 
 try:
     import cryptography
@@ -65,9 +66,9 @@ if __name__ == '__main__':
 
     if configObj.data['main']['locast_password'] == 'UNKNOWN':
         #  two different users trying to decrypt the encrypted password
-        #  need to create two separate config areas for each user
-        logging.critical("Unable to update password, aborting update")
-        sys.exit(1)
+        #  ignore the error and update with password passed in
+        logging.info('ignoring password error and ' \
+            + 'replacing password with one provided by user')
 
     base64_bytes = args.pwd.encode('ascii')
     try:
