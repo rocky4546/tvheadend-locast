@@ -17,10 +17,6 @@ Var pythonpath
 !include "CharToASCII.nsh"
 !include "Base64.nsh"
 
-
-
-
-
 Function ConfigPage
     nsDialogs::Create /NOUNLOAD 1018
     Pop $Dialog
@@ -143,7 +139,7 @@ FunctionEnd
 
 
 Function AddFiles
-    !define SOURCEPATH ".."
+    !define SOURCEPATH "../.."
     SetOutPath "$INSTDIR"
     File "${SOURCEPATH}\tvh_main.py"
     File "${SOURCEPATH}\LICENSE"
