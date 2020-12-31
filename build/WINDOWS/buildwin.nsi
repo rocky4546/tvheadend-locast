@@ -39,7 +39,7 @@
 
 
 ; License page
-!insertmacro MUI_PAGE_LICENSE "../LICENSE"
+!insertmacro MUI_PAGE_LICENSE "../../LICENSE"
 ; Directory page
 !insertmacro MUI_PAGE_DIRECTORY
 ; get username and password
