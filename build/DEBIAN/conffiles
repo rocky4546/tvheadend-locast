@@ -1,0 +1,3 @@
+/etc/emby-server.conf
+/etc/firewalld/services/emby-server.xml
+/etc/init/emby-server.conf
