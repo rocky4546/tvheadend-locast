@@ -1,0 +1,9 @@
+Package: emby-server
+Version: 4.5.2.0
+Architecture: amd64
+Maintainer: Emby LLC <apps@emby.media>
+Installed-Size: 266564
+Depends: libc6 (>= 2.17)
+Section: misc
+Priority: optional
+Description: Emby Server is a personal media server with apps on just about every device.

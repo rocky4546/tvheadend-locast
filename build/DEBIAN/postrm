@@ -1,0 +1,29 @@
+#! /bin/sh
+# postrm script for emby-server
+#
+# see: dh_installdeb(1)
+
+set -e
+
+case "$1" in
+  purge)
+    if [ -d /var/lib/emby ]; then
+      rm -rf /var/lib/emby
+    fi
+    getent passwd emby > /dev/null 2>&1 && userdel emby
+    ;;
+
+  remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    ;;
+
+  *)
+    echo "postrm called with unknown argument \`$1'" >&2
+    exit 1
+    ;;
+esac
+
+
+
+exit 0
+
+# vim: ts=2 sw=2 et:

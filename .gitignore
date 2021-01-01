@@ -21,7 +21,7 @@ cache/*_epg.xml*
 cache/stations/*facilities.json*
 *.ts
 lib/tvheadend/DevNotes.txt
-build/tvheadend*.exe
+build/*/tvheadend*.exe
 ffmpeg/
 #IntelliJ
 .idea/

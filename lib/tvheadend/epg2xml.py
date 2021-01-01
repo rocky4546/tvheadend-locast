@@ -95,6 +95,10 @@ def generate_epg_file(config, location):
             done_channels = True
             for channel_item in channel_info:
                 sid = str(channel_item['id'])
+                # some channels in the epg are not listed in stations
+                channel = dma_channels.get(sid)
+                if not channel:   
+                    continue
                 channel_number = str(dma_channels[sid]['channel'])
                 channel_realname = str(dma_channels[sid]['friendlyName'])
                 channel_callsign = str(dma_channels[sid]['callSign'])
@@ -119,6 +123,10 @@ def generate_epg_file(config, location):
         # Now list Program informations
         for channel_item in channel_info:
             sid = str(channel_item['id'])
+            # some channels in the epg are not listed in stations
+            channel = dma_channels.get(sid)
+            if not channel:
+                continue
             channel_number = str(dma_channels[sid]['channel'])
             channel_realname = str(dma_channels[sid]['friendlyName'])
             channel_callsign = str(dma_channels[sid]['callSign'])
