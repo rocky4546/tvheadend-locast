@@ -3,9 +3,10 @@ import sys
 import logging
 import logging.config
 
+VERSION = '0.7.2'
 
 def get_version_str():
-    return '0.7.1'
+    return VERSION
 
 
 def logging_setup(config_file):
