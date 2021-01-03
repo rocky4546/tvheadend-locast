@@ -1,6 +1,5 @@
 # pylama:ignore=E722,E303,E302,E305
 import os
-import pip
 import sys
 import time
 import platform 
@@ -19,9 +18,16 @@ import lib.tvheadend.epg2xml as epg2xml
 from lib.l2p_tools import clean_exit
 
 try:
+    import pip
+except ModuleNotFoundError:
+    print('Unable to load pip and cryptography modules, will not encrypt passwords')
+
+try:
     import cryptography
 except ImportError:
-    pip.main(['install', 'cryptography']) 
+    #pip.main(['install', 'cryptography']) 
+    print('Unable to load cryptography module, will not encrypt passwords')
+    
 
 import lib.tvheadend.user_config as user_config
 from lib.tvheadend.user_config import get_config
@@ -140,5 +146,6 @@ def main(script_dir):
 
     except KeyboardInterrupt:
         logging.info('^C received, shutting down the server')
-        ssdp_serverx.terminate()
+        if not config['main']['disable_ssdp']:
+            ssdp_serverx.terminate()
         clean_exit()

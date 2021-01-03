@@ -97,7 +97,8 @@ def generate_epg_file(config, location):
                 sid = str(channel_item['id'])
                 # some channels in the epg are not listed in stations
                 channel = dma_channels.get(sid)
-                if not channel:   
+                if not channel:
+                    logging.debug('EPG: Skipping channel id=%d'.format(sid))
                     continue
                 channel_number = str(dma_channels[sid]['channel'])
                 channel_realname = str(dma_channels[sid]['friendlyName'])
@@ -126,6 +127,7 @@ def generate_epg_file(config, location):
             # some channels in the epg are not listed in stations
             channel = dma_channels.get(sid)
             if not channel:
+                logging.debug('EPG Skipping channel programming id=%d'.format(sid))
                 continue
             channel_number = str(dma_channels[sid]['channel'])
             channel_realname = str(dma_channels[sid]['friendlyName'])

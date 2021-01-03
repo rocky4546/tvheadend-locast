@@ -17,6 +17,9 @@ import lib.tuner_interface
 from lib.templates import templates
 import lib.tvheadend.utils as utils
 import lib.tvheadend.channels_m3u as channels_m3u
+#from lib.tvheadend.stream_queue import StreamQueue
+
+
 
 # with help from https://www.acmesystems.it/python_http
 # and https://stackoverflow.com/questions/21631799/how-can-i-pass-parameters-to-a-requesthandler
@@ -31,16 +34,38 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
     buffer_prev_time = None
     block_moving_avg = 0
     block_max_pts = 0
-    small_pkt_streaming=False
+    small_pkt_streaming = False
+    #stream_queue = None
+
+    def read_buffer(self, sid, station_list):
+        #videoData = self.stream_queue.read()
+        videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+        return videoData
 
 
     def do_GET(self):
-        if self.config['main']['plex_accessible_ip'] == "0.0.0.0":
-            print(self.client_address[0], self.get_ip(self.client_address[0]))
-            base_url = self.get_ip(self.client_address[0]) + ':' + self.config['main']['plex_accessible_port']
-        else:
-            base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
+        base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
         contentPath = self.path
+
+        if contentPath == '/':
+            page= \
+                '<body>' \
+                '    <h2>TVHeadend-Locast</h2>' \
+                '    <p>This is a list of interfaces provided by TVHeadend-Locast.  ' \
+                '        If it states HDHR, then the interface matches that of HDHomerun tuners.' \
+                '    <ul>' \
+                '        <li><a href="/device.xml">/device.xml: DLNA/SSDP device description response</a>' \
+                '        <li><a href="/discover.json">/discover.json: HDHR, app metadata</a>' \
+                '        <li><a href="/lineup_status.json">/lineup_status.json: HDHR, stream source data</a>' \
+                '        <li><a href="/lineup.json">/lineup.json: HDHR, channel list in JSON format</a>' \
+                '        <li><a href="/lineup.xml">/lineup.xml: HDHR, channel list in XML format</a>' \
+                '        <li><a href="/xmltv.xml">/xmltv.xml: XMLTV formatted EPG</a>' \
+                '        <li><a href="/channels.m3u">/channels.m3u: M3U formatted channel list</a>' \
+                '        <li>/watch/#id: Tunes stream to Channel ID requested</a>' \
+                '        <li>/auto/v#id: HDHR, Tunes stream to Channel ID requested</a>' \
+                '    </ul>' \
+                '</body>'
+            self.do_response(200, 'text/html', page)
 
         if contentPath == '/channels.m3u':
             self.do_response(200, 'audio/x-mpegurl', channels_m3u.get_channels_m3u(self.config, self.location, base_url))
@@ -94,9 +119,10 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
             self.send_header('Content-type', 'video/mpeg; codecs="avc1.4D401E')
             self.end_headers()
             self.ffmpeg_proc = self.open_ffmpeg_proc(channelUri, station_list, sid)
+
             
             # get initial videodata. if that works, then keep grabbing it
-            videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+            videoData = self.read_buffer(sid, station_list)
             self.last_refresh = time.time()
             self.block_prev_time = time.time()
             self.buffer_prev_time = time.time()
@@ -104,7 +130,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 if not videoData:
                     logging.debug('No Video Data, refreshing stream')
                     self.ffmpeg_proc = self.refresh_stream(sid, station_list)
-                    videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                    videoData = self.read_buffer(sid, station_list)
                 else:
                     # from https://stackoverflow.com/questions/9932332
                     try:
@@ -124,7 +150,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             raise
 
                 try:
-                    videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                    videoData = self.read_buffer(sid, station_list)
                 except:
                     logging.error('{}{}'.format(
                         'UNEXPECTED EXCEPTION=',sys.exc_info()[0]))
@@ -164,10 +190,16 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     '-']
             cmdpts = subprocess.Popen(ffprobe_command,
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            cmdpts.stdin.write(videoData)
-            ptsout = cmdpts.communicate()[0]
+            ptsout = cmdpts.communicate(videoData)[0]
+            exit_code = cmdpts.wait()
+            if exit_code != 0:
+                logging.info('FFPROBE failed to execute with error code: {}' \
+                    .format(exit_code))
             ptsjson = json.loads(ptsout)
-            pkt_len = len(ptsjson['packets'])
+            try:
+                pkt_len = len(ptsjson['packets'])
+            except KeyError:
+                pkt_len = 0
             if pkt_len < 1:
                 # This occurs when the buffer size is too small, so no video packets are sent
                 logging.debug('Packet recieved with no video packet included')
@@ -175,6 +207,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
             elif pkt_len < int(self.config['freeaccount']['min_pkt_rcvd']):
                 # need to keep it from hitting bottom
                 self.bytes_per_read = int(self.bytes_per_read * 1.5) # increase buffer size by 50%
+                #self.stream_queue.set_bytes_per_read(self.bytes_per_read)
                 logging.debug('{} {}  {}{}'.format(
                     '### MIN pkts rcvd limit, adjusting READ BUFFER to =', 
                     self.bytes_per_read, 
@@ -185,6 +218,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.bytes_per_read = int(self.bytes_per_read 
                     * int(self.config['freeaccount']['max_pkt_rcvd']) * 0.9
                     / pkt_len)
+                #self.stream_queue.set_bytes_per_read(self.bytes_per_read)
                 logging.debug('{} {}  {}{}'.format(
                     '### MAX pkts rcvd limit, adjusting READ BUFFER to =', 
                     self.bytes_per_read, 
@@ -261,7 +295,8 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     
                 self.ffmpeg_proc = self.refresh_stream(sid, station_list)
                 self.block_prev_time = time.time()
-                videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                #videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                videoData = self.read_buffer(sid, station_list)
                 logging.info('Stream reset')
             else:
                 # valid video stream found
@@ -276,7 +311,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                         if lastpts < self.block_max_pts:
                             # all packets are in the past, drop and reload
                             logging.debug('Entire PTS buffer in the past lastpts={} vs max={}'.format(lastpts, self.block_max_pts))
-                            videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                            videoData = self.read_buffer(sid, station_list)
                         else:
                             # a potion of the packets are in the past.
                             # find the point and then write the end of the buffer to the stream
@@ -291,7 +326,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             else:
                                 # write end of buffer from byte_offset
                                 self.wfile.write(videoData[byte_offset:len(videoData)-1])
-                            videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                            videoData = self.read_buffer(sid, station_list)
                     else:
                         
                         block_delta_time = time.time() - self.block_prev_time
@@ -324,7 +359,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     if lastpts < self.block_max_pts - 50000:
                         logging.debug('PTS in the past {} vs max={}'.format(lastpts, self.block_max_pts))
                         # need to read the next buffer and loop around
-                        videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                        videoData = self.read_buffer(sid, station_list)
                     
                     # determine if we are at the end of a block AND the refresh timeout has occurred.
                     elif block_pts_delta > self.block_moving_avg/10:
@@ -334,7 +369,7 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                                 self.block_max_pts = lastpts
                             self.wfile.write(videoData)
                             self.ffmpeg_proc = self.refresh_stream(sid, station_list)
-                            videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
+                            videoData = self.read_buffer(sid, station_list)
                             # loop back around and verify the videoData is good
                         else:
                             if lastpts > self.block_max_pts:
@@ -450,14 +485,9 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                             '-copyts',
                             'pipe:1']
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
+        #self.stream_queue = StreamQueue(ffmpeg_process.stdout, self.bytes_per_read, ffmpeg_process)
         return ffmpeg_process
     
-    def get_ip(self, client_ip):
-        hostname = socket.gethostname()
-        IP = socket.gethostbyname(hostname)
-        return IP
-
-
 
 # mostly from https://github.com/ZeWaren/python-upnp-ssdp-example
 # and https://stackoverflow.com/questions/46210672/python-2-7-streaming-http-server-supporting-multiple-connections-on-one-port
