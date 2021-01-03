@@ -3,7 +3,7 @@ import sys
 import logging
 import logging.config
 
-VERSION = '0.7.2'
+VERSION = '0.7.3-RC1'
 
 def get_version_str():
     return VERSION

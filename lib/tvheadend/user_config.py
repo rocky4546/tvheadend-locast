@@ -6,11 +6,18 @@ import configparser
 import pathlib
 import logging
 import base64
-import cryptography
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.fernet import Fernet
+import socket
+
+try:
+    import cryptography
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.fernet import Fernet
+    CRYPTO_LOADED = True
+except ImportError:
+    print('Unable to load cryptography module, will not encrypt passwords')
+    CRYPTO_LOADED = False
 
 
 import lib.user_config
@@ -78,6 +85,18 @@ class TVHUserConfig( lib.user_config.UserConfig ):
                     }})
                     self.data[each_section.lower()][each_key.lower()] = each_val
 
+    def get_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # doesn't even have to be reachable
+            s.connect(('10.255.255.255', 1))
+            IP = s.getsockname()[0]
+        except Exception:
+            IP = '127.0.0.1'
+        finally:
+            s.close()
+        return IP
+
 
     def tvh_config_adjustments(self, opersystem, script_dir):
     
@@ -94,6 +113,7 @@ class TVHUserConfig( lib.user_config.UserConfig ):
                     self.data['main']['ffmpeg_path'] = pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe')
                 else:
                     self.data['main']['ffmpeg_path'] = 'ffmpeg'
+
         if not self.data['player']['ffprobe_path']:
             if opersystem in ['Windows']:
                 base_ffprobe_dir = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
@@ -101,7 +121,25 @@ class TVHUserConfig( lib.user_config.UserConfig ):
             else:
                 self.data['player']['ffprobe_path'] = 'ffprobe'
 
-        if self.data['main']['encrypt_key'] is None:
+        if self.data['main']['plex_accessible_ip'] == "0.0.0.0":
+            self.data["main"]["bind_ip"] = "0.0.0.0"
+            self.data['main']['plex_accessible_ip'] = self.get_ip()
+            print('#######IP=',self.get_ip())
+
+        # BOOLEAN PARAMETERS
+        if type(self.data['main']['quiet']) is str:
+            self.data['main']['quiet'] = self.config_handler.getboolean('main', 'quiet')
+        if type(self.data['main']['quiet_print']) is str:
+            self.data['main']['quiet_print'] = self.config_handler.getboolean('main', 'quiet_print')
+        if not self.data['main']['disable_ssdp']:
+            # ssdp does not currently work, disable it is the default is used
+            self.data['main']['disable_ssdp'] = True
+        elif type(self.data['main']['disable_ssdp']) is str:
+            self.data['main']['disable_ssdp'] = self.config_handler.getboolean('main', 'disable_ssdp')
+        if type(self.data['main']['verbose']) is str:
+            self.data['main']['verbose'] = self.config_handler.getboolean('main', 'verbose')
+
+        if CRYPTO_LOADED and self.data['main']['encrypt_key'] is None:
             self.set_fernet_key()
             if self.data['main']['locast_password'].startswith(ENCRYPT_STRING):
                 # encrypted
