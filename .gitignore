@@ -20,7 +20,7 @@ cache/stations/facility.*
 cache/*_epg.xml*
 cache/stations/*facilities.json*
 *.ts
-lib/tvheadend/DevNotes.txt
+lib/tvheadend/development/
 build/*/tvheadend*.exe
 ffmpeg/
 #IntelliJ

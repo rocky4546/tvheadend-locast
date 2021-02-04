@@ -15,12 +15,13 @@ import lib.stations as stations
 import lib.location as location
 import lib.tvheadend.utils as utils
 import lib.tvheadend.epg2xml as epg2xml
+import lib.tvheadend.hdhr_server as hdhr_server
 from lib.l2p_tools import clean_exit
 
 try:
     import pip
 except ModuleNotFoundError:
-    print('Unable to load pip and cryptography modules, will not encrypt passwords')
+    print('Unable to load pip module to install extra modules')
 
 try:
     import cryptography
@@ -45,6 +46,8 @@ def get_args():
 
 
 def main(script_dir):
+
+
     """ main startup method for app """
     #utils.block_print()  # stop locast2plex logging until the logging engine is update
     
@@ -57,17 +60,11 @@ def main(script_dir):
     # Open Configuration File
     configObj = get_config(script_dir, opersystem, args)
     config = configObj.data
-    config['main']['quiet'] = utils.str2bool(config['main']['quiet'])
-
-    # if requested, stop all the print statements in locast2plex
-    # from printing to standard out
-    if config['main']['quiet']:
-        utils.block_print()
-    else:
-        utils.enable_print()
 
     # setup global logging
     utils.logging_setup(configObj.config_file)
+    logging.info('Server is set to run on {}:{}'.format(config["main"]["plex_accessible_ip"], \
+        config["main"]["plex_accessible_port"]))
     if config['main']['locast_password'] == 'UNKNOWN':
         logging.critical("No password available.  Terminating process")
         clean_exit(1)
@@ -83,20 +80,26 @@ def main(script_dir):
 
     locast = locast_service.LocastService(location_info.location, config)
 
-
     if config['main']['quiet_print']:
         utils.block_print()
+    # if past logins were invalid, do not keep trying
+    if config['main']['login_invalid'] is not None:
+        logging.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
+        clean_exit(1)
+
     if not locast.login(config['main']['locast_username'], config['main']['locast_password']):
         if config['main']['quiet_print']:
             utils.enable_print()
         logging.error('Invalid Locast Login Credentials. Exiting...')
+        # set the config file to know we have had a login failure
+        current_time = str(int(time.time()))
+        configObj.write('main', 'login_invalid', current_time)
         clean_exit(1)
     if config['main']['quiet_print']:
         utils.enable_print()
     if not locast.validate_user():
-        logging.error('Invalid Locast Login Credentials. Exiting...')
+        logging.error('2. Invalid Locast Login Credentials. Exiting...')
         clean_exit(1)
-
 
     try:
         fcc_cache_dir = pathlib.Path(config['main']['cache_dir']).joinpath('stations')
@@ -119,8 +122,8 @@ def main(script_dir):
         if config['main']['quiet_print']:
             utils.enable_print()
 
-        logging.debug('Starting device server on ' + config['main']['plex_accessible_ip'] + ':' + config['main']['plex_accessible_port'])
-        tuner_interface.start(config, locast, location_info.location)
+        logging.debug('Starting device tuner on ' + config['main']['plex_accessible_ip'] + ':' + config['main']['plex_accessible_port'])
+        tuner_interface.start(configObj, locast, location_info.location)
 
         if not config['main']['disable_ssdp']:
             logging.debug('Starting SSDP server...')
@@ -138,6 +141,12 @@ def main(script_dir):
         epg_server.daemon = True
         epg_server.start()
 
+        # START HDHOMERUN
+        if not config['hdhomerun']['disable_hdhr']:
+            logging.debug('Starting HDHomeRun server...')
+            hdhr_serverx = Process(target=hdhr_server.hdhr_process, args=(config,))
+            hdhr_serverx.start()
+
         logging.info('TVHeadend_Locast is now online.')
 
         # wait forever
@@ -146,6 +155,11 @@ def main(script_dir):
 
     except KeyboardInterrupt:
         logging.info('^C received, shutting down the server')
+        if not config['hdhomerun']['disable_hdhr']:
+            hdhr_serverx.terminate()
+            hdhr_serverx.join()
         if not config['main']['disable_ssdp']:
             ssdp_serverx.terminate()
+            ssdp_serverx.join()
+        
         clean_exit()
