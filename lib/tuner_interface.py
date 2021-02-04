@@ -27,6 +27,7 @@ class PlexHttpHandler(BaseHTTPRequestHandler):
         
 
     def do_GET(self):
+
         base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
 
         contentPath = self.path
@@ -265,7 +266,6 @@ class PlexHttpHandler(BaseHTTPRequestHandler):
                              'application/xml', 
                              templates['xmlRmgScanStatus'])
 
-            
             # putting this here after the response on purpose
             stations.refresh_dma_stations_and_channels(self.config, self.local_locast, self.location)
 
@@ -274,7 +274,6 @@ class PlexHttpHandler(BaseHTTPRequestHandler):
             for index, scan_status in enumerate(self.rmg_station_scans):
                 if scan_status == 'Scan':
                     self.rmg_station_scans[index] = "Idle"
-
         else:
             print("Unknown request to " + contentPath)
 

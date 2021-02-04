@@ -45,12 +45,12 @@ class LocastService( lib.locast_service.LocastService ):
             logging.debug('User donationExpire: {}'.format(donateExp))
             if datetime.now() > donateExp:
                 logging.info("User's donation ad-free period has expired.")
-                self.config['main']['is_free_account'] = True #CAM
+                self.config['freeaccount']['is_free_account'] = True
             else:
                 logging.info('User has an active subscription.')
-                self.config['main']['is_free_account'] = False #CAM
+                self.config['freeaccount']['is_free_account'] = False
         else:
             logging.info('User is a free account.')
-            self.config['main']['is_free_account'] = True #CAM
+            self.config['freeaccount']['is_free_account'] = True
         return True
 
