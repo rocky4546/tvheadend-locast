@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="rocky4546">
+    <meta name="description" content="config editor for tvheadend-locast">
+    <title>TVHeadend-Locast Config Editor</title>
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Config Editor: TVHeadend-Locast</h1>
+    </header>
+    <form id="ConfigForm" method="post">
+        <table><tr><th>Main
+        </th></tr><tr><td><label title="Use 0.0.0.0 for any IP">local_ip</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-local_ip">
+        </th></tr><tr><td><label title="READONLY: IP Address found">plex_accessible_ip</label></td><td>
+        <input type="text"  readonly  name="main-plex_accessible_ip">
+        </td></tr><tr><td><label title="Port 6077 is the default">plex_accessible_port</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-plex_accessible_port">
+        </td></tr><tr><td><label title="Default is 3 due to locast rate limits">tuner_count</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-tuner_count">
+        </td></tr><tr><td><label title="Number of end devices connected to this service.  Should be >= tuner_count">concurrent_listeners</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-concurrent_listeners">
+        </td></tr><tr><td><label title="Number of seconds between refresh. Default is 12 hours">epg_update_frequency</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="number" name="main-epg_update_frequency">
+        </td></tr><tr><td><label title="Days to pull down from locast">epg_update_days</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-epg_update_days">
+        </td></tr><tr><td><label title="Locast stream buffer size. Small enough to read multiple times per section"> bytes_per_read</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-bytes_per_read">
+        </td></tr><tr><td><label title="Turns on debug logging for SSDP module">verbose</label></td><td>
+        <input type="checkbox" name="main-verbose">
+        </td></tr><tr><td><label title="Disables print statements to STDOUT by locast2plex modules">quiet_print</label></td><td>
+        <input type="checkbox" name="main-quiet_print">
+        </td></tr><tr><td><label title="Encrypts the password in the config.ini file">use_encryption</label></td><td>
+        <input type="checkbox" name="main-use_encryption">
+        </td></tr><tr><td><label title="Is blank unless service is having authentication issues with locast. Clear to retest interface">login_invalid</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="main-login_invalid">
+        </td></tr><tr><td><br>
+        </td></tr><tr><th>Freeaccount
+        </th></tr><tr><td><label title="READONLY: Account Status">is_free_account</lable></td><td>
+        <input type="text" readonly name="freeaccount-is_free_account">
+        </td></tr><tr><td><label title="In seconds, should be less than locast advertisement rate of 15 minutes">refresh_rate</lable></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="freeaccount-refresh_rate">
+        </td></tr><tr><td><label title="Buffer size is adjusted to provide more than 0 packets per read. 10 is the default">min_pkt_rcvd</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="number" name="freeaccount-min_pkt_rcvd">
+        </td></tr><tr><td><label title="buffer size is reduced when the max packets are rcvd in one read">max_pkt_rcvd</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="number" name="freeaccount-max_pkt_rcvd">
+        </td></tr><tr><td><label title="Bad packets are removed when the PTS is less than the minimum">pts_minimum</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="number" name="freeaccount-pts_minimum">
+        </td></tr><tr><td><label title="Bad packets are removed when the PTS changes more than delta">pts_max_delta</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="number" name="freeaccount-pts_max_delta">
+        </td></tr><tr><td><br>
+        </td></tr><tr><th>EPG
+        </th></tr><tr><td><label title="Adds string before channel number when you use an antenna and locast for the same channels. Organizes channels list by antenna then locast">epg_prefix</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="epg-epg_prefix">
+        </th></tr><tr><td><label title="Adds string after channel number when you use an antenna and locast for the same channels. Organizes channels list by channel numbers">epg_suffix</label></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="epg-epg_suffix">
+        </td></tr><tr><td><label title="Amount of information added to description">description</label></td><td>
+        <select STYLE="background-color: #E0E0E0;" name="epg-description">
+            <option value="">default</option>
+            <option value="brief">brief</option>
+            <option value="default">normal</option>
+            <option value="extend">extend</option>
+        </select>
+        </td></tr><tr><td><label title="TVHeadend uses specific genre instead of what is received by guides">genre</label></td><td>
+        <select STYLE="background-color: #E0E0E0;" name="epg-genre">
+            <option value="">default</option>
+            <option value="tvheadend">tvheadend</option>
+            <option value="normal">normal</option>
+        </select>
+        </td></tr><tr><td><br>
+        </td></tr><tr><th>HDHomerun
+        </th></tr><tr><td><label title="Disables the discovery service to notify apps that this is a HDHomerun device">disable_hdhr</label></td><td>
+        <input type="checkbox" name="hdhomerun-disable_hdhr">
+        </td></tr><tr><td><label title="Not very useful. Auth code used to access silicon dust tv guide. Use only if you have a hdhomerun device.  Go to http://[deviceip]/discovery.json and enter the Device Auth here.">hdhr_auth</lable></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="hdhomerun-hdhr_auth">
+        </td></tr><tr><td><br>
+        </td></tr><tr><th>Logger_root
+        </th></tr><tr><td><label title="Python Log level sent to output">level</label></td><td>
+        <select STYLE="background-color: #E0E0E0;" name="logger_root-level">
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO">INFO</option>
+            <option value="WARNING">WARNING</option>
+            <option value="ERROR">ERROR</option>
+            <option value="CRITICAL">CRITICAL</option>
+        </select>
+        </td></tr><tr><td><br>
+        </td></tr><tr><th>Handler_logHandler
+        </th></tr><tr><td><label title="extend adds date/time stamp">formatter</td><td>
+        <select STYLE="background-color: #E0E0E0;" name="handler_loghandler-formatter">
+            <option value="extend">extend</option>
+            <option value="simple">simple</option>
+        </select>
+        </td></tr><tr><td><br>
+        </td></tr></table>
+        <button STYLE="background-color: #E0E0E0;" id="save" type="submit"><b>Save changes</b></button>
+    </form>
+    <section id="status">
+    </section>
+    <footer>
+        <p>Not all configuration parameters are listed.  To change username/password, 
+        disable the web interface or other parameters, edit the config file directly</p>
+    </footer>
+</div>
+</body>
+</html>

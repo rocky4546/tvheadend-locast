@@ -236,13 +236,28 @@ Function InstallService
     Pop $1 ; status text
     IntCmp $0 0 Service4Done
         MessageBox MB_OK "Service update AppDirectory failed.  status:$0 $1"
-    Goto Service4Done
+    Service4Done:
+
+    StrCpy $cmd '$INSTDIR\lib\tvheadend\service\Windows\nssm.exe set TVHeadend-Locast AppStdoutCreationDisposition 2'
+    nsExec::ExecToStack '$cmd'
+    Pop $0 ;return value
+    Pop $1 ; status text
+    IntCmp $0 0 Service5Done
+        MessageBox MB_OK "Service update AppDirectory failed.  status:$0 $1"
+    Service5Done:
+
+    StrCpy $cmd '$INSTDIR\lib\tvheadend\service\Windows\nssm.exe set TVHeadend-Locast AppStderrCreationDisposition 2'
+    nsExec::ExecToStack '$cmd'
+    Pop $0 ;return value
+    Pop $1 ; status text
+    IntCmp $0 0 Service6Done
+        MessageBox MB_OK "Service update AppDirectory failed.  status:$0 $1"
+    Goto Service6Done
 
     ServiceAlreadyInstalled:
     MessageBox MB_OK "Service already installed"
 
-
-    Service4Done:
+    Service6Done:
 
 FunctionEnd
 
