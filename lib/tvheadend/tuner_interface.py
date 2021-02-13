@@ -279,6 +279,8 @@ class TVHeadendHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     self.rmg_station_scans[index] = station_list[sid]['channel']
                 except KeyError:
                     self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+                    logging.warning('KeyError on allocating idle tuner.  index={}, sid={}' \
+                        .format(index, sid))
                     return
                 
                 tuner_found = True

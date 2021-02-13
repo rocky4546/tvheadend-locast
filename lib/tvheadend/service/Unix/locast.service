@@ -11,12 +11,13 @@
 
 [Unit]
 Description=Locast Service
-After=auditd.service syslog.target network.target local-fs.target
+Wants=network-online.target
+After=network.target network-online.target
 
 [Service]
-#Type=forked
+Type=simple
 ExecStart=/usr/bin/python3 /home/hts/locast/tvheadend-locast/tvh_main.py
-StandardInput=tty-force
+#StandardInput=tty-force
 
 # Disable Python's buffering of STDOUT and STDERR, so that output from the
 # service shows up immediately in systemd's logs
@@ -25,9 +26,9 @@ Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 RestartSec=54s
 
-StandardInput=tty-force
-StandardOutput=syslog+console
-StandardError=syslog+console
+#StandardInput=tty-force
+StandardOutput=syslog
+StandardError=syslog
 SyslogIdentifier=locast
 User=hts
 
