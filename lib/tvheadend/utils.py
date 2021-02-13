@@ -3,7 +3,7 @@ import sys
 import struct
 import logging
 import logging.config
-
+import datetime
 
 VERSION = '0.7.3-RC2'
 
@@ -51,6 +51,13 @@ def gen_fernet_key(self, user_key):
         
 def noop(configObj):
     pass
+
+
+def tm_parse(tm):
+    tm_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=tm/1000)
+    #tm = datetime.datetime.utcfromtimestamp(tm/1000.0) #does not work before 1970
+    tm = str(tm_date.strftime('%Y%m%d%H%M%S +0000'))
+    return tm
 
 
 

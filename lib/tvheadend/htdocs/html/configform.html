@@ -18,7 +18,7 @@
         <table><tr><th>Main
         </th></tr><tr><td><label title="Use 0.0.0.0 for any IP">local_ip</label></td><td>
         <input STYLE="background-color: #E0E0E0;" type="text" name="main-local_ip">
-        </th></tr><tr><td><label title="READONLY: IP Address found">plex_accessible_ip</label></td><td>
+        </th></tr><tr><td><label title="READONLY: Local IP Address found">plex_accessible_ip</label></td><td>
         <input type="text"  readonly  name="main-plex_accessible_ip">
         </td></tr><tr><td><label title="Port 6077 is the default">plex_accessible_port</label></td><td>
         <input STYLE="background-color: #E0E0E0;" type="text" name="main-plex_accessible_port">
@@ -77,8 +77,12 @@
         </td></tr><tr><th>HDHomerun
         </th></tr><tr><td><label title="Disables the discovery service to notify apps that this is a HDHomerun device">disable_hdhr</label></td><td>
         <input type="checkbox" name="hdhomerun-disable_hdhr">
-        </td></tr><tr><td><label title="Not very useful. Auth code used to access silicon dust tv guide. Use only if you have a hdhomerun device.  Go to http://[deviceip]/discovery.json and enter the Device Auth here.">hdhr_auth</lable></td><td>
-        <input STYLE="background-color: #E0E0E0;" type="text" name="hdhomerun-hdhr_auth">
+
+        </td></tr><tr><td><label title="CRC-based 4byte hex string. ex 104ed44c.">hdhr_id</lable></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="hdhomerun-hdhr_id">
+        </td></tr><tr><td><label title="UDP Netmask to reduce UDP broadcast traffic received. EX: use 192.168.1.120/32 to filter to just one IP.">
+            udp_netmask</lable></td><td>
+        <input STYLE="background-color: #E0E0E0;" type="text" name="hdhomerun-udp_netmask">
         </td></tr><tr><td><br>
         </td></tr><tr><th>Logger_root
         </th></tr><tr><td><label title="Python Log level sent to output">level</label></td><td>
