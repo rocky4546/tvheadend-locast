@@ -21,7 +21,7 @@ from lib.l2p_tools import clean_exit
 try:
     import pip
 except ModuleNotFoundError:
-    print('Unable to load pip module to install extra modules')
+    print('Unable to load pip module to install upgrades')
 
 try:
     import cryptography
@@ -136,7 +136,7 @@ def main(script_dir):
                 utils.enable_print()
 
         logging.debug('Starting EPG thread...')
-        epg2xml.generate_epg_file(config, location_info.location)
+        epg = epg2xml.EPGLocast(config, location_info.location)
         epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location))
         epg_server.daemon = True
         epg_server.start()

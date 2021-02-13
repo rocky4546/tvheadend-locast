@@ -1,0 +1,2 @@
+> ** You have found the tvheadend-locast README. Most of the top level files are directly from locast2plex **
+> ** Additional information is provided on the [Wiki]https://github.com/rocky4546/tvheadend-locast/wiki pages. **
