@@ -9,10 +9,10 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 
-import lib.stations as stations
+import lib.tvheadend.stations as stations
 import lib.tvheadend.utils as utils
 from lib.l2p_tools import clean_exit
-from lib.filelock import Timeout, FileLock
+from lib.filelock import FileLock
 import lib.tvheadend.epg_category as epg_category
 
 
@@ -30,25 +30,28 @@ class EPGLocast:
     def __init__(self, _config, _location):
         self.config = _config
         self.location = _location
+        self.logger = logging.getLogger(__name__)
+        stations.Stations.config = _config
+        stations.Stations.location = _location
+        self.stations = stations.Stations()
 
     def run(self):
         self.dummy_xml()
         try:
             while True:
-                logging.info('Fetching EPG for DMA ' + str(self.location['DMA']) + '.')
+                self.logger.info('Fetching EPG for DMA ' + str(self.location['DMA']) + '.')
                 self.generate_epg_file()
                 time.sleep(self.config["main"]["epg_update_frequency"])
-                
         except KeyboardInterrupt:
             clean_exit()
 
-
     def dummy_xml(self):
-        out_path = pathlib.Path(self.config["main"]["cache_dir"]).joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml")
+        out_path = pathlib.Path(self.config["main"]["cache_dir"]) \
+            .joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml")
         if os.path.exists(out_path):
             return
 
-        logging.debug('Creating Temporary Empty XMLTV File.')
+        self.logger.debug('Creating Temporary Empty XMLTV File.')
 
         base_cache_dir = self.config["main"]["cache_dir"]
 
@@ -65,22 +68,25 @@ class EPGLocast:
             f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(ET.tostring(out, encoding='UTF-8'))
 
-
     def generate_epg_file(self):
 
+        hd_channel_list = set([])
         base_cache_dir = self.config["main"]["cache_dir"]
-
         out_path = pathlib.Path(base_cache_dir).joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml")
-        out_lock_path = pathlib.Path(base_cache_dir).joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml.lock")
+        if not utils.is_file_expired(out_path,
+                hours=int(self.config["epg"]["min_refresh_rate"] / 3600)):
+            return
 
+        out_lock_path = pathlib.Path(base_cache_dir) \
+            .joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml.lock")
         cache_dir = pathlib.Path(base_cache_dir).joinpath(str(self.location["DMA"]) + "_epg")
         if not cache_dir.is_dir():
             cache_dir.mkdir()
 
-        dma_channels = stations.get_dma_stations_and_channels(self.config, self.location)
-
+        dma_channels = self.stations.get_dma_stations_and_channels()
         # Make a date range to pull
-        todaydate = datetime.datetime.utcnow().replace(hour=0,minute=0,second=0,microsecond=0) # make sure we're dealing with UTC!
+        todaydate = datetime.datetime.utcnow() \
+            .replace(hour=0, minute=0, second=0, microsecond=0)  # make sure we're dealing with UTC!
         dates_to_pull = [todaydate]
         days_to_pull = int(self.config["main"]["epg_update_days"])
         for x in range(1, days_to_pull - 1):
@@ -97,6 +103,11 @@ class EPGLocast:
         out.set('generator-special-thanks', 'deathbybandaid')
 
         done_channels = False
+
+        # remove today EPG so it will refresh
+        file_to_remove = cache_dir.joinpath(todaydate.strftime("%m-%d-%Y") + '.json')
+        if file_to_remove.is_file():
+            file_to_remove.unlink()
 
         for x_date in dates_to_pull:
             url = ('https://api.locastnet.org/api/watch/epg/' +
@@ -115,26 +126,28 @@ class EPGLocast:
                         channel_realname = str(dma_channels[sid]['friendlyName'])
                         channel_callsign = str(dma_channels[sid]['callSign'])
 
+                        channel_logo = None
                         if 'logo226Url' in channel_item.keys():
                             channel_logo = channel_item['logo226Url']
-                            
                         elif 'logoUrl' in channel_item.keys():
                             channel_logo = channel_item['logoUrl']
 
                         c_out = self.sub_el(out, 'channel', id=sid)
-                        self.sub_el(c_out, 'display-name', text='%s%s%s %s' % (self.config['epg']['epg_prefix'], channel_number, self.config['epg']['epg_suffix'], channel_callsign))
+                        self.sub_el(c_out, 'display-name', text='%s%s%s %s' %
+                            (self.config['epg']['epg_prefix'], channel_number,
+                            self.config['epg']['epg_suffix'], channel_callsign))
                         self.sub_el(c_out, 'display-name', text='%s %s %s' % (channel_number, channel_callsign, sid))
                         self.sub_el(c_out, 'display-name', text=channel_number)
                         self.sub_el(c_out, 'display-name', text='%s %s fcc' % (channel_number, channel_callsign))
                         self.sub_el(c_out, 'display-name', text=channel_callsign)
                         self.sub_el(c_out, 'display-name', text=channel_realname)
 
-                        if channel_logo != None:
+                        if channel_logo is not None:
                             self.sub_el(c_out, 'icon', src=channel_logo)
                     else:
-                        logging.debug('EPG: Skipping channel id=%d'.format(sid))
+                        self.logger.debug('EPG: Skipping channel id=%d'.format(sid))
 
-            # Now list Program informations
+            # Now list Program information
             for channel_item in channel_info:
                 sid = str(channel_item['id'])
                 if sid in dma_channels.keys():
@@ -144,13 +157,13 @@ class EPGLocast:
 
                     if 'logo226Url' in channel_item.keys():
                         channel_logo = channel_item['logo226Url']
-                        
+
                     elif 'logoUrl' in channel_item.keys():
                         channel_logo = channel_item['logoUrl']
 
                     for event in channel_item['listings']:
 
-                        tm_start = utils.tm_parse(event['startTime']) # this is returned from locast in UTC
+                        tm_start = utils.tm_parse(event['startTime'])  # this is returned from locast in UTC
                         tm_duration = event['duration'] * 1000
                         tm_end = utils.tm_parse(event['startTime'] + tm_duration)
 
@@ -181,7 +194,7 @@ class EPGLocast:
                             if date_str is not None:
                                 descr_add = descr_add + '(' + date_str + ') '
                             if 'genres' in event.keys():
-                                descr_add = descr_add + event['genres'].replace(',',' /') + ' / '
+                                descr_add = descr_add + event['genres'].replace(',', ' /') + ' / '
                             if 'seasonNumber' in event.keys():
                                 descr_add = descr_add + 'S' + '{:0>2d}'.format(event['seasonNumber'])
                             if 'episodeNumber' in event.keys():
@@ -192,13 +205,20 @@ class EPGLocast:
                         elif self.config['epg']['description'] == 'normal':
                             pass
                         else:
-                            logging.warning('Config value [epg][description] is invalid: ' 
-                                + self.config['epg']['description'])
+                            self.logger.warning('Config value [epg][description] is invalid: '
+                                                + self.config['epg']['description'])
                         self.sub_el(prog_out, 'desc', lang='en', text=event['description'])
 
+                        if 'videoProperties' in event.keys():
+                            if 'HD' in event['videoProperties']:
+                                video_out = self.sub_el(prog_out, 'video')
+                                self.sub_el(video_out, 'quality', 'HDTV')
+                                hd_channel_list.add(sid)
+
                         if 'releaseDate' in event.keys():
-                            self.sub_el(prog_out, 'date', lang='en', text=self.date_parse(event, 'releaseDate', '%Y%m%d'))
-                                                  
+                            self.sub_el(prog_out, 'date', lang='en',
+                                text=self.date_parse(event, 'releaseDate', '%Y%m%d'))
+
                         self.sub_el(prog_out, 'length', units='minutes', text=str(event['duration']))
 
                         for f in event_genres:
@@ -209,8 +229,8 @@ class EPGLocast:
                                 if f in epg_category.TVHEADEND.keys():
                                     f = epg_category.TVHEADEND[f]
                             else:
-                                logging.warning('Config value [epg][genre] is invalid: ' 
-                                    + self.config['epg']['genre'])
+                                self.logger.warning('Config value [epg][genre] is invalid: '
+                                                    + self.config['epg']['genre'])
                             self.sub_el(prog_out, 'category', lang='en', text=f.strip())
                             self.sub_el(prog_out, 'genre', lang='en', text=f.strip())
 
@@ -228,7 +248,7 @@ class EPGLocast:
                             self.sub_el(prog_out, 'episode-num', system='common',
                                 text='S%02dE%02d' % (s_, e_))
                             self.sub_el(prog_out, 'episode-num', system='xmltv_ns',
-                                text='%d.%d.0' % (int(s_)-1, int(e_)-1))
+                                text='%d.%d.0' % (int(s_) - 1, int(e_) - 1))
                             self.sub_el(prog_out, 'episode-num', system='SxxExx',
                                 text='S%02dE%02d' % (s_, e_))
 
@@ -237,7 +257,7 @@ class EPGLocast:
                                 self.sub_el(prog_out, 'new')
 
                 else:
-                    logging.debug('EPG Skipping channel programming id=%d'.format(sid))
+                    self.logger.debug('EPG Skipping channel programming id=%d'.format(sid))
 
         xml_lock = FileLock(out_lock_path)
         with xml_lock:
@@ -245,33 +265,34 @@ class EPGLocast:
                 f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
                 f.write(ET.tostring(out, encoding='UTF-8'))
 
-
     def get_epg(self):
+
         epg_path = pathlib.Path(self.config['main']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')
+        if utils.is_file_expired(epg_path,
+                hours=int(self.config['epg']['min_refresh_rate'] / 3600)):
+            self.generate_epg_file()
+
         xml_lock = FileLock(str(epg_path) + '.lock')
 
-        return_str = None
         with xml_lock:
             with open(epg_path, 'rb') as epg_file:
                 return_str = epg_file.read().decode('utf-8')
-
         return return_str
-
 
     def get_cached(self, cache_dir, cache_key, url):
         cache_path = cache_dir.joinpath(cache_key + '.json')
         if cache_path.is_file():
-            logging.debug('FROM CACHE:' + str(cache_path))
+            self.logger.debug('FROM CACHE:' + str(cache_path))
             with open(cache_path, 'rb') as f:
                 return f.read()
         else:
-            logging.debug('Fetching:  ' + url)
+            self.logger.debug('Fetching:  ' + url)
             try:
                 resp = urllib.request.urlopen(url)
                 result = resp.read()
             except urllib.error.HTTPError as e:
                 if e.code == 400:
-                    logging.debug('Got a 400 error!  Ignoring it.')
+                    self.logger.debug('Got a 400 error!  Ignoring it.')
                     result = (
                         b'{'
                         b'"note": "Got a 400 error at this time, skipping.",'
@@ -283,29 +304,25 @@ class EPGLocast:
                 f.write(result)
             return result
 
-
     def remove_stale_cache(self, cache_dir, todaydate):
         for p in cache_dir.glob('*'):
             try:
                 cachedate = datetime.datetime.strptime(str(p.name).replace('.json', ''), '%m-%d-%Y')
                 if cachedate >= todaydate:
                     continue
-            except:
+            except Exception:
                 pass
-            logging.debug('Removing stale cache file:' + p.name)
+            self.logger.debug('Removing stale cache file:' + p.name)
             p.unlink()
 
-
-
     def date_parse(self, event, key, format_str):
-        dt_str = None;
+        dt_str = None
         if key not in event.keys() or event[key] is None:
             pass
         else:
-            dt_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=event[key]/1000)
+            dt_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=event[key] / 1000)
             dt_str = str(dt_date.strftime(format_str))
         return dt_str
-
 
     def sub_el(self, parent, name, text=None, **kwargs):
         el = ET.SubElement(parent, name, **kwargs)

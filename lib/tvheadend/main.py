@@ -1,17 +1,15 @@
-# pylama:ignore=E722,E303,E302,E305
-import os
 import sys
 import time
 import platform 
 import argparse
-import pathlib
 import logging
-from multiprocessing import Process
+from multiprocessing import Queue, Process
 
 import lib.tvheadend.locast_service as locast_service
-import lib.ssdp_server as ssdp_server
+import lib.tvheadend.ssdp_server as ssdp_server
 import lib.tvheadend.tuner_interface as tuner_interface
-import lib.stations as stations 
+import lib.tvheadend.web_admin as web_admin
+import lib.tvheadend.stations as stations 
 import lib.location as location
 import lib.tvheadend.utils as utils
 import lib.tvheadend.epg2xml as epg2xml
@@ -26,12 +24,11 @@ except ModuleNotFoundError:
 try:
     import cryptography
 except ImportError:
-    #pip.main(['install', 'cryptography']) 
+    # pip.main(['install', 'cryptography'])
     print('Unable to load cryptography module, will not encrypt passwords')
     
 
 import lib.tvheadend.user_config as user_config
-from lib.tvheadend.user_config import get_config
 
 
 if sys.version_info.major == 2 or sys.version_info < (3, 6):
@@ -47,9 +44,8 @@ def get_args():
 
 def main(script_dir):
 
-
     """ main startup method for app """
-    #utils.block_print()  # stop locast2plex logging until the logging engine is update
+    # utils.block_print()  # stop locast2plex logging until the logging engine is update
     
     # Gather args
     args = get_args()
@@ -58,75 +54,70 @@ def main(script_dir):
     opersystem = platform.system()
 
     # Open Configuration File
-    configObj = get_config(script_dir, opersystem, args)
-    config = configObj.data
-
-    # setup global logging
-    utils.logging_setup(configObj.config_file)
-    logging.info('Server is set to run on {}:{}'.format(config["main"]["plex_accessible_ip"], \
-        config["main"]["plex_accessible_port"]))
+    config_obj = user_config.get_config(script_dir, opersystem, args)
+    config = config_obj.data
+    logger = logging.getLogger(__name__)
     if config['main']['locast_password'] == 'UNKNOWN':
-        logging.critical("No password available.  Terminating process")
+        logger.critical("No password available.  Terminating process")
         clean_exit(1)
 
-    logging.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
+    logger.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
 
     if config['main']['quiet_print']:
         utils.block_print()
     location_info = location.DMAFinder(config)
     if config['main']['quiet_print']:
         utils.enable_print()
-    logging.debug('Location={}'.format(location_info.location['city']))
+    logger.debug('Location={}'.format(location_info.location['city']))
 
-    locast = locast_service.LocastService(location_info.location, config)
+    locast = locast_service.TVHLocastService(location_info.location, config)
 
     if config['main']['quiet_print']:
         utils.block_print()
     # if past logins were invalid, do not keep trying
     if config['main']['login_invalid'] is not None:
-        logging.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
+        logger.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
         clean_exit(1)
 
     if not locast.login(config['main']['locast_username'], config['main']['locast_password']):
         if config['main']['quiet_print']:
             utils.enable_print()
-        logging.error('Invalid Locast Login Credentials. Exiting...')
+        logger.error('Invalid Locast Login Credentials. Exiting...')
         # set the config file to know we have had a login failure
         current_time = str(int(time.time()))
-        configObj.write('main', 'login_invalid', current_time)
+        config_obj.write('main', 'login_invalid', current_time)
         clean_exit(1)
     if config['main']['quiet_print']:
         utils.enable_print()
     if not locast.validate_user():
-        logging.error('2. Invalid Locast Login Credentials. Exiting...')
+        logger.error('2. Invalid Locast Login Credentials. Exiting...')
         clean_exit(1)
 
     try:
-        fcc_cache_dir = pathlib.Path(config['main']['cache_dir']).joinpath('stations')
-        if not fcc_cache_dir.is_dir():
-            fcc_cache_dir.mkdir()
-
-        logging.debug('Starting First time Stations refresh...')
+        logger.debug('Starting Stations thread...')
         if config['main']['quiet_print']:
             utils.block_print()
-        stations.refresh_dma_stations_and_channels(config, locast, location_info.location)
-        if config['main']['quiet_print']:
-            utils.enable_print()
-
-        logging.debug('Starting Stations thread...')
-        if config['main']['quiet_print']:
-            utils.block_print()
-        stations_server = Process(target=stations.stations_process, args=(config, locast, location_info.location))
+        stations_server = Process(target=stations.stations_process, args=(config, locast, location_info.location,))
         stations_server.daemon = True
         stations_server.start()
         if config['main']['quiet_print']:
             utils.enable_print()
 
-        logging.debug('Starting device tuner on ' + config['main']['plex_accessible_ip'] + ':' + config['main']['plex_accessible_port'])
-        tuner_interface.start(configObj, locast, location_info.location)
+        hdhr_queue = Queue()
+        logger.debug('Starting admin website on ' + config['main']['plex_accessible_ip']
+            + ':' + config['main']['web_admin_port'])
+        tuner = Process(target=web_admin.start, args=(config, locast, location_info.location, hdhr_queue,))
+        tuner.daemon = True
+        tuner.start()
+
+        logger.debug('Starting device tuner on ' + config['main']['plex_accessible_ip'] + ':'
+            + config['main']['plex_accessible_port'])
+        tuner = Process(target=tuner_interface.start, args=(config, locast, location_info.location, hdhr_queue,))
+        tuner.daemon = True
+        tuner.start()
 
         if not config['main']['disable_ssdp']:
-            logging.debug('Starting SSDP server...')
+            logger.debug('Starting SSDP server...')
             if config['main']['quiet_print']:
                 utils.block_print()
             ssdp_serverx = Process(target=ssdp_server.ssdp_process, args=(config,))
@@ -135,26 +126,27 @@ def main(script_dir):
             if config['main']['quiet_print']:
                 utils.enable_print()
 
-        logging.debug('Starting EPG thread...')
-        epg = epg2xml.EPGLocast(config, location_info.location)
-        epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location))
+        logger.debug('Starting EPG thread...')
+        epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location,))
         epg_server.daemon = True
         epg_server.start()
 
         # START HDHOMERUN
         if not config['hdhomerun']['disable_hdhr']:
-            logging.debug('Starting HDHomeRun server...')
-            hdhr_serverx = Process(target=hdhr_server.hdhr_process, args=(config,))
+            logger.debug('Starting HDHomeRun server...')
+            hdhr_serverx = Process(target=hdhr_server.hdhr_process, args=(config, hdhr_queue,))
             hdhr_serverx.start()
+        # Let the other process and threads take turns to run
+        time.sleep(0.1)
 
-        logging.info('TVHeadend_Locast is now online.')
+        logger.info('TVHeadend_Locast is now online.')
 
         # wait forever
         while True:
             time.sleep(3600)
 
     except KeyboardInterrupt:
-        logging.info('^C received, shutting down the server')
+        logger.info('^C received, shutting down the server')
         if not config['hdhomerun']['disable_hdhr']:
             hdhr_serverx.terminate()
             hdhr_serverx.join()

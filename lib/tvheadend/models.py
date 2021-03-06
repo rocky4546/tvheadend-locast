@@ -44,7 +44,6 @@ To print the parameters of a particular model:
 """
 
 
-
 class CrcModels(object):
     """
     CRC Models.
@@ -315,13 +314,11 @@ class CrcModels(object):
         'check':         0x995dc9bbdf1939fa,
     })
 
-
     def names(self):
         """
         This function returns the list of supported CRC models.
         """
         return [model['name'] for model in self.models]
-
 
     def get_params(self, model):
         """
