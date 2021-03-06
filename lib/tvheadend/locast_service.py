@@ -1,56 +1,50 @@
 # pylama:ignore=E722,E303
 import json
-import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-import pathlib
 import logging
 from datetime import datetime
 
-import lib.m3u8 as m3u8
-import lib.stations as stations
 import lib.locast_service
 from lib.l2p_tools import handle_url_except
 
 
+class TVHLocastService(lib.locast_service.LocastService):
+    config = None
 
-class LocastService( lib.locast_service.LocastService ):
-
-    config = None  #CAM
-
-    def __init__(self, location, config):  #CAM
+    def __init__(self, location, config):
         super().__init__(location)
-        self.config = config  #CAM
-
+        self.config = config
+        self.logger = logging.getLogger(__name__)
 
     @handle_url_except
     def validate_user(self):
-        logging.debug('Validating User Info...')
+        self.logger.debug('Validating User Info...')
 
         # get user info and make sure we donated
-        userReq = urllib.request.Request('https://api.locastnet.org/api/user/me',
-                                         headers={'Content-Type': 'application/json',
-                                                  'authorization': 'Bearer ' + self.current_token,
-                                                  'User-agent': self.DEFAULT_USER_AGENT})
+        user_req = urllib.request.Request(
+            'https://api.locastnet.org/api/user/me',
+            headers={'Content-Type': 'application/json',
+                'authorization': 'Bearer ' + self.current_token,
+                'User-agent': self.DEFAULT_USER_AGENT})
 
-        userOpn = urllib.request.urlopen(userReq)
-        userRes = json.load(userOpn)
-        userOpn.close()
+        user_opn = urllib.request.urlopen(user_req)
+        user_res = json.load(user_opn)
+        user_opn.close()
 
-        logging.debug('User didDonate: {}'.format(userRes['didDonate']))
+        self.logger.debug('User didDonate: {}'.format(user_res['didDonate']))
         # Check if the user has donated, and we got an actual expiration date.
-        if userRes['didDonate'] and userRes['donationExpire']: 
-            donateExp = datetime.fromtimestamp(userRes['donationExpire'] / 1000)
-            logging.debug('User donationExpire: {}'.format(donateExp))
-            if datetime.now() > donateExp:
-                logging.info("User's donation ad-free period has expired.")
+        if user_res['didDonate'] and user_res['donationExpire']:
+            donate_exp = datetime.fromtimestamp(user_res['donationExpire'] / 1000)
+            self.logger.debug('User donationExpire: {}'.format(donate_exp))
+            if not datetime.now() <= donate_exp:
+                self.logger.info("User's donation ad-free period has expired.")
                 self.config['freeaccount']['is_free_account'] = True
             else:
-                logging.info('User has an active subscription.')
+                self.logger.info('User has an active subscription.')
                 self.config['freeaccount']['is_free_account'] = False
         else:
-            logging.info('User is a free account.')
+            self.logger.info('User is a free account.')
             self.config['freeaccount']['is_free_account'] = True
         return True
-
