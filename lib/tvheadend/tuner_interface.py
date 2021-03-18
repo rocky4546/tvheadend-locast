@@ -634,7 +634,7 @@ class TunerHttpServer(Thread):
         TunerHttpHandler.config = config_obj.data
 
         self.bind_ip = config_obj.data['main']['bind_ip']
-        self.bind_port = config_obj.data['main']['bind_port']
+        self.bind_port = config_obj.data['main']['plex_accessible_port']
 
         stations.Stations.config = config_obj.data
         stations.Stations.locast = locast_service
@@ -678,7 +678,7 @@ def start(config, locast, location, hdhr_queue):
     config_obj = TVHUserConfig(config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((config['main']['bind_ip'], int(config['main']['bind_port'])))
+    server_socket.bind((config['main']['bind_ip'], int(config['main']['plex_accessible_port'])))
     server_socket.listen(int(config['main']['concurrent_listeners']))
     logger = logging.getLogger(__name__)
     logger.debug('Now listening for requests. Number of listeners={}'.format(config['main']['concurrent_listeners']))
