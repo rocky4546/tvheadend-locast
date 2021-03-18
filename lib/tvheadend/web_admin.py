@@ -293,7 +293,7 @@ class TVHeadendHttpServer(Thread):
         WebAdminHttpHandler.config = config_object.data
 
         self.bind_ip = config_object.data['main']['bind_ip']
-        self.bind_port = config_object.data['main']['bind_port']
+        self.bind_port = config_object.data['main']['web_admin_port']
 
         stations.Stations.config = config_object.data
         stations.Stations.locast = locast_service
