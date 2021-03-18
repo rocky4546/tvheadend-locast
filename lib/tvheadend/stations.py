@@ -52,7 +52,7 @@ class Stations:
         filepath = Stations.location["DMA"] + "_stations.json"
         filepath = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations").joinpath(filepath)
         if utils.is_file_expired(filepath, days=7):
-            fcc_stations = get_fcc_stations(config)
+            fcc_stations = self.get_fcc_stations()
             Stations.dma_channels = self.generate_dma_stations_and_channels_file(fcc_stations)
 
 
@@ -144,7 +144,7 @@ class Stations:
 
     def get_fcc_stations(self):
 
-        fcc_cache_dir = pathlib.Path(config["main"]["cache_dir"]).joinpath("stations")
+        fcc_cache_dir = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations")
 
         facility_url = 'https://transition.fcc.gov/ftp/Bureaus/MB/Databases/cdbs/facility.zip'
         facility_zip_dl_path = pathlib.Path(fcc_cache_dir).joinpath("facility.zip")
@@ -159,8 +159,8 @@ class Stations:
         else:
             print("Checking FCC facilities database for updates.")
 
-            offline_file_time = get_offline_file_time(facility_zip_dl_path)
-            online_file_time = get_online_file_time(facility_url)
+            offline_file_time = self.get_offline_file_time(facility_zip_dl_path)
+            online_file_time = self.get_online_file_time(facility_url)
 
             if not offline_file_time <= online_file_time:
                 print("Cached facilities database is current.")
@@ -199,7 +199,7 @@ class Stations:
 
                 facility_list = []
                 for fac_line in lines:
-                    formatteddict = fcc_db_format(fac_line)
+                    formatteddict = self.fcc_db_format(fac_line)
                     if formatteddict:
                         facility_list.append(formatteddict)
 
@@ -233,11 +233,11 @@ class Stations:
 
     def generate_dma_stations_and_channels_file(self, fcc_stations):
 
-        station_list = locast.get_stations()
+        station_list = self.locast.get_stations()
         final_channel_list = {}
-        print("Found " + str(len(station_list)) + " stations for DMA " + str(location["DMA"]))
+        print("Found " + str(len(station_list)) + " stations for DMA " + str(Stations.location["DMA"]))
 
-        fcc_market = get_dma_info(str(location["DMA"]))
+        fcc_market = get_dma_info(str(Stations.location["DMA"]))
         if not len(fcc_market):
             print("No DMA to FCC mapping found.  Poke the developer to get it into locast2plex.")
      
@@ -280,11 +280,11 @@ class Stations:
                 skip_sub_id = False
 
                 # callsign from "callsign" field
-                callsign_result = detect_callsign(locast_station['callSign'])
+                callsign_result = self.detect_callsign(locast_station['callSign'])
 
                 # callsign from "name" field - usually in "[callsign][TYPE][subchannel]" format
                 # example: WABCDT2
-                alt_callsign_result = detect_callsign(locast_station['name'])
+                alt_callsign_result = self.detect_callsign(locast_station['name'])
 
 
                 # check the known station json that we maintain whenever locast's
@@ -293,7 +293,7 @@ class Stations:
                     known_stations = json.load(known_stations_file_obj)
 
                 # first look via "callsign" value
-                ks_result = find_known_station(locast_station, 'callSign', known_stations)
+                ks_result = self.find_known_station(locast_station, 'callSign', known_stations)
                 if ks_result is not None:
                     final_channel_list[sid]['channel'] = ks_result['channel']
                     skip_sub_id = ks_result['skip_sub']
@@ -301,7 +301,7 @@ class Stations:
 
                 # then check "name"
                 if ('channel' not in final_channel_list[sid]):
-                    ks_result = find_known_station(locast_station, 'name', known_stations)
+                    ks_result = self.find_known_station(locast_station, 'name', known_stations)
                     if ks_result is not None:
                         final_channel_list[sid]['channel'] = ks_result['channel']
                         skip_sub_id = ks_result['skip_sub']
@@ -310,7 +310,7 @@ class Stations:
                 # first by searching the callsign found in the "callsign" field
                 if ('channel' not in final_channel_list[sid]) and callsign_result['verified']:
                     for market_item in fcc_market:
-                        result = find_fcc_station(callsign_result['callsign'], market_item["fcc_dma_str"], fcc_stations)
+                        result = self.find_fcc_station(callsign_result['callsign'], market_item["fcc_dma_str"], fcc_stations)
                         if result is not None:
                             final_channel_list[sid]['channel'] = result['channel']
                             skip_sub_id = result['analog']
@@ -320,7 +320,7 @@ class Stations:
                 # "name" field
                 if ('channel' not in final_channel_list[sid]) and alt_callsign_result['verified']:
                     for market_item in fcc_market:
-                        result = find_fcc_station(alt_callsign_result['callsign'], market_item["fcc_dma_str"], fcc_stations)
+                        result = self.find_fcc_station(alt_callsign_result['callsign'], market_item["fcc_dma_str"], fcc_stations)
                         if result is not None:
                             final_channel_list[sid]['channel'] = result['channel']
                             skip_sub_id = result['analog']
@@ -344,8 +344,8 @@ class Stations:
 
                 final_channel_list[sid]['friendlyName'] = locast_station['callSign']
 
-        dma_channels_list_path = location["DMA"] + "_stations.json"
-        dma_channels_list_file = pathlib.Path(config["main"]["cache_dir"]).joinpath("stations").joinpath(dma_channels_list_path)
+        dma_channels_list_path = Stations.location["DMA"] + "_stations.json"
+        dma_channels_list_file = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations").joinpath(dma_channels_list_path)
         dma_channels_list_file_lock = FileLock(str(dma_channels_list_file) + ".lock")
 
         with dma_channels_list_file_lock: 
