@@ -232,7 +232,6 @@ class Stations:
 
 
     def generate_dma_stations_and_channels_file(self, fcc_stations):
-
         station_list = Stations.locast.get_stations()
         final_channel_list = {}
         print("Found " + str(len(station_list)) + " stations for DMA " + str(Stations.location["DMA"]))
