@@ -104,14 +104,16 @@ def main(script_dir):
             utils.enable_print()
 
         hdhr_queue = Queue()
-        logger.debug('Starting admin website on ' + config['main']['plex_accessible_ip']
-            + ':' + config['main']['web_admin_port'])
+        logger.debug('Starting admin website on {}:{}'.format(
+            config['main']['plex_accessible_ip'],
+            config['main']['web_admin_port']))
         tuner = Process(target=web_admin.start, args=(config, locast, location_info.location, hdhr_queue,))
         tuner.daemon = True
         tuner.start()
 
-        logger.debug('Starting device tuner on ' + config['main']['plex_accessible_ip'] + ':'
-            + config['main']['plex_accessible_port'])
+        logger.debug('Starting admin website on {}:{}'.format(
+            config['main']['plex_accessible_ip'],
+            config['main']['web_admin_port']))
         tuner = Process(target=tuner_interface.start, args=(config, locast, location_info.location, hdhr_queue,))
         tuner.daemon = True
         tuner.start()

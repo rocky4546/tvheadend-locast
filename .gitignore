@@ -27,3 +27,4 @@ ffmpeg/
 .idea/
 tvheadend-locast.iml
 
+/lib/tvheadend/htdocs/Netbeans/nbproject/private/

@@ -22,6 +22,7 @@ import lib.tvheadend.stations as stations
 from lib.templates import templates
 import lib.tvheadend.utils as utils
 from lib.tvheadend.user_config import TVHUserConfig
+from lib.tvheadend.atsc import ATSCMsg
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
@@ -35,6 +36,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     config = None
     rmg_station_scans = []
     local_locast = None
+
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -51,10 +53,10 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.logger = logging.getLogger(__name__)
         super().__init__(*args)
 
+        
     def do_GET(self):
-        base_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
+        base_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
         content_path = self.path
-
         if content_path.startswith('/auto/v'):
             channel = content_path.replace('/auto/v', '')
             if '.' in channel:
@@ -78,7 +80,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_path = self.path
         query_data = {}
-        self.logger.debug('receiving a post form {}'.format(content_path))
+        self.logger.debug('Receiving a post form {}'.format(content_path))
         # get POST data
         if self.headers.get('Content-Length') != '0':
             post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
@@ -114,17 +116,16 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         return video_data
 
     def write_buffer(self, msg):
-        self.logger.debug('writing buffer-len={}'.format(len(msg)))
         self.wfile.write(msg)
 
     def do_tuning(self, sid):
-
         # sid is the id for the channel requested
         # with m3u8 redirect, there is no way to know when it is being used
         if self.config['player']['stream_type'] == 'm3u8redirect':
             channel_uri = self.locast.get_station_stream_uri(sid)
             if not channel_uri:
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+               
             self.send_response(302)
             self.send_header('Location', channel_uri)
             self.end_headers()
@@ -156,14 +157,14 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-type', 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E')
                 self.end_headers()
                 self.stream_video(sid, station_list)
-                self.logger.info('Locast Connection Closed')
+                self.logger.info('1 Locast Connection Closed')
                 TunerHttpHandler.rmg_station_scans[index] = 'Idle'
             elif self.config['player']['stream_type'] == 'internalproxy':
                 self.send_response(200)
                 self.send_header('Content-type', 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E')
                 self.end_headers()
-                self.stream_direct(sid)
-                self.logger.info('Locast Connection Closed')
+                self.stream_direct(sid, station_list)
+                self.logger.info('2 Locast Connection Closed')
                 TunerHttpHandler.rmg_station_scans[index] = 'Idle'
             else:
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown streamtype'))
@@ -220,7 +221,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     '2 UNEXPECTED EXCEPTION=', e))
 
         # Send SIGTERM to shutdown ffmpeg
-        self.logger.debug('Terminating stream')
+        self.logger.debug('Terminating ffmpeg stream')
         self.ffmpeg_proc.terminate()
         try:
             # ffmpeg writes a bit of data out to stderr after it terminates,
@@ -262,7 +263,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.bytes_per_read = int(self.bytes_per_read * 1.5 / 1316) * 1316  # increase buffer size by 50%
                 # self.stream_queue.set_bytes_per_read(self.bytes_per_read)
                 self.logger.debug('{} {}  {}{}'.format(
-                    '### MIN pkts rcvd limit, adjusting READ BUFFER to =',
+                    'MIN pkts rcvd limit, adjusting READ BUFFER to =',
                     self.bytes_per_read,
                     'Pkts Rcvd=', pkt_len))
             elif pkt_len > int(self.config['freeaccount']['max_pkt_rcvd']):
@@ -273,7 +274,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                                           / pkt_len / 1316) * 1316
                 # self.stream_queue.set_bytes_per_read(self.bytes_per_read)
                 self.logger.debug('{} {}  {}{}'.format(
-                    '### MAX pkts rcvd limit, adjusting READ BUFFER to =',
+                    'MAX pkts rcvd limit, adjusting READ BUFFER to =',
                     self.bytes_per_read,
                     'Pkts Rcvd=', pkt_len))
 
@@ -351,7 +352,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.block_prev_time = time.time()
                 # videoData = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
                 video_data = self.read_buffer()
-                self.logger.info('Stream reset')
+                self.logger.debug('Stream reset')
             else:
                 # valid video stream found
                 if last_pts >= pts_minimum:
@@ -539,21 +540,19 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
         return ffmpeg_process
 
-    def stream_direct(self, sid):
+    def stream_direct(self, sid, station_list):
         segments = OrderedDict()
         duration = 1
         file_filter = None
         self.last_refresh = time.time()
         stream_uri = self.locast.get_station_stream_uri(sid)
+        self.logger.debug('M3U8: {}'.format(stream_uri))
         if self.config['player']['stream_filter'] is not None:
             file_filter = re.compile(self.config['player']['stream_filter'])
         while True:
             try:
                 added = 0
                 removed = 0
-                if self.is_time_to_refresh():
-                    stream_uri = self.locast.get_station_stream_uri(sid)
-                    self.last_refresh = time.time()
                 playlist = m3u8.load(stream_uri)
                 for segment_dict in list(segments.keys()):
                     is_found = False
@@ -585,9 +584,11 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                         self.logger.debug(f"Added {uri} to play queue")
                         added += 1
 
-                self.logger.debug(f"Added {added} new segments, removed {removed}")
                 if added == 0 and duration > 0:
-                    time.sleep(duration)
+                    time.sleep(duration*0.3)
+                elif self.is_time_to_refresh():
+                    stream_uri = self.locast.get_station_stream_uri(sid)
+                    self.last_refresh = time.time()
 
                 for uri, data in segments.items():
                     if not data["played"]:
@@ -596,17 +597,19 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                         end_download = datetime.datetime.utcnow()
                         download_secs = (
                             end_download - start_download).total_seconds()
-                        self.logger.debug(
-                            f"Downloaded {uri}, time spent: {download_secs:.2f}")
                         data['played'] = True
                         if not chunk:
                             self.logger.warning(f"Segment {uri} not available. Skipping..")
                             continue
+                        atsc_msg = ATSCMsg()
+                        chunk_updated = atsc_msg.update_sdt_names(chunk[:80], b'Locast', 
+                            self.set_service_name(station_list, sid).encode())
+                        chunk = chunk_updated + chunk[80:]
                         duration = data['duration']
                         runtime = (datetime.datetime.utcnow() - start_download).total_seconds()
-                        target_diff = 0.5 * duration
+                        target_diff = 0.3 * duration
                         wait = target_diff - runtime
-                        self.logger.info(f"Serving {uri} ({duration}s) in, {wait:.2f}s")
+                        self.logger.info(f"Serving {uri} ({duration}s)")
                         self.write_buffer(chunk)
                         if wait > 0:
                             time.sleep(wait)
@@ -614,7 +617,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 # Check we hit a broken pipe when trying to write back to the client
                 if e.errno in [errno.EPIPE, errno.ECONNABORTED, errno.ECONNRESET, errno.ECONNREFUSED]:
                     # Normal process.  Client request end of stream
-                    self.logger.info('2. Connection dropped by end device')
+                    self.logger.info('2. Connection dropped by end device {}'.format(e))
                     break
                 else:
                     self.logger.error('{}{}'.format(
@@ -634,7 +637,7 @@ class TunerHttpServer(Thread):
         TunerHttpHandler.config = config_obj.data
 
         self.bind_ip = config_obj.data['main']['bind_ip']
-        self.bind_port = config_obj.data['main']['bind_port']
+        self.bind_port = config_obj.data['main']['plex_accessible_port']
 
         stations.Stations.config = config_obj.data
         stations.Stations.locast = locast_service
@@ -678,9 +681,9 @@ def start(config, locast, location, hdhr_queue):
     config_obj = TVHUserConfig(config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((config['main']['bind_ip'], int(config['main']['bind_port'])))
-    server_socket.listen(int(config['main']['concurrent_listeners']))
+    server_socket.bind((config_obj.data['main']['bind_ip'], int(config_obj.data['main']['plex_accessible_port'])))
+    server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
     logger = logging.getLogger(__name__)
-    logger.debug('Now listening for requests. Number of listeners={}'.format(config['main']['concurrent_listeners']))
-    for i in range(int(config['main']['concurrent_listeners'])):
+    logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
+    for i in range(int(config_obj.data['main']['concurrent_listeners'])):
         TunerHttpServer(server_socket, config_obj, locast, location, hdhr_queue)
