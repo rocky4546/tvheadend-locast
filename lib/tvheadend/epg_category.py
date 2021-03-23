@@ -1,4 +1,4 @@
-
+# pylama:ignore=E203,E221
 
 # KODI COLOR MAPPINGS
 # 0 Other/Unknown Grey
@@ -26,7 +26,8 @@ SF                = 'Science fiction / Fantasy / Horror'
 COMEDY            = 'Comedy'
 SOAP              = 'Soap / Melodrama / Folkloric'
 ROMANCE           = 'Romance'
-HISTORICAL        = 'Serious / Classical / Religious / Historical movie / Drama'
+HISTORICAL        = 'Serious / Classical / Religious ' \
+                    '/ Historical movie / Drama'
 XXX               = 'Adult movie / Drama'
 
 NEWS              = 'News / Current affairs'
@@ -134,7 +135,7 @@ TVHEADEND = {
     'Educational'           : EDUCATIONAL,
     'Entertainment'         : GAME,
     'Exercise'              : FITNESS,
-    #'Fantasy'               : 
+    # 'Fantasy'               :
     'financial'             : ECONOMIC,
     'Football'              : FOOTBALL,
     'Game show'             : GAME,
@@ -171,13 +172,12 @@ TVHEADEND = {
     'Sitcom'                : COMEDY,
     'Soap'                  : SOAP,
     'Soccer'                : FOOTBALL,
-    #'Special'              :
+    # 'Special'              :
     'Sports talk'           : SPORT,
-    #'Talk'                 :
+    # 'Talk'                 :
     'Thriller'              : THRILLER,
     'Travel'                : TRAVEL,
     'Variety'               : VARIETY,
     'Weightlifting'         : ATHLETICS,
     'Western'               : ADVENTURE,
 }
-

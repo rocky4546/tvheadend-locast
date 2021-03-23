@@ -5,7 +5,8 @@ import logging
 import logging.config
 import datetime
 
-VERSION = '0.7.4'
+
+VERSION = '0.7.5'
 
 
 def get_version_str():
@@ -21,6 +22,12 @@ def logging_setup(config_file):
 def logging_refresh(config_obj):
     logging.config.fileConfig(fname=config_obj.config_file)
 
+def noop(config_obj):
+    pass
+
+def set_version(config_obj):
+    config_obj.data['main']['reporting_firmware_ver'] \
+            = 'v' + get_version_str()
 
 def block_print():
     sys.stdout = open(os.devnull, 'w')
@@ -33,9 +40,6 @@ def enable_print():
 def str2bool(s):
     return str(s).lower() in ['true', '1', 'yes', 'on']
 
-
-def noop(config_obj):
-    pass
 
 
 def tm_parse(tm):

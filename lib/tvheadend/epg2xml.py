@@ -63,7 +63,7 @@ class EPGLocast:
         out.set('source-info-url', 'https://www.locast.org')
         out.set('source-info-name', 'locast.org')
         out.set('generator-info-name', 'locastepg')
-        out.set('generator-info-url', 'github.com/tgorgdotcom/locast2plex')
+        out.set('generator-info-url', 'github.com/rocky4546/tvheadend-locast')
         with open(out_path, 'wb') as f:
             f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(ET.tostring(out, encoding='UTF-8'))
@@ -99,8 +99,8 @@ class EPGLocast:
         out.set('source-info-url', 'https://www.locast.org')
         out.set('source-info-name', 'locast.org')
         out.set('generator-info-name', 'locastepg')
-        out.set('generator-info-url', 'github.com/tgorgdotcom/locast2plex')
-        out.set('generator-special-thanks', 'deathbybandaid')
+        out.set('generator-info-url', 'github.com/rocky4546/tvheadend-locast')
+        out.set('generator-special-thanks', 'locast2plex')
 
         done_channels = False
 
@@ -266,14 +266,11 @@ class EPGLocast:
                 f.write(ET.tostring(out, encoding='UTF-8'))
 
     def get_epg(self):
-
         epg_path = pathlib.Path(self.config['main']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')
         if utils.is_file_expired(epg_path,
                 hours=int(self.config['epg']['min_refresh_rate'] / 3600)):
             self.generate_epg_file()
-
         xml_lock = FileLock(str(epg_path) + '.lock')
-
         with xml_lock:
             with open(epg_path, 'rb') as epg_file:
                 return_str = epg_file.read().decode('utf-8')

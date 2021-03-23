@@ -1,6 +1,7 @@
 import os
 import urllib
 import copy
+import time
 import pathlib
 import logging
 from threading import Thread
@@ -17,7 +18,10 @@ import lib.tuner_interface
 from lib.templates import templates
 from lib.tvheadend.templates import tvh_templates
 import lib.tvheadend.channels_m3u as channels_m3u
+from lib.tvheadend.epg2xml import EPGLocast
 from lib.tvheadend.user_config import TVHUserConfig
+from lib.tvheadend.pages.configform_html import ConfigFormHTML
+from lib.tvheadend.pages.index_js import IndexJS
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
@@ -35,6 +39,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
     locast = None
     location = None
     hdhr_queue = None
+    html_folders = ['web', 'emby', 'images', 'html', 'pages']
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -50,18 +55,21 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
         self.small_pkt_streaming = False
         self.server_instance = -1
         self.logger = logging.getLogger(__name__)
-
         super().__init__(*args)
-        self.logger.debug('Server Instance = {}'.format(self.server_instance))
+
+    def log_message(self, format, *args):
+        self.logger.debug('[%s] %s' % (self.address_string(), format%args))
+
 
     def do_GET(self):
-        stream_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['plex_accessible_port']
-        web_admin_url = self.config['main']['plex_accessible_ip'] + ':' + self.config['main']['web_admin_port']
+        stream_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
+        web_admin_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['web_admin_port'])
         content_path = self.path
+        valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', content_path)
 
         if content_path == '/':
             self.send_response(302)
-            self.send_header('Location', 'html/index.html')
+            self.send_header('Location', 'web/index.html')
             self.end_headers()
 
         elif content_path == '/favicon.ico':
@@ -166,31 +174,38 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             return_xml = "<Lineup>" + return_xml + "</Lineup>"
             self.do_response(200, 'application/xml', return_xml)
 
-        elif content_path.startswith('/images/'):
-            if re.match(r'^[A-Za-z0-9\._\-/]+$', content_path):
+        elif content_path == '/xmltv.xml':
+            epg = EPGLocast(self.config, self.location)
+            self.do_response(200, 'application/xml', epg.get_epg())
+
+        elif content_path == '/pages/configform.html':
+            configform = ConfigFormHTML()
+            self.do_response(200, 'text/html', configform.get(self.config_obj.defn_json))
+
+        elif content_path == '/pages/index.js':
+            indexjs = IndexJS()
+            self.do_response(200, 'text/javascript', indexjs.get(self.config))
+
+        elif valid_check:
+            if valid_check and valid_check.group(2) in WebAdminHttpHandler.html_folders:
+                file_path = valid_check.group(1)
                 htdocs_path = pathlib.Path(self.script_dir).joinpath('htdocs')
-                file_path = pathlib.Path(htdocs_path).joinpath(*content_path.split('/'))
-                self.do_file_response(200, file_path)
-            else:
-                self.logger.warning('Invalid content. ignoring {}'.format(content_path))
-                self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly formed URL'))
-        elif content_path.startswith("/html/"):
-            if re.match(r'^[A-Za-z0-9\._\-/]+$', content_path):
-                htdocs_path = pathlib.Path(self.script_dir).joinpath('htdocs')
-                file_path = pathlib.Path(htdocs_path).joinpath(*content_path.split('/'))
-                self.do_file_response(200, file_path)
+                fullfile_path = pathlib.Path(htdocs_path).joinpath(*file_path.split('/'))
+                self.do_file_response(200, fullfile_path, content_path)
             else:
                 self.logger.warning('Invalid content. ignoring {}'.format(content_path))
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly formed URL'))
 
         else:
-            super().do_GET()
+            self.logger.info('UNKNOWN HTTP Request {}'.format(content_path))
+            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
+            #super().do_GET()
         return
 
     def do_POST(self):
         content_path = self.path
         query_data = {}
-        self.logger.debug('Receiving POST form {}'.format(content_path))
+        self.logger.debug('Receiving POST form {} {}'.format(content_path, query_data))
         # get POST data
         if self.headers.get('Content-Length') != '0':
             post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
@@ -207,7 +222,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 if len(get_data_item_split) > 1:
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
 
-        if content_path == '/html/configform.html':
+        if content_path == '/pages/configform.html':
             if self.config['main']['disable_web_config']:
                 self.do_response(501, 'text/html', templates['htmlError']
                     .format('501 - Config pages disabled. '
@@ -244,47 +259,54 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                         self.put_hdhr_queue(index, None, 'Idle')
 
             else:
-                print("Unknown scan command " + query_data['scan'])
+                self.logger.warning("Unknown scan command " + query_data['scan'])
                 self.do_response(400, 'text/html',
                     templates['htmlError'].format(
                         query_data['scan'] + ' is not a valid scan command'))
+        elif content_path.startswith('/emby/Sessions/Capabilities/Full'):
+                self.do_response(204, 'text/html')
+        
         else:
             super().do_POST()
         return
 
-    def do_file_response(self, code, reply_file):
+    def do_file_response(self, code, reply_file, content_path):
         if reply_file:
             try:
                 f = open(reply_file, 'rb')
                 mime_lookup = mimetypes.guess_type(str(reply_file))
                 self.send_response(code)
-                self.send_header('Content-type', mime_lookup)
+                self.send_header('Content-type', mime_lookup[0])
                 self.end_headers()
-                self.wfile.write(f.read())
+                x = f.read()
+                self.wfile.write(x)
                 f.close()
-            except IsADirectoryError:
+            except IsADirectoryError as e:
+                self.logger.info(e)
                 self.do_response(401, 'text/html', templates['htmlError'].format('401 - Unauthorized'))
-            except FileNotFoundError:
-                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Not Found'))
+            except FileNotFoundError as e:
+                self.logger.info(e)
+                self.do_response(404, 'text/html', templates['htmlError'].format('404 - File Not Found'))
+            except NotADirectoryError as e:
+                self.logger.info(e)
+                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Folder Not Found'))
 
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
         self.send_header('Content-type', mime)
         self.end_headers()
         if reply_str:
-            self.wfile.write(reply_str.encode('utf-8'))
+            try:
+                self.wfile.write(reply_str.encode('utf-8'))
+            except BrokenPipeError:
+                self.logger.debug('Client dropped connection before results were sent, ignoring')
 
     def put_hdhr_queue(self, index, channel, status):
         if not self.config['hdhomerun']['disable_hdhr']:
             WebAdminHttpHandler.hdhr_queue.put(
                 {'tuner': index, 'channel': channel, 'status': status})
 
-    def set_server_index(self, index):
-        self.logger.debug('Setting server instance to {}'.format(index))
-        self.server_instance = index
-
-
-class TVHeadendHttpServer(Thread):
+class WebAdminHttpServer(Thread):
 
     def __init__(self, server_socket, config_object, locast_service, location, _hdhr_queue, _index):
         Thread.__init__(self)
@@ -293,7 +315,7 @@ class TVHeadendHttpServer(Thread):
         WebAdminHttpHandler.config = config_object.data
 
         self.bind_ip = config_object.data['main']['bind_ip']
-        self.bind_port = config_object.data['main']['bind_port']
+        self.bind_port = config_object.data['main']['web_admin_port']
 
         stations.Stations.config = config_object.data
         stations.Stations.locast = locast_service
@@ -333,19 +355,18 @@ class TVHeadendHttpServer(Thread):
         self.start()
 
     def run(self):
-        HttpHandlerClass = FactoryHttpHandler(self.index)
-        httpd = HTTPServer((self.bind_ip, int(self.bind_port)), HttpHandlerClass, False)
+        HttpHandlerClass = FactoryWebAdminHttpHandler(self.index)
+        httpd = HTTPServer((self.bind_ip, self.bind_port), HttpHandlerClass, False)
         httpd.socket = self.socket
         httpd.server_bind = self.server_close = lambda self: None
         httpd.serve_forever()
 
 
-def FactoryHttpHandler(index):
-    class CustomHttpHandler(WebAdminHttpHandler):
+def FactoryWebAdminHttpHandler(index):
+    class CustomWebAdminHttpHandler(WebAdminHttpHandler):
         def __init__(self, *args, **kwargs):
-            super(CustomHttpHandler, self).__init__(*args, **kwargs)
-            self.set_server_index(index)
-    return CustomHttpHandler
+            super(CustomWebAdminHttpHandler, self).__init__(*args, **kwargs)
+    return CustomWebAdminHttpHandler
 
 
 def start(config, locast, location, hdhr_queue):
@@ -357,9 +378,9 @@ def start(config, locast, location, hdhr_queue):
     config_obj = TVHUserConfig(config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((config['main']['bind_ip'], int(config['main']['web_admin_port'])))
-    server_socket.listen(int(config['main']['concurrent_listeners']))
+    server_socket.bind((config_obj.data['main']['bind_ip'], config_obj.data['main']['web_admin_port']))
+    server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
     logger = logging.getLogger(__name__)
-    logger.debug('Now listening for requests. Number of listeners={}'.format(config['main']['concurrent_listeners']))
-    for i in range(int(config['main']['concurrent_listeners'])):
-        TVHeadendHttpServer(server_socket, config_obj, locast, location, hdhr_queue, i)
+    logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
+    for i in range(int(config_obj.data['main']['concurrent_listeners'])):
+        WebAdminHttpServer(server_socket, config_obj, locast, location, hdhr_queue, i)
