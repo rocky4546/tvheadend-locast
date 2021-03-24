@@ -30,7 +30,7 @@ def get_args():
 
 # Startup Logic
 if __name__ == '__main__':
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    #os.chdir(os.path.dirname(os.path.abspath(__file__)))
     script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
     opersystem = platform.system()
 
@@ -44,6 +44,7 @@ if __name__ == '__main__':
         print("ERROR: installdir not found at ", install_dir)
         sys.exit(1)
     config_file = pathlib.Path(install_dir).joinpath("config.ini")
+    print(install_dir)
 
     if os.path.exists(config_file):
         print("configfile found at ", config_file)
@@ -62,7 +63,7 @@ if __name__ == '__main__':
 
     print("args.cfg=", args.cfg)
 
-    configObj = get_config(script_dir, opersystem, args)
+    configObj = get_config(install_dir, opersystem, args)
 
     if configObj.data['main']['locast_password'] == 'UNKNOWN':
         #  two different users trying to decrypt the encrypted password
