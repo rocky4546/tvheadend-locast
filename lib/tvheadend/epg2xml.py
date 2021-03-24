@@ -67,6 +67,8 @@ class EPGLocast:
         with open(out_path, 'wb') as f:
             f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
             f.write(ET.tostring(out, encoding='UTF-8'))
+        newtime = int(time.time()) - int(self.config["epg"]["min_refresh_rate"]) - 3300
+        os.utime(out_path, (newtime, newtime))
 
     def generate_epg_file(self):
 
