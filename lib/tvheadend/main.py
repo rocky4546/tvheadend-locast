@@ -62,7 +62,6 @@ def main(script_dir):
         clean_exit(1)
 
     logger.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
-
     if config['main']['quiet_print']:
         utils.block_print()
     location_info = location.DMAFinder(config)

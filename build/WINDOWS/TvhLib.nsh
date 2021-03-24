@@ -124,19 +124,16 @@ Function TestPythonSilent
     PythonMissing:
 FunctionEnd
 
-
 Function UpdateConfig
-    SetOutPath "E:\Chad\Development\git\tvheadend-locast\"
-    StrCpy $cmd 'python -m build.UpdateConfig --username "$user" --password "$pwd" --installdir "$INSTDIR"'
+    SetOutPath "$INSTDIR"
+    StrCpy $cmd 'python -m build.WINDOWS.UpdateConfig --username "$user" --password "$pwd" --installdir "$INSTDIR"'
     nsExec::ExecToStack '$cmd'
     Pop $0 ;return value
     Pop $1 ; status text
     IntCmp $0 0 PythonDone
-        MessageBox MB_OK "Unable to update Config file. Edit the file manually."
+        MessageBox MB_OK "Unable to update Config file. Edit the file manually. $0 $1"
     PythonDone:
 FunctionEnd
-
-
 
 Function AddFiles
     !define SOURCEPATH "../.."
@@ -148,8 +145,13 @@ Function AddFiles
     File "${SOURCEPATH}\docker-compose.yml"
     File "${SOURCEPATH}\Dockerfile"
     File "${SOURCEPATH}\Dockerfile_tvh"
+    File "${SOURCEPATH}\Dockerfile_tvh_crypt.alpine"
+    File "${SOURCEPATH}\Dockerfile_tvh_crypt.alpine"
+    File "${SOURCEPATH}\Dockerfile_tvh_crypt.slim-buster"
     File "${SOURCEPATH}\README.md"
-    Rename "$INSTDIR\README.md" "$INSTDIR\README.txt"
+    File "${SOURCEPATH}\TVHEADEND.md"
+    File "${SOURCEPATH}\requirements.txt"
+    Rename "$INSTDIR\TVHEADEND.md" "$INSTDIR\README.txt"
 
     SetOutPath "$INSTDIR\lib"
     File "${SOURCEPATH}\lib\*.py"
@@ -165,15 +167,16 @@ Function AddFiles
     SetOutPath "$INSTDIR\lib\tvheadend"
     File "${SOURCEPATH}\lib\tvheadend\config_example.ini"
     File "${SOURCEPATH}\lib\tvheadend\*.py"
-
-    SetOutPath "$INSTDIR\lib\tvheadend\service\Unix"
-    File "${SOURCEPATH}\lib\tvheadend\service\Unix\locast.service"
-
-    SetOutPath "$INSTDIR\lib\tvheadend\service\Windows"
-    File "${SOURCEPATH}\lib\tvheadend\service\Windows\nssm*.*"
+    File "${SOURCEPATH}\lib\tvheadend\*.json"
+    File /r /x __pycache__ "${SOURCEPATH}\lib\tvheadend\pages"
+    File /r "${SOURCEPATH}\lib\tvheadend\service"
+    File /r "${SOURCEPATH}\lib\tvheadend\htdocs"
 
     SetOutPath "$INSTDIR\cache\stations"
     File "${SOURCEPATH}\cache\stations\README.txt"
+
+    SetOutPath "$INSTDIR\build\WINDOWS"
+    File "${SOURCEPATH}\build\WINDOWS\UpdateConfig.pyw"
 
 FunctionEnd
 

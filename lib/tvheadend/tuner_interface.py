@@ -53,6 +53,8 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.logger = logging.getLogger(__name__)
         super().__init__(*args)
 
+    def log_message(self, format, *args):
+        self.logger.debug('[%s] %s' % (self.address_string(), format%args))
         
     def do_GET(self):
         base_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
@@ -588,6 +590,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     time.sleep(duration*0.3)
                 elif self.is_time_to_refresh():
                     stream_uri = self.locast.get_station_stream_uri(sid)
+                    self.logger.debug('M3U8: {}'.format(stream_uri))
                     self.last_refresh = time.time()
 
                 for uri, data in segments.items():
