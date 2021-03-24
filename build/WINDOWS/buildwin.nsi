@@ -7,7 +7,7 @@
 !define PRODUCT_VERSION ${VERSION}
 !define PRODUCT_PUBLISHER "rocky4546"
 !define PRODUCT_WEB_SITE "http://www.mycompany.com"
-!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\main.py"
+!define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\tvh_main.py"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 !define PRODUCT_STARTMENU_REGVAL "NSIS:StartMenuDir"
@@ -151,8 +151,10 @@ Section "MainSection" SEC03
     ; Shortcuts
     !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
-    CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\tvheadend-locast.lnk" "$INSTDIR\main.py"
-    CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\main.py"
+    SetOutPath "$INSTDIR"
+    CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
+    SetOutPath "$INSTDIR"
+    CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
