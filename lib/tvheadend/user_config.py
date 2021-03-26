@@ -38,7 +38,6 @@ class TVHUserConfig(lib.user_config.UserConfig):
 
     def __init__(self, script_dir=None, opersystem=None, args=None, config=None):
         self.logger = None
-
         self.defn_json = self.load_config_defn('lib/tvheadend/config.json')
         self.config_defaults = self.init_default_config(self.defn_json)
         self.data = copy.deepcopy(self.config_defaults)
@@ -95,12 +94,15 @@ class TVHUserConfig(lib.user_config.UserConfig):
     def set_config(self, _config):
         self.data = copy.deepcopy(_config)
         self.logger = logging.getLogger(__name__)
+        self.get_config_path(utils.MAIN_DIR, None)
+        self.data['main']['config_file'] = str(self.config_file)
         
     def import_config(self):
         self.config_handler.read(self.config_file)
         self.data['main']['config_file'] = str(self.config_file)
         utils.logging_setup(self.config_file)
         self.logger = logging.getLogger(__name__)
+        self.logger.info("Loading Configuration File: " + str(self.config_file))
         
         for each_section in self.config_handler.sections():
             lower_section = each_section.lower()
@@ -110,6 +112,19 @@ class TVHUserConfig(lib.user_config.UserConfig):
                 lower_key = each_key.lower()
                 self.data[lower_section][lower_key] = \
                     self.fix_value_type(lower_section, lower_key, each_val)
+
+    def get_config_path(self, script_dir, args=None):
+        if args is not None and args.cfg:
+            self.config_file = pathlib.Path(str(args.cfg))
+        else:
+            for x in ['config/config.ini', 'config.ini']:
+                poss_config = pathlib.Path(script_dir).joinpath(x)
+                if os.path.exists(poss_config):
+                    self.config_file = poss_config
+                    break
+        if not self.config_file or not os.path.exists(self.config_file):
+            print("ERROR: Config file missing, Exiting...")
+            clean_exit(1)
 
 
     def fix_value_type(self, _section, _key, _value):
@@ -411,11 +426,11 @@ class TVHUserConfig(lib.user_config.UserConfig):
             self.data['main']['cache_dir'] \
                 = str(self.data['main']['cache_dir'])
         if type(self.data['main']['ffmpeg_path']) is not str:
-            print('FFMPEG NOT A STRING')
+            self.logger.debug('FFMPEG NOT A STRING')
             self.data['main']['ffmpeg_path'] \
                 = str(self.data['main']['ffmpeg_path'])
         if type(self.data['player']['ffprobe_path']) is not str:
-            print('FFPROBE NOT A STRING')
+            self.logger.debug('FFPROBE NOT A STRING')
             self.data['player']['ffprobe_path'] \
                 = str(self.data['player']['ffprobe_path'])
 

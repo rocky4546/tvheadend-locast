@@ -690,3 +690,8 @@ def start(config, locast, location, hdhr_queue):
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
         TunerHttpServer(server_socket, config_obj, locast, location, hdhr_queue)
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass

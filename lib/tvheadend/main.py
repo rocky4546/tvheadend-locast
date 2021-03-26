@@ -45,13 +45,15 @@ def get_args():
 def main(script_dir):
 
     """ main startup method for app """
-    # utils.block_print()  # stop locast2plex logging until the logging engine is update
     
     # Gather args
     args = get_args()
 
     # Get Operating system
     opersystem = platform.system()
+
+    utils.MAIN_DIR = script_dir
+
 
     # Open Configuration File
     config_obj = user_config.get_config(script_dir, opersystem, args)
@@ -93,32 +95,34 @@ def main(script_dir):
         clean_exit(1)
 
     try:
-        logger.debug('Starting Stations thread...')
-        if config['main']['quiet_print']:
-            utils.block_print()
+        logger.info('Starting Stations process...')
         stations_server = Process(target=stations.stations_process, args=(config, locast, location_info.location,))
         stations_server.daemon = True
         stations_server.start()
-        if config['main']['quiet_print']:
-            utils.enable_print()
+        while not stations.check_station_file(config, location_info.location):
+            time.sleep(1)
 
         hdhr_queue = Queue()
-        logger.debug('Starting admin website on {}:{}'.format(
+        logger.info('Starting admin website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
             config['main']['web_admin_port']))
-        tuner = Process(target=web_admin.start, args=(config, locast, location_info.location, hdhr_queue,))
-        tuner.daemon = True
-        tuner.start()
+        webadmin = Process(target=web_admin.start, args=(config, locast, 
+            location_info.location, hdhr_queue,))
+        webadmin.daemon = True
+        webadmin.start()
+        time.sleep(0.01)
 
-        logger.debug('Starting admin website on {}:{}'.format(
+        logger.info('Starting streaming tuner website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
             config['main']['web_admin_port']))
-        tuner = Process(target=tuner_interface.start, args=(config, locast, location_info.location, hdhr_queue,))
+        tuner = Process(target=tuner_interface.start, args=(config, locast, 
+            location_info.location, hdhr_queue,))
         tuner.daemon = True
         tuner.start()
+        time.sleep(0.01)
 
         if not config['main']['disable_ssdp']:
-            logger.debug('Starting SSDP server...')
+            logger.info('Starting SSDP service on port 1900')
             if config['main']['quiet_print']:
                 utils.block_print()
             ssdp_serverx = Process(target=ssdp_server.ssdp_process, args=(config,))
@@ -127,14 +131,15 @@ def main(script_dir):
             if config['main']['quiet_print']:
                 utils.enable_print()
 
-        logger.debug('Starting EPG thread...')
+        logger.info('Starting EPG process...')
         epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location,))
         epg_server.daemon = True
         epg_server.start()
+        time.sleep(0.01)
 
         # START HDHOMERUN
         if not config['hdhomerun']['disable_hdhr']:
-            logger.debug('Starting HDHomeRun server...')
+            logger.info('Starting HDHR service on port 65001')
             hdhr_serverx = Process(target=hdhr_server.hdhr_process, args=(config, hdhr_queue,))
             hdhr_serverx.start()
         # Let the other process and threads take turns to run

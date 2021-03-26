@@ -6,6 +6,7 @@ import os
 import datetime
 import json
 import pathlib
+import logging
 
 from lib.l2p_tools import clean_exit
 from lib.filelock import FileLock
@@ -18,6 +19,12 @@ fcc_ssl_context.set_ciphers('HIGH:!DH:!aNULL')
 def stations_process(config, locast, location):
     try:
         while True:
+            Stations.config = config
+            Stations.locast = locast
+            Stations.location = location
+            stations = Stations()
+            stations.refresh_dma_stations_and_channels()
+            time.sleep(config["main"]["fcc_delay"])
             # Work in eastern time, since that is what the FCC is using to determine maintenance times
             currentTime = datetime.datetime.now(tz=EST5EDT())
             # if we find we're returning from delay at a time that the FCC is doing maintenance, sleep a bit more...
@@ -29,16 +36,18 @@ def stations_process(config, locast, location):
                 sleepTime = (sleepTime - currentTime.second)
                 time.sleep(sleepTime)
 
-            Stations.config = config
-            Stations.locast = locast
-            Stations.location = location
-            stations = Stations()
-            stations.refresh_dma_stations_and_channels()
-            time.sleep(config["main"]["fcc_delay"])
-
     except KeyboardInterrupt:
         clean_exit()
 
+
+def check_station_file(_config, _location):
+    filepath = _location["DMA"] + "_stations.json"
+    filepath = pathlib.Path(_config["main"]["cache_dir"]).joinpath("stations").joinpath(filepath)
+    if os.path.exists(filepath):
+        return True
+    else:
+        return False
+    
 
 class Stations:
 
@@ -47,14 +56,15 @@ class Stations:
     location = None
     dma_channels = None
 
-
+    def __init__(self, *args):
+        self.logger = logging.getLogger(__name__)
+    
     def refresh_dma_stations_and_channels(self):
         filepath = Stations.location["DMA"] + "_stations.json"
         filepath = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations").joinpath(filepath)
         if utils.is_file_expired(filepath, days=7):
             fcc_stations = self.get_fcc_stations()
             Stations.dma_channels = self.generate_dma_stations_and_channels_file(fcc_stations)
-
 
     def get_online_file_time(self, facility_url):
         url_head = urllib.request.Request(facility_url, method='HEAD')
@@ -64,14 +74,10 @@ class Stations:
         online_file_time = online_file_time.replace(tzinfo=EST5EDT()).astimezone(datetime.timezone.utc)
         return online_file_time
 
-
     def get_offline_file_time(self, facility_zip_dl_path):
         offline_file_time = datetime.datetime.utcfromtimestamp(os.path.getmtime(facility_zip_dl_path))
         offline_file_time = offline_file_time.replace(tzinfo=datetime.timezone.utc)
         return offline_file_time
-
-
-        
 
     def fcc_db_format(self, fac_line):
         current_date = datetime.datetime.utcnow()
@@ -140,8 +146,6 @@ class Stations:
 
         return formatteddict
 
-
-
     def get_fcc_stations(self):
 
         fcc_cache_dir = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations")
@@ -157,18 +161,18 @@ class Stations:
         if not os.path.exists(facility_zip_dl_path):
             why_download = "FCC facilities database cache missing."
         else:
-            print("Checking FCC facilities database for updates.")
+            self.logger.debug("Checking FCC facilities database for updates.")
 
             offline_file_time = self.get_offline_file_time(facility_zip_dl_path)
             online_file_time = self.get_online_file_time(facility_url)
 
             if not offline_file_time <= online_file_time:
-                print("Cached facilities database is current.")
+                self.logger.debug("Cached facilities database is current.")
             else:
                 why_download = "Online facilities database is newer."
 
         if why_download:
-            print(why_download + ' Downloading the latest FCC facilities database...')
+            self.logger.info(why_download + ' Downloading the latest FCC facilities database...')
 
             # remove old copies of zip and dat
             if os.path.exists(facility_zip_dl_path):
@@ -184,7 +188,7 @@ class Stations:
                     fcc_facility_file.write(fcc_facility_data)
             
             if (not os.path.exists(fcc_unzipped_dat)) and (os.path.exists(facility_zip_dl_path)):
-                print('Unzipping FCC facilities database...')
+                self.logger.debug('Unzipping FCC facilities database...')
 
                 with zipfile.ZipFile(facility_zip_dl_path, 'r') as zip_ref:
                     zip_ref.extractall(fcc_cache_dir)
@@ -192,7 +196,7 @@ class Stations:
             # make sure the fcc data is not corrupted (if the file isn't as big as we expect)
             if (os.path.exists(fcc_unzipped_dat) and os.path.getsize(fcc_unzipped_dat) > 7000000):
                 
-                print('Reading and formatting FCC database...')
+                self.logger.debug('Reading and formatting FCC database...')
 
                 with open(fcc_unzipped_dat, "r") as fac_file:
                     lines = fac_file.readlines()
@@ -203,7 +207,7 @@ class Stations:
                     if formatteddict:
                         facility_list.append(formatteddict)
 
-                print('Found ' + str(len(facility_list)) + ' stations.')
+                self.logger.debug('Found ' + str(len(facility_list)) + ' stations.')
 
                 facility_json = {
                                 "fcc_station_list": facility_list
@@ -229,16 +233,14 @@ class Stations:
                     
             return fcc_stations["fcc_station_list"]
 
-
-
     def generate_dma_stations_and_channels_file(self, fcc_stations):
         station_list = Stations.locast.get_stations()
         final_channel_list = {}
-        print("Found " + str(len(station_list)) + " stations for DMA " + str(Stations.location["DMA"]))
+        self.logger.info("Found " + str(len(station_list)) + " stations for DMA " + str(Stations.location["DMA"]))
 
         fcc_market = get_dma_info(str(Stations.location["DMA"]))
         if not len(fcc_market):
-            print("No DMA to FCC mapping found.  Poke the developer to get it into locast2plex.")
+            self.logger.info("No DMA to FCC mapping found.  Poke the developer to get it into locast2plex.")
      
         noneChannel = 1000
 
@@ -270,7 +272,7 @@ class Stations:
 
             except ValueError:
 
-                print('################### CALLSIGN ERROR: {} {}'.format(sid, locast_station['callSign']))
+                self.logger.warning('################### CALLSIGN ERROR: {} {}'.format(sid, locast_station['callSign']))
 
                 # result like "WDPN" or "CBS" in the callsign field, or the callsign in the name field
                 # then we'll search the callsign in a few different lists to get the station channel
@@ -352,7 +354,6 @@ class Stations:
                 json.dump(final_channel_list, dma_stations_file, indent=4)
         return final_channel_list
 
-
     def get_dma_stations_and_channels(self):
         if Stations.dma_channels is None:
             channel_list = None
@@ -367,7 +368,6 @@ class Stations:
             return channel_list
         else:
             return Stations.dma_channels
-
 
     def detect_callsign(self, compare_string):
         verified = False
@@ -402,7 +402,6 @@ class Stations:
             "callsign": compare_string
         }
 
-
     def find_known_station(self, station, searchBy, known_stations):
 
         for known_station in known_stations:
@@ -430,7 +429,6 @@ class Stations:
 
         return None
                 
-
     def find_fcc_station(self, callsign, market, fcc_stations):
         for fcc_station in fcc_stations:
             # go through each possible station
@@ -452,7 +450,6 @@ class Stations:
                         }
 
         return None
-
 
 # from http://docs.python.org/library/datetime.html 
 # via https://stackoverflow.com/questions/11710469/how-to-get-python-to-display-current-time-eastern

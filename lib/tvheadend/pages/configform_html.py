@@ -34,7 +34,6 @@ class ConfigFormHTML():
                 for setting, setting_data in section_data['settings'].items():
                     if setting_data['level'] == 4:
                         continue
-                        
                     title = ''
                     readonly = ''
                     background_color = '#E0E0E0'
