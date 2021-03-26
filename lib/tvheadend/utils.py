@@ -7,7 +7,7 @@ import datetime
 
 
 VERSION = '0.7.5'
-
+MAIN_DIR = None
 
 def get_version_str():
     return VERSION
