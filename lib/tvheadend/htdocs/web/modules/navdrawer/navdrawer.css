@@ -24,19 +24,19 @@
     box-sizing: border-box;
 }
 .drawer-docked {
-    width: 30%;
+    width: 13em;
 }
 .mainDrawer:not(.drawer-docked) {
     -webkit-transition: -webkit-transform 0.33s cubic-bezier(0, 0, 0.3, 1);
     -o-transition: transform 0.33s cubic-bezier(0, 0, 0.3, 1);
     transition: transform 0.33s cubic-bezier(0, 0, 0.3, 1);
 }
-@media all and (min-width: 60em) {
+@media all and (min-width: 40em) {
     .mainDrawer {
         width: 30%;
     }
 }
-@media all and (min-width: 80em) {
+@media all and (min-width: 55em) {
     .mainDrawer {
         width: 18.6em;
     }

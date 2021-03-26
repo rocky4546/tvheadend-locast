@@ -19,10 +19,6 @@ import lib.tvheadend.epg_category as epg_category
 def epg_process(config, location):
     epg_locast = EPGLocast(config, location)
     epg_locast.run()
-    try:
-        epg_locast.run()
-    except KeyboardInterrupt:
-        clean_exit()
 
 
 class EPGLocast:
@@ -36,12 +32,13 @@ class EPGLocast:
         self.stations = stations.Stations()
 
     def run(self):
+        self.generate_epg_file()
         self.dummy_xml()
         try:
             while True:
+                time.sleep(self.config["main"]["epg_update_frequency"])
                 self.logger.info('Fetching EPG for DMA ' + str(self.location['DMA']) + '.')
                 self.generate_epg_file()
-                time.sleep(self.config["main"]["epg_update_frequency"])
         except KeyboardInterrupt:
             clean_exit()
 

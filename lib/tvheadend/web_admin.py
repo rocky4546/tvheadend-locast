@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from xml.sax.saxutils import escape
 
 import lib.tvheadend.stations as stations
+import lib.tvheadend.utils as utils
 import lib.tuner_interface
 from lib.templates import templates
 from lib.tvheadend.templates import tvh_templates
@@ -384,3 +385,8 @@ def start(config, locast, location, hdhr_queue):
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
         WebAdminHttpServer(server_socket, config_obj, locast, location, hdhr_queue, i)
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        pass
