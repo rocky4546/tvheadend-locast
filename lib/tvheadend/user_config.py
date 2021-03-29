@@ -78,7 +78,6 @@ class TVHUserConfig(lib.user_config.UserConfig):
         for defnfile in os.listdir(defn_path):
             defnfilepath = os.path.join(defn_path, defnfile)
             if str(defnfilepath).endswith('.json'):
-                logging.warning('reading {} {} {}'.format(defn_path, defnfile, defnfilepath))
                 with open(defnfilepath, 'r') as file_defn:
                     defn = json.load(file_defn)
             merged_defn = utils.merge_dict(merged_defn, defn)
@@ -104,8 +103,9 @@ class TVHUserConfig(lib.user_config.UserConfig):
     def set_config(self, _config):
         self.data = copy.deepcopy(_config)
         self.logger = logging.getLogger(__name__)
-        self.get_config_path(utils.MAIN_DIR, None)
+        self.get_config_path(self.data['main']['main_dir'], None)
         self.data['main']['config_file'] = str(self.config_file)
+        self.config_handler.read(self.config_file)
 
     def init_logger_config(self):
         log_sections = ['loggers', 'logger_root', 'handlers', 'formatters', 
@@ -398,6 +398,9 @@ class TVHUserConfig(lib.user_config.UserConfig):
     def tvh_config_adjustments(self, opersystem, script_dir):
 
         self.call_oninit()
+
+        if not self.data['main']['main_dir']:
+            self.data['main']['main_dir'] = script_dir
 
         if not self.data['main']['ffmpeg_path']:
             if opersystem in ['Windows']:

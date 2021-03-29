@@ -53,9 +53,6 @@ def main(script_dir):
     # Get Operating system
     opersystem = platform.system()
 
-    utils.MAIN_DIR = script_dir
-
-
     # Open Configuration File
     config_obj = user_config.get_config(script_dir, opersystem, args)
     config = config_obj.data
@@ -110,7 +107,7 @@ def main(script_dir):
         webadmin = Process(target=web_admin.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
         webadmin.start()
-        time.sleep(0.01)
+        time.sleep(2.01)
 
         logger.info('Starting streaming tuner website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
@@ -118,7 +115,7 @@ def main(script_dir):
         tuner = Process(target=tuner_interface.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
         tuner.start()
-        time.sleep(0.01)
+        time.sleep(2.01)
 
         if not config['main']['disable_ssdp']:
             logger.info('Starting SSDP service on port 1900')
@@ -134,7 +131,7 @@ def main(script_dir):
         epg_server = Thread(target=epg2xml.epg_process, args=(config, location_info.location,))
         #epg_server.daemon = True
         epg_server.start()
-        time.sleep(0.01)
+        time.sleep(2.01)
 
         # START HDHOMERUN
         if not config['hdhomerun']['disable_hdhr']:

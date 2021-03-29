@@ -113,8 +113,29 @@ Section "Install Python3" SEC01
 
 SectionEnd
 
+Section "MainSection" SEC02
+    SetOutPath "$INSTDIR"
+    SetOverwrite ifnewer
+    Call AddFiles
+    Call UpdateConfig
 
-Section "Install FFMPEG" SEC02
+    ; Shortcuts
+    !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+    CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
+    SetOutPath "$INSTDIR"
+    CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
+    SetOutPath "$INSTDIR"
+    CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
+    !insertmacro MUI_STARTMENU_WRITE_END
+SectionEnd
+
+Section "Windows Service" SEC03
+    SetOutPath "$INSTDIR"
+    SetOverwrite ifnewer
+    Call InstallService
+SectionEnd
+
+Section "Install FFMPEG" SEC04
     SetOutPath "$INSTDIR"
     SetOverwrite ifnewer
     inetc::get /BANNER "FFMPEG download in progress..." \
@@ -139,29 +160,6 @@ Section "Install FFMPEG" SEC02
     DELETE "$TEMP\ffmpeg.zip"
     RMDIR /r "$TEMP\ffmpeg\*.*"
     RMDIR "$TEMP\ffmpeg"
-SectionEnd
-
-
-Section "MainSection" SEC03
-    SetOutPath "$INSTDIR"
-    SetOverwrite ifnewer
-    Call AddFiles
-    Call UpdateConfig
-
-    ; Shortcuts
-    !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-    CreateDirectory "$SMPROGRAMS\$ICONS_GROUP"
-    SetOutPath "$INSTDIR"
-    CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
-    SetOutPath "$INSTDIR"
-    CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
-    !insertmacro MUI_STARTMENU_WRITE_END
-SectionEnd
-
-Section "Windows Service" SEC04
-    SetOutPath "$INSTDIR"
-    SetOverwrite ifnewer
-    Call InstallService
 SectionEnd
 
 
@@ -190,27 +188,28 @@ SectionEnd
 ; Section descriptions
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SEC01} "Installs python for all users.  Required for the Windows Service"
-    !insertmacro MUI_DESCRIPTION_TEXT ${SEC02} "Installs ffmpeg in app folder. Required to run."
-    !insertmacro MUI_DESCRIPTION_TEXT ${SEC03} "Installs the base app"
-    !insertmacro MUI_DESCRIPTION_TEXT ${SEC04} "Adds a Windows Service using nssm."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SEC02} "Installs the base app"
+    !insertmacro MUI_DESCRIPTION_TEXT ${SEC03} "Adds a Windows Service using nssm."
+    !insertmacro MUI_DESCRIPTION_TEXT ${SEC04} "Installs ffmpeg in app folder. No longer required."
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 Function onMultiUserModeChanged
     ${If} $MultiUser.InstallMode == "CurrentUser"
         StrCpy $INSTDIR "$LocalAppdata\Programs\${MULTIUSER_INSTALLMODE_INSTDIR}"
         StrCpy $pythoninstall '$TEMP\python.exe InstallAllUsers=0 PrependPath=1'
-        SectionSetFlags ${SEC04} 16
+        SectionSetFlags ${SEC03} 16
     ${Else}
         StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCT_NAME}"
         StrCpy $pythoninstall '$TEMP\python.exe InstallAllUsers=1 PrependPath=1'
-        SectionSetFlags ${SEC04} 1
+        SectionSetFlags ${SEC03} 1
     ${EndIf}
 FunctionEnd
 
 
 Function .onInit
     !insertmacro MULTIUSER_INIT
-    SectionSetFlags ${SEC03} 17    # main section
+    SectionSetFlags ${SEC02} 17    # main section
+    SectionSetFlags ${SEC04} 0    # main section
 FunctionEnd
 
 

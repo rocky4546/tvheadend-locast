@@ -167,7 +167,6 @@ Function AddFiles
     SetOutPath "$INSTDIR\lib\tvheadend"
     File "${SOURCEPATH}\lib\tvheadend\config_example.ini"
     File "${SOURCEPATH}\lib\tvheadend\*.py"
-    File "${SOURCEPATH}\lib\tvheadend\*.json"
     File /r /x __pycache__ "${SOURCEPATH}\lib\tvheadend\pages"
     File /r "${SOURCEPATH}\lib\tvheadend\service"
     File /r "${SOURCEPATH}\lib\tvheadend\htdocs"
@@ -177,6 +176,10 @@ Function AddFiles
 
     SetOutPath "$INSTDIR\build\WINDOWS"
     File "${SOURCEPATH}\build\WINDOWS\UpdateConfig.pyw"
+
+    SetOutPath "$INSTDIR\data\config_defn"
+    File "${SOURCEPATH}\data\config_defn\*.*"
+
 
 FunctionEnd
 
