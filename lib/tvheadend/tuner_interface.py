@@ -691,6 +691,7 @@ def start(config, locast, location, hdhr_queue):
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], int(config_obj.data['main']['plex_accessible_port'])))
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
+    utils.logging_setup(config_obj.data['main']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
