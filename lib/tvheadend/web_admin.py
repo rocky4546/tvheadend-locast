@@ -291,6 +291,9 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             except NotADirectoryError as e:
                 self.logger.info(e)
                 self.do_response(404, 'text/html', templates['htmlError'].format('404 - Folder Not Found'))
+            except ConnectionAbortedError as e:
+                self.logger.info(e)
+            
 
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
@@ -381,6 +384,7 @@ def start(config, locast, location, hdhr_queue):
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], config_obj.data['main']['web_admin_port']))
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
+    utils.logging_setup(config_obj.data['main']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):

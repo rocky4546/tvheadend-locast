@@ -284,6 +284,15 @@
                         "onChange": "lib.tvheadend.utils.noop",
                         "onInit": "lib.tvheadend.utils.noop"
                     },
+                    "main_dir":{
+                        "label": "main_dir",
+                        "type": "path",
+                        "default": null,
+                        "level": 4,
+                        "help": null,
+                        "onChange": "lib.tvheadend.utils.noop",
+                        "onInit": "lib.tvheadend.utils.noop"
+                    },
                     "web_admin_port":{
                         "label": "web_admin_port",
                         "type": "integer",

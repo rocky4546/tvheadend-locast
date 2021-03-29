@@ -7,8 +7,7 @@ import datetime
 import requests
 
 
-VERSION = '0.8.0'
-MAIN_DIR = None
+VERSION = '0.7.5c'
 
 def get_version_str():
     return VERSION
@@ -19,10 +18,10 @@ def logging_setup(config_file):
         logging.config.fileConfig(fname=config_file)
         logging.addLevelName(100, 'NOTUSED')
 
-
 def logging_refresh(config_obj):
     logging.config.fileConfig(fname=config_obj.config_file, disable_existing_loggers=False)
-    resp = requests.get('http://192.168.1.130:5004/logreset')
+    resp = requests.get('http://{}:{}/logreset'.format(
+        config_obj.data['main']['plex_accessible_ip'], str(config_obj.data['main']['plex_accessible_port'])))
 
 def noop(config_obj):
     pass
