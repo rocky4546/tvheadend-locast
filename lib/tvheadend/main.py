@@ -3,6 +3,7 @@ import time
 import platform 
 import argparse
 import logging
+from threading import Thread
 from multiprocessing import Queue, Process
 
 import lib.tvheadend.locast_service as locast_service
@@ -95,9 +96,9 @@ def main(script_dir):
         clean_exit(1)
 
     try:
-        logger.info('Starting Stations process...')
-        stations_server = Process(target=stations.stations_process, args=(config, locast, location_info.location,))
-        stations_server.daemon = True
+        logger.info('Starting Stations thread...')
+        stations_server = Thread(target=stations.stations_process, args=(config, locast, location_info.location,))
+        #stations_server.daemon = True
         stations_server.start()
         while not stations.check_station_file(config, location_info.location):
             time.sleep(1)
@@ -108,7 +109,6 @@ def main(script_dir):
             config['main']['web_admin_port']))
         webadmin = Process(target=web_admin.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
-        webadmin.daemon = True
         webadmin.start()
         time.sleep(0.01)
 
@@ -117,7 +117,6 @@ def main(script_dir):
             config['main']['web_admin_port']))
         tuner = Process(target=tuner_interface.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
-        tuner.daemon = True
         tuner.start()
         time.sleep(0.01)
 
@@ -132,8 +131,8 @@ def main(script_dir):
                 utils.enable_print()
 
         logger.info('Starting EPG process...')
-        epg_server = Process(target=epg2xml.epg_process, args=(config, location_info.location,))
-        epg_server.daemon = True
+        epg_server = Thread(target=epg2xml.epg_process, args=(config, location_info.location,))
+        #epg_server.daemon = True
         epg_server.start()
         time.sleep(0.01)
 
@@ -159,5 +158,8 @@ def main(script_dir):
         if not config['main']['disable_ssdp']:
             ssdp_serverx.terminate()
             ssdp_serverx.join()
-        
+        webadmin.terminate()
+        webadmin.join()
+        tuner.terminate()
+        tuner.join()
         clean_exit()

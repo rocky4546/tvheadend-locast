@@ -28,7 +28,7 @@ import lib.user_config
 import lib.tvheadend.utils as utils
 
 ENCRYPT_STRING = 'ENC::'
-
+CONFIG_DEFN_PATH = 'data/config_defn'
 
 def get_config(script_dir, opersystem, args):
     return TVHUserConfig(script_dir, opersystem, args)
@@ -36,10 +36,13 @@ def get_config(script_dir, opersystem, args):
 
 class TVHUserConfig(lib.user_config.UserConfig):
 
+    defn_json = None
+
     def __init__(self, script_dir=None, opersystem=None, args=None, config=None):
         self.logger = None
-        self.defn_json = self.load_config_defn('lib/tvheadend/config.json')
-        self.config_defaults = self.init_default_config(self.defn_json)
+        if TVHUserConfig.defn_json is None:
+            TVHUserConfig.defn_json = self.load_config_defn(CONFIG_DEFN_PATH)
+        self.config_defaults = self.init_default_config(TVHUserConfig.defn_json)
         self.data = copy.deepcopy(self.config_defaults)
         if script_dir is not None:
             super().__init__(script_dir, opersystem, args)
@@ -70,10 +73,17 @@ class TVHUserConfig(lib.user_config.UserConfig):
             }
         }
 
-    def load_config_defn(self, json_file):
-        with open(json_file, 'r') as file_defn:
-            defn = json.load(file_defn)
-        return defn
+    def load_config_defn(self, defn_path):
+        merged_defn = {}
+        for defnfile in os.listdir(defn_path):
+            defnfilepath = os.path.join(defn_path, defnfile)
+            if str(defnfilepath).endswith('.json'):
+                logging.warning('reading {} {} {}'.format(defn_path, defnfile, defnfilepath))
+                with open(defnfilepath, 'r') as file_defn:
+                    defn = json.load(file_defn)
+            merged_defn = utils.merge_dict(merged_defn, defn)
+        return merged_defn
+
 
     def init_default_config(self, config_defn):
         """
@@ -96,11 +106,24 @@ class TVHUserConfig(lib.user_config.UserConfig):
         self.logger = logging.getLogger(__name__)
         self.get_config_path(utils.MAIN_DIR, None)
         self.data['main']['config_file'] = str(self.config_file)
-        
+
+    def init_logger_config(self):
+        log_sections = ['loggers', 'logger_root', 'handlers', 'formatters', 
+            'handler_loghandler', 'formatter_extend', 'formatter_simple']
+        for section in log_sections:
+            self.config_handler.add_section(section)
+            for key, value in self.data[section].items():
+                self.config_handler.set(section, key, str(value))
+            with open(self.data['main']['config_file'], 'w') as config_file:
+                self.config_handler.write(config_file)
+
     def import_config(self):
         self.config_handler.read(self.config_file)
         self.data['main']['config_file'] = str(self.config_file)
-        utils.logging_setup(self.config_file)
+        try:
+            utils.logging_setup(self.config_file)
+        except KeyError:
+            self.init_logger_config()
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading Configuration File: " + str(self.config_file))
         
@@ -145,12 +168,12 @@ class TVHUserConfig(lib.user_config.UserConfig):
 
 
     def validate_list_item(self, _section, _key, _value):
-        for module in list(self.defn_json.keys()):
-            for section in list(self.defn_json[module]['sections'].keys()):
+        for module in list(TVHUserConfig.defn_json.keys()):
+            for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
                 if section == _section:
-                    for setting in list(self.defn_json[module]['sections'][section]['settings'].keys()):
+                    for setting in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].keys()):
                         if setting == _key:
-                            if _value in self.defn_json[module]['sections'][section]['settings'][setting]['values']:
+                            if _value in TVHUserConfig.defn_json[module]['sections'][section]['settings'][setting]['values']:
                                 return True
                             else:
                                 return False
@@ -158,12 +181,12 @@ class TVHUserConfig(lib.user_config.UserConfig):
     
 
     def get_type(self, _section, _key, _value):
-        for module in list(self.defn_json.keys()):
-            for section in list(self.defn_json[module]['sections'].keys()):
+        for module in list(TVHUserConfig.defn_json.keys()):
+            for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
                 if section == _section:
-                    for setting in list(self.defn_json[module]['sections'][section]['settings'].keys()):
+                    for setting in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].keys()):
                         if setting == _key:
-                            return self.defn_json[module]['sections'][section]['settings'][setting]['type']
+                            return TVHUserConfig.defn_json[module]['sections'][section]['settings'][setting]['type']
         return None
 
     def call_function(self, func_str):
@@ -238,9 +261,9 @@ class TVHUserConfig(lib.user_config.UserConfig):
     # removes sensitive data from config and returns a copy
     def filter_config_data(self):
         filtered_config = copy.deepcopy(self.data)
-        for module in list(self.defn_json.keys()):
-            for section in list(self.defn_json[module]['sections'].keys()):
-                for key, settings in list(self.defn_json[module]['sections'][section]['settings'].items()):
+        for module in list(TVHUserConfig.defn_json.keys()):
+            for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
+                for key, settings in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].items()):
                     if settings['level'] == 4:
                         del filtered_config[section][key]
                     elif 'hidden' in settings and settings['hidden']:
@@ -283,7 +306,7 @@ class TVHUserConfig(lib.user_config.UserConfig):
 
     def update_config(self, updated_data):
 
-        for area, area_data in self.defn_json.items():
+        for area, area_data in TVHUserConfig.defn_json.items():
             for section, section_data in area_data['sections'].items():
                 if section not in updated_data:
                     updated_data[section]={}
@@ -353,10 +376,21 @@ class TVHUserConfig(lib.user_config.UserConfig):
                         .format(section, key, updated_data[section][key][0])
         return results
 
+
+    def write(self, section, key, value):
+        self.data[section][key] = value
+        try:
+            self.config_handler.set(section, key, value)
+        except configparser.NoSectionError:
+            self.config_handler.add_section(section)
+            self.config_handler.set(section, key, value)
+        with open(self.config_file, 'w') as config_file:
+            self.config_handler.write(config_file)
+
     def call_oninit(self):
-        for module in list(self.defn_json.keys()):
-            for section in list(self.defn_json[module]['sections'].keys()):
-                for key, settings in list(self.defn_json[module]['sections'][section]['settings'].items()):
+        for module in list(TVHUserConfig.defn_json.keys()):
+            for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
+                for key, settings in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].items()):
                     if 'onInit' in settings:
                         self.call_function(settings['onInit'])
 
