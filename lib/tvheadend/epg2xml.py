@@ -142,7 +142,7 @@ class EPGLocast:
                         if channel_logo is not None:
                             self.sub_el(c_out, 'icon', src=channel_logo)
                     else:
-                        self.logger.debug('EPG: Skipping channel id=%d'.format(sid))
+                        self.logger.debug('EPG: Skipping channel id={} {}'.format(sid, type(sid)))
 
             # Now list Program information
             for channel_item in channel_info:
@@ -254,7 +254,7 @@ class EPGLocast:
                                 self.sub_el(prog_out, 'new')
 
                 else:
-                    self.logger.debug('EPG Skipping channel programming id=%d'.format(sid))
+                    self.logger.debug('EPG Skipping channel programming id={}'.format(sid))
 
         xml_lock = FileLock(out_lock_path)
         with xml_lock:

@@ -4,9 +4,10 @@ import struct
 import logging
 import logging.config
 import datetime
+import requests
 
 
-VERSION = '0.7.5'
+VERSION = '0.8.0'
 MAIN_DIR = None
 
 def get_version_str():
@@ -20,7 +21,8 @@ def logging_setup(config_file):
 
 
 def logging_refresh(config_obj):
-    logging.config.fileConfig(fname=config_obj.config_file)
+    logging.config.fileConfig(fname=config_obj.config_file, disable_existing_loggers=False)
+    resp = requests.get('http://192.168.1.130:5004/logreset')
 
 def noop(config_obj):
     pass
@@ -59,6 +61,20 @@ def is_file_expired(filepath, days=0, hours=0):
     elif (current_time - file_time).days > days:
         return True
     return False
+
+
+def merge_dict(d1, d2):
+    for key in d2:
+        if key in d1:
+            if isinstance(d1[key], dict) and isinstance(d2[key], dict):
+                merge_dict(d1[key], d2[key])
+            elif d1[key] == d2[key]:
+                pass
+            else:
+                raise Exception('Conflict when merging dictionaries {}'.format(str(key)))
+        else:
+            d1[key] = d2[key]
+    return d1
 
 
 # BYTE METHODS

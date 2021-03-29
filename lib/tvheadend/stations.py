@@ -246,7 +246,7 @@ class Stations:
 
         for index, locast_station in enumerate(station_list):
 
-            sid = locast_station['id']
+            sid = str(locast_station['id'])
             final_channel_list[sid] = { 'callSign': locast_station['name'] }
 
             if 'logo226Url' in locast_station.keys():

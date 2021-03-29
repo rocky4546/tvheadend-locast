@@ -36,6 +36,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     config = None
     rmg_station_scans = []
     local_locast = None
+    logger = None
 
 
     def __init__(self, *args):
@@ -50,7 +51,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.buffer_prev_time = None
         self.block_max_pts = 0
         self.small_pkt_streaming = False
-        self.logger = logging.getLogger(__name__)
+        TunerHttpHandler.logger = logging.getLogger(__name__)
         super().__init__(*args)
 
     def log_message(self, format, *args):
@@ -70,6 +71,10 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
             else:
                 self.do_tuning(channel)
+
+        elif content_path.startswith('/logreset'):
+            logging.config.fileConfig(fname=self.config['main']['config_file'], disable_existing_loggers=False)
+            self.do_response(200, 'text/html')
 
         elif content_path.startswith('/watch'):
             sid = content_path.replace('/watch/', '')
