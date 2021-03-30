@@ -41,7 +41,7 @@ class TVHUserConfig(lib.user_config.UserConfig):
     def __init__(self, script_dir=None, opersystem=None, args=None, config=None):
         self.logger = None
         if TVHUserConfig.defn_json is None:
-            TVHUserConfig.defn_json = self.load_config_defn(CONFIG_DEFN_PATH)
+            TVHUserConfig.defn_json = self.load_config_defn(pathlib.Path(script_dir).joinpath(CONFIG_DEFN_PATH))
         self.config_defaults = self.init_default_config(TVHUserConfig.defn_json)
         self.data = copy.deepcopy(self.config_defaults)
         if script_dir is not None:
