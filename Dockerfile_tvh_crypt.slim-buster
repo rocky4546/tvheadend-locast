@@ -27,6 +27,7 @@ RUN apt-get update \
 
 COPY *.py /app/
 COPY cache/ /app/cache/
+COPY data/ /app/data/
 COPY lib/ /app/lib/
 RUN touch /app/is_container
 
