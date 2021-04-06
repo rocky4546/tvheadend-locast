@@ -1,0 +1,181 @@
+{
+    "clients":{
+        "id": null,
+        "icon": "tv",
+        "label": "Clients",
+        "description": "Settings that support different clients",
+        "sections":{
+            "main":{
+                "label": "Main",
+                "icon": "sensor_window",
+                "description": "Contains the general settings for the app",
+                "settings":{
+                    "local_ip":{
+                        "label": "local_ip",
+                        "type": "string",
+                        "default": "0.0.0.0",
+                        "level": 1,
+                        "onInit": "lib.tvheadend.config_callbacks.set_ip",
+                        "help": "Use instead of plex_accessible_ip. 0.0.0.0 means bind to all IPs and use the main IP address for json data"
+                    },
+                    "plex_accessible_ip":{
+                        "label": "plex_accessible_ip",
+                        "type": "string",
+                        "default": "0.0.0.0",
+                        "level": 1,
+                        "writable": false,
+                        "help": "The IP provided to the clients for http requests"
+                    },
+                    "bind_ip":{
+                        "label": "bind_ip",
+                        "type": "string",
+                        "default": "0.0.0.0",
+                        "level": 3,
+                        "writable": false,
+                        "help": null
+                    },
+                    "plex_accessible_port":{
+                        "label": "plex_accessible_port",
+                        "type": "integer",
+                        "default": 5004,
+                        "level": 1,
+                        "help": "Port used to stream. Default is 5004"
+                    },
+                    "web_admin_port":{
+                        "label": "web_admin_port",
+                        "type": "integer",
+                        "default": 6077,
+                        "level": 1,
+                        "help": "Port for main web-site.  TVHeadend can use any port; however, others such as Plex and Emby need it on port 80 for full HDHR compatilibity"
+                    },
+                    "disable_ssdp":{
+                        "label": "disable_ssdp",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 2,
+                        "help": "Not required for TVHeadend.  Needed for Emby, Plex, etc"
+                    },
+                    "verbose":{
+                        "label": "verbose",
+                        "type": "boolean",
+                        "default": false,
+                        "level": 3,
+                        "help": "Used in locast2plex SSDP module."
+                    },
+                    "uuid":{
+                        "label": "UUID",
+                        "type": "string",
+                        "default": null,
+                        "level": 3,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_uuid",
+                        "help": null
+                    },
+                    "reporting_model":{
+                        "label": "reporting_model",
+                        "type": "string",
+                        "default": "HDHR5-4US",
+                        "level": 4,
+                        "help": null
+                    },
+                    "reporting_friendly_name":{
+                        "label": "reporting_friendly_name",
+                        "type": "string",
+                        "default": "Locast Rocky4546",
+                        "level": 4,
+                        "help": null
+                    },
+                    "reporting_firmware_name":{
+                        "label": "reporting_firmware_name",
+                        "type": "string",
+                        "default": "hdhomerun5_atsc",
+                        "level": 4,
+                        "help": null
+                    },
+                    "tuner_type":{
+                        "label": "tuner_type",
+                        "type": "string",
+                        "default": "Antenna",
+                        "level": 4,
+                        "writable": false,
+                        "help": null
+                    }
+                }
+            },
+            "hdhomerun":{
+                "label": "HDHomeRun",
+                "icon": "vignette",
+                "description": "HDHomeRun protocol on port 65001 (partially implemented)",
+                "settings":{
+                    "disable_hdhr":{
+                        "label": "disable_hdhr",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 2,
+                        "help": "Enables HDHR protocol on port 65001. Not required for TVHeadend"
+                    },
+                    "hdhr_id":{
+                        "label": "hdhr_id",
+                        "type": "string",
+                        "default": null,
+                        "level": 2,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_hdhomerun_id",
+                        "help": "Unique CRC-based hex code for this install"
+                    },
+                    "udp_netmask":{
+                        "label": "udp_netmask",
+                        "type": "string",
+                        "default": null,
+                        "level": 2,
+                        "help": "Used to reduce traffic from UDP broadcast messages. Recommend using anetmask filter to a single IP, i.e., 192.168.1.130/32"
+                    }
+                }
+            },
+            "epg":{
+                "label": "EPG",
+                "icon": "tune",
+                "description": "TV Guide or EPG settings",
+                "settings":{
+                    "epg_prefix":{
+                        "label": "epg_prefix",
+                        "type": "string",
+                        "default": "",
+                        "level": 1,
+                        "help": "Used with channel number to order channel list"
+                    },
+                    "epg_suffix":{
+                        "label": "epg_suffix",
+                        "type": "string",
+                        "default": "L",
+                        "level": 1,
+                        "help": "Used with channel number to order channel list"
+                    },
+                    "description":{
+                        "label": "description",
+                        "type": "list",
+                        "default": "extend",
+                        "values": ["normal", "brief", "extend"],
+                        "level": 1,
+                        "help": null
+                    },
+                    "genre":{
+                        "label": "genre",
+                        "type": "list",
+                        "default": "tvheadend",
+                        "values": ["normal", "tvheadend"],
+                        "level": 1,
+                        "help": "TVHeadend uses specific genre to get colors on tv guide"
+                    },
+                    "min_refresh_rate":{
+                        "label": "min_refresh_rate",
+                        "type": "integer",
+                        "default": 14400,
+                        "level": 3,
+                        "help": "Default=4 hours. When a HTTP request for epg data is received, will refresh the data if older than this value."
+                    }
+                }
+            }
+        }
+    }
+}

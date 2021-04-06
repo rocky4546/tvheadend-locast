@@ -27,6 +27,7 @@ except ImportError:
 
 HDHR_PORT = 65001
 HDHR_ADDR = '224.0.0.255'  # multicast to local addresses only
+#HDHR_ADDR = '239.255.255.250'
 SERVER_ID = 'HDHR3'
 HDHOMERUN_TYPE_DISCOVER_REQ = 2
 HDHOMERUN_TYPE_DISCOVER_RSP = 3
@@ -306,7 +307,7 @@ class HDHRServer:
                 device_id = bytes.fromhex('0204' + self.config['hdhomerun']['hdhr_id'])
                 base_url = 'http://' + \
                            self.config['main']['plex_accessible_ip'] + \
-                           ':' + self.config['main']['plex_accessible_port']
+                           ':' + str(self.config['main']['web_admin_port'])
                 base_url_msg = b'\x2a' + utils.set_str(base_url.encode(), False)
                 tuner_count = b'\x10\x01' + utils.set_u8(self.config['main']['tuner_count'])
 

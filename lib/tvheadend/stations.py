@@ -16,15 +16,15 @@ import lib.tvheadend.utils as utils
 fcc_ssl_context = ssl.SSLContext()
 fcc_ssl_context.set_ciphers('HIGH:!DH:!aNULL')
 
-def stations_process(config, locast, location):
+def stations_process(_config, _locast, _location):
     try:
         while True:
-            Stations.config = config
-            Stations.locast = locast
-            Stations.location = location
+            Stations.config = _config
+            Stations.locast = _locast
+            Stations.location = _location
             stations = Stations()
             stations.refresh_dma_stations_and_channels()
-            time.sleep(config["main"]["fcc_delay"])
+            time.sleep(_config["main"]["fcc_delay"])
             # Work in eastern time, since that is what the FCC is using to determine maintenance times
             currentTime = datetime.datetime.now(tz=EST5EDT())
             # if we find we're returning from delay at a time that the FCC is doing maintenance, sleep a bit more...
@@ -42,7 +42,7 @@ def stations_process(config, locast, location):
 
 def check_station_file(_config, _location):
     filepath = _location["DMA"] + "_stations.json"
-    filepath = pathlib.Path(_config["main"]["cache_dir"]).joinpath("stations").joinpath(filepath)
+    filepath = pathlib.Path(_config["paths"]["stations_dir"]).joinpath(filepath)
     if os.path.exists(filepath):
         return True
     else:
@@ -61,7 +61,7 @@ class Stations:
     
     def refresh_dma_stations_and_channels(self):
         filepath = Stations.location["DMA"] + "_stations.json"
-        filepath = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations").joinpath(filepath)
+        filepath = pathlib.Path(Stations.config["paths"]["stations_dir"]).joinpath(filepath)
         if utils.is_file_expired(filepath, days=7):
             fcc_stations = self.get_fcc_stations()
             Stations.dma_channels = self.generate_dma_stations_and_channels_file(fcc_stations)
@@ -148,7 +148,7 @@ class Stations:
 
     def get_fcc_stations(self):
 
-        fcc_cache_dir = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations")
+        fcc_cache_dir = pathlib.Path(Stations.config["paths"]["stations_dir"])
 
         facility_url = 'https://transition.fcc.gov/ftp/Bureaus/MB/Databases/cdbs/facility.zip'
         facility_zip_dl_path = pathlib.Path(fcc_cache_dir).joinpath("facility.zip")
@@ -345,8 +345,8 @@ class Stations:
                 final_channel_list[sid]['friendlyName'] = locast_station['callSign']
 
         dma_channels_list_path = Stations.location["DMA"] + "_stations.json"
-        dma_channels_list_file = pathlib.Path(Stations.config["main"]["cache_dir"]) \
-            .joinpath("stations").joinpath(dma_channels_list_path)
+        dma_channels_list_file = pathlib.Path(Stations.config["paths"]["stations_dir"]) \
+            .joinpath(dma_channels_list_path)
         dma_channels_list_file_lock = FileLock(str(dma_channels_list_file) + ".lock")
 
         with dma_channels_list_file_lock: 
@@ -358,7 +358,7 @@ class Stations:
         if Stations.dma_channels is None:
             channel_list = None
             channel_list_path = Stations.location["DMA"] + "_stations.json"
-            channel_list_file = pathlib.Path(Stations.config["main"]["cache_dir"]).joinpath("stations").joinpath(channel_list_path)
+            channel_list_file = pathlib.Path(Stations.config["paths"]["stations_dir"]).joinpath(channel_list_path)
             channel_list_file_lock = FileLock(str(channel_list_file) + ".lock")
 
             with channel_list_file_lock: 

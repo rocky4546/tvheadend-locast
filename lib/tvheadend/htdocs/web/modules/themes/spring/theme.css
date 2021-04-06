@@ -17,8 +17,9 @@
     --line-size: 0.13em;
     --scrollbar-thumb-background: #857371;
     --drawer-background: #011432;
-    --docked-drawer-background: rgba(0, 0, 0, 0.7);
+    --docked-drawer-background: rgba(0, 0, 0, 0.4);
     --logo-url:  modules/themes/logowhite.png;
+    --theme-button-hover-color: rgba(28, 141, 173, 0.718);
 }
 html {
     color: var(--theme-text-color);
@@ -276,7 +277,7 @@ html {
 }
 @media (hover: hover) and (pointer: fine) {
     .navMenuOption:hover {
-        background: rgba(0, 0, 0, 0.5);
+        background: var(--theme-button-hover-color);
     }
 }
 .navMenuOption-selected {

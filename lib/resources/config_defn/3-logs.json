@@ -1,0 +1,179 @@
+{
+    "general":{
+        "sections":{
+            "freeaccount":{
+                "label": "FreeAccount",
+                "icon": "account_circle",
+                "description": "Setting that pertain to the locast user free account",
+                "settings":{
+                    "min_pkt_rcvd":{
+                        "label": "min_pkt_rcvd",
+                        "type": "integer",
+                        "default": 10,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "max_pkt_rcvd":{
+                        "label": "max_pkt_rcvd",
+                        "type": "integer",
+                        "default": 100,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "pts_minimum":{
+                        "label": "pts_minimum",
+                        "type": "integer",
+                        "default": 10000000,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "pts_max_delta":{
+                        "label": "pts_max_delta",
+                        "type": "integer",
+                        "default": 10000000,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "refresh_rate":{
+                        "label": "refresh_rate",
+                        "type": "integer",
+                        "default": 800,
+                        "level": 3,
+                        "help": "Must be less than 15 minute Locast timeout for free accounts"
+                    }
+                }
+            },
+            "loggers":{
+                "label": "loggers",
+                "icon": "comment",
+                "description": "Python logging settings",
+                "settings":{
+                    "keys":{
+                        "label": "keys",
+                        "type": "string",
+                        "default": "root",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    }
+                }
+            },
+            "logger_root":{
+                "label": "logger_root",
+                "icon": "description",
+                "description": "Python logging settings, including the log level",
+                "settings":{
+                    "level":{
+                        "label": "level",
+                        "type": "list",
+                        "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        "default": "WARNING",
+                        "level": 1,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": "Default is WARNING"
+                    },
+                    "handlers":{
+                        "label": "handlers",
+                        "type": "string",
+                        "default": "loghandler",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    }
+                }
+            },
+            "handlers":{
+                "label": "handlers",
+                "icon": "comment",
+                "description": "Python logging settings",
+                "settings":{
+                    "keys":{
+                        "label": "keys",
+                        "type": "string",
+                        "default": "loghandler",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    }
+                }
+            },
+            "formatters":{
+                "label": "formatters",
+                "icon": "comment",
+                "description": "Python logging formats",
+                "settings":{
+                    "keys":{
+                        "label": "keys",
+                        "type": "string",
+                        "default": "extend,simple",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    }
+                }
+            },
+            "handler_loghandler":{
+                "label": "handler_loghandler",
+                "icon": "comment",
+                "description": "Python logging settings",
+                "settings":{
+                    "class":{
+                        "label": "class",
+                        "type": "string",
+                        "default": "StreamHandler",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    },
+                    "formatter":{
+                        "label": "formatter",
+                        "type": "list",
+                        "values": ["extend", "simple"],
+                        "default": "extend",
+                        "level": 2,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": "Use simple for syslog and extend for file logging"
+                    },
+                    "args":{
+                        "label": "args",
+                        "type": "string",
+                        "default": "(sys.stdout,)",
+                        "level": 4,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": null
+                    }
+                }
+            },
+            "formatter_extend":{
+                "label": "formatter_extend",
+                "icon": "comment",
+                "description": "Python logging setting for standard output",
+                "settings":{
+                    "format":{
+                        "label": "format",
+                        "type": "string",
+                        "default": "%(asctime)s-%(levelname)s:%(module)s %(message)s",
+                        "level": 3,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": "Format for extend logging"
+                    }
+                }
+            },
+            "formatter_simple":{
+                "label": "formatter_simple",
+                "icon": "comment",
+                "description": "Python logging settings for outputs to event log or syslog",
+                "settings":{
+                    "format":{
+                        "label": "format",
+                        "type": "string",
+                        "default": "%(levelname)s:%(module)s %(message)s",
+                        "level": 3,
+                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "help": "Format for simple logging"
+                    }
+                }
+            }
+        }
+    }
+}

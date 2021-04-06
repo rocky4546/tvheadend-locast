@@ -5,9 +5,9 @@ RUN apk add --no-cache --update bash tzdata ffmpeg curl && \
     pip3 install requests && \
     pip install cryptography --no-binary=cryptography && \
     apk del builddeps
+
 COPY *.py /app/
-COPY cache/ /app/cache/
+COPY data/ /app/data/
 COPY lib/ /app/lib/
 RUN touch /app/is_container
-
 ENTRYPOINT ["python3", "/app/tvh_main.py"]

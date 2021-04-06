@@ -125,11 +125,19 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def write_buffer(self, msg):
         self.wfile.write(msg)
 
+    def get_stream_uri(self, sid):
+        if self.config['main']['quiet_print']:
+            utils.block_print()
+        uri = self.locast.get_station_stream_uri(sid)
+        if self.config['main']['quiet_print']:
+            utils.enable_print()
+        return uri
+
     def do_tuning(self, sid):
         # sid is the id for the channel requested
         # with m3u8 redirect, there is no way to know when it is being used
         if self.config['player']['stream_type'] == 'm3u8redirect':
-            channel_uri = self.locast.get_station_stream_uri(sid)
+            channel_uri = self.get_stream_uri(sid)
             if not channel_uri:
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
                
@@ -188,7 +196,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def stream_video(self, sid, station_list):
         if self.config['main']['quiet_print']:
             utils.block_print()
-        channel_uri = self.locast.get_station_stream_uri(sid)
+        channel_uri = self.get_stream_uri(sid)
         if self.config['main']['quiet_print']:
             utils.enable_print()
 
@@ -500,7 +508,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.last_refresh = time.time()
         if self.config['main']['quiet_print']:
             utils.block_print()
-        channel_uri = self.locast.get_station_stream_uri(sid)
+        channel_uri = self.get_stream_uri(sid)
         if self.config['main']['quiet_print']:
             utils.enable_print()
         try:
@@ -532,7 +540,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         return service_name
 
     def open_ffmpeg_proc(self, channel_uri, station_list, sid):
-        ffmpeg_command = [self.config['main']['ffmpeg_path'],
+        ffmpeg_command = [self.config['player']['ffmpeg_path'],
             '-i', str(channel_uri),
             '-c:v', 'copy',
             '-c:a', 'copy',
@@ -552,7 +560,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         duration = 1
         file_filter = None
         self.last_refresh = time.time()
-        stream_uri = self.locast.get_station_stream_uri(sid)
+        stream_uri = self.get_stream_uri(sid)
         self.logger.debug('M3U8: {}'.format(stream_uri))
         if self.config['player']['stream_filter'] is not None:
             file_filter = re.compile(self.config['player']['stream_filter'])
@@ -594,7 +602,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 if added == 0 and duration > 0:
                     time.sleep(duration*0.3)
                 elif self.is_time_to_refresh():
-                    stream_uri = self.locast.get_station_stream_uri(sid)
+                    stream_uri = self.get_stream_uri(sid)
                     self.logger.debug('M3U8: {}'.format(stream_uri))
                     self.last_refresh = time.time()
 
@@ -691,9 +699,10 @@ def start(config, locast, location, hdhr_queue):
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], int(config_obj.data['main']['plex_accessible_port'])))
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
-    utils.logging_setup(config_obj.data['main']['config_file'])
+    utils.logging_setup(config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
+    logger.info('Available tuners={}'.format(config_obj.data['main']['tuner_count']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
         TunerHttpServer(server_socket, config_obj, locast, location, hdhr_queue)
     try:
