@@ -107,31 +107,27 @@ def main(script_dir):
         webadmin = Process(target=web_admin.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
         webadmin.start()
-        time.sleep(2.01)
+        time.sleep(0.1)
 
         logger.info('Starting streaming tuner website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
-            config['main']['web_admin_port']))
+            config['main']['plex_accessible_port']))
         tuner = Process(target=tuner_interface.start, args=(config, locast, 
             location_info.location, hdhr_queue,))
         tuner.start()
-        time.sleep(2.01)
+        time.sleep(0.1)
 
         if not config['main']['disable_ssdp']:
             logger.info('Starting SSDP service on port 1900')
-            if config['main']['quiet_print']:
-                utils.block_print()
             ssdp_serverx = Process(target=ssdp_server.ssdp_process, args=(config,))
             ssdp_serverx.daemon = True
             ssdp_serverx.start()
-            if config['main']['quiet_print']:
-                utils.enable_print()
 
         logger.info('Starting EPG process...')
         epg_server = Thread(target=epg2xml.epg_process, args=(config, location_info.location,))
         #epg_server.daemon = True
         epg_server.start()
-        time.sleep(2.01)
+        time.sleep(0.1)
 
         # START HDHOMERUN
         if not config['hdhomerun']['disable_hdhr']:

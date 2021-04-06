@@ -43,14 +43,14 @@ class EPGLocast:
             clean_exit()
 
     def dummy_xml(self):
-        out_path = pathlib.Path(self.config["main"]["cache_dir"]) \
+        out_path = pathlib.Path(self.config["paths"]["cache_dir"]) \
             .joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml")
         if os.path.exists(out_path):
             return
 
         self.logger.debug('Creating Temporary Empty XMLTV File.')
 
-        base_cache_dir = self.config["main"]["cache_dir"]
+        base_cache_dir = self.config["paths"]["cache_dir"]
 
         cache_dir = pathlib.Path(base_cache_dir).joinpath(str(self.location["DMA"]) + "_epg")
         if not cache_dir.is_dir():
@@ -68,7 +68,7 @@ class EPGLocast:
     def generate_epg_file(self):
 
         hd_channel_list = set([])
-        base_cache_dir = self.config["main"]["cache_dir"]
+        base_cache_dir = self.config["paths"]["cache_dir"]
         out_path = pathlib.Path(base_cache_dir).joinpath(str(self.location["DMA"]) + "_epg").with_suffix(".xml")
         if not utils.is_file_expired(out_path,
                 hours=int(self.config["epg"]["min_refresh_rate"] / 3600)):
@@ -263,7 +263,7 @@ class EPGLocast:
                 f.write(ET.tostring(out, encoding='UTF-8'))
 
     def get_epg(self):
-        epg_path = pathlib.Path(self.config['main']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')
+        epg_path = pathlib.Path(self.config['paths']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')
         if utils.is_file_expired(epg_path,
                 hours=int(self.config['epg']['min_refresh_rate'] / 3600)):
             self.generate_epg_file()

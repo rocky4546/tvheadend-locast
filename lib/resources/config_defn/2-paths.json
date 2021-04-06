@@ -1,0 +1,98 @@
+{
+    "general":{
+        "sections":{
+            "paths":{
+                "label": "Paths",
+                "icon": "perm_media",
+                "description": "Contains the general settings for the web GUI",
+                "settings":{                        
+                    "main_dir":{
+                        "label": "Root Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 0,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_main_path",
+                        "help": "Not changeable. Where App is installed"
+                    },
+                    "data_dir":{
+                        "label": "Data Path",
+                        "type": "path",
+                        "default": "data",
+                        "level": 2,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_data_path",
+                        "help": "Cache and Data storage"
+                    },
+                    "config_file":{
+                        "label": "config.ini file",
+                        "type": "path",
+                        "default": null,
+                        "level": 1,
+                        "writable": false,
+                        "help": "Not changeable. Use --config_file option to change"
+                    },
+                    "cache_dir":{
+                        "label": "Cache Path",
+                        "type": "path",
+                        "default": "data/cache",
+                        "level": 3,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_cache_path",
+                        "help": "Location of temporary files"
+                    },
+                    "stations_dir":{
+                        "label": "Stations Cache Path",
+                        "type": "path",
+                        "default": "data/cache/stations",
+                        "level": 3,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_stations_path",
+                        "help": "Cache path for stations data"
+                    },
+                    "config_defn_dir":{
+                        "label": "Internal Config Definition Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 2,
+                        "writable": false,
+                        "onInit": "lib.tvheadend.config_callbacks.set_configdefn_path",
+                        "help": "Not changeable, Location of the base config definitions"
+                    },
+                    "internal_addons_dir":{
+                        "label": "Main Addons Path",
+                        "type": "path",
+                        "default": "addons",
+                        "level": 1,
+                        "writable": false,
+                        "help": "Location of where the addons are installed"
+                    },
+                    "external_addons_dir":{
+                        "label": "Alternative Addons Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 3,
+                        "writable": false,
+                        "help": "Where other addons are manually placed"
+                    },
+                    "www_dir":{
+                        "label": "WWW Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 3,
+                        "writable": false,
+                        "help": "Where HTML, JS, Image and CSS files are located"
+                    },
+                    "www_cgi_dir":{
+                        "label": "WWW CGI Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 3,
+                        "writable": false,
+                        "help": "Where Python scripts that generate web pages are located"
+                    }
+                }
+            }
+        }
+    }
+}

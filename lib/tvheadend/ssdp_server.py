@@ -30,7 +30,7 @@ def ssdp_process(config):
                   'uuid:' + config["main"]["uuid"] + '::upnp:rootdevice',
                   'upnp:rootdevice',
                   'http://' + config["main"]["plex_accessible_ip"] + ':' +
-                  config["main"]["plex_accessible_port"] + '/device.xml')
+                  str(config["main"]["web_admin_port"]) + '/device.xml')
 
     ssdp.run(config["main"]["bind_ip"])
 
@@ -82,7 +82,7 @@ class SSDPServer:
 
     def datagram_received(self, data, host_port):
         """Handle a received multicast datagram."""
-
+        print("SSDP::",host_port)
         (host, port) = host_port
 
         try:

@@ -9,6 +9,7 @@ import socket
 import re
 import mimetypes
 import json
+import random
 from http.server import HTTPServer
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
@@ -45,18 +46,14 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         self.script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
-        self.ffmpeg_proc = None  # process for running ffmpeg
-        self.block_moving_avg = 0
-        self.bytes_per_read = 0
-        self.last_refresh = None
-        self.block_prev_pts = 0
-        self.block_prev_time = None
-        self.buffer_prev_time = None
-        self.block_max_pts = 0
-        self.small_pkt_streaming = False
-        self.server_instance = -1
         self.logger = logging.getLogger(__name__)
-        super().__init__(*args)
+        try:
+            super().__init__(*args)
+        except ConnectionResetError:
+            self.logger.warning('########## ConnectionResetError occurred')
+            time.sleep(1)
+            super().__init__(*args)
+            
 
     def log_message(self, format, *args):
         self.logger.debug('[%s] %s' % (self.address_string(), format%args))
@@ -65,8 +62,8 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
     def do_GET(self):
         stream_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
         web_admin_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['web_admin_port'])
-        content_path = self.path
-        valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', content_path)
+        valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
+        content_path, query_data = self.get_query_data()
 
         if content_path == '/':
             self.send_response(302)
@@ -179,20 +176,24 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             epg = EPGLocast(self.config, self.location)
             self.do_response(200, 'application/xml', epg.get_epg())
 
-        elif content_path == '/pages/configform.html':
+        elif content_path == '/pages/configform.html' and 'area' in query_data:
             configform = ConfigFormHTML()
-            self.do_response(200, 'text/html', configform.get(self.config_obj.defn_json))
+            form = configform.get(self.config_obj.defn_json, query_data['area'])
+            self.do_response(200, 'text/html', form)
 
         elif content_path == '/pages/index.js':
             indexjs = IndexJS()
             self.do_response(200, 'text/javascript', indexjs.get(self.config))
+
+        elif content_path == '/background':
+            self.send_random_image()
 
         elif valid_check:
             if valid_check and valid_check.group(2) in WebAdminHttpHandler.html_folders:
                 file_path = valid_check.group(1)
                 htdocs_path = pathlib.Path(self.script_dir).joinpath('htdocs')
                 fullfile_path = pathlib.Path(htdocs_path).joinpath(*file_path.split('/'))
-                self.do_file_response(200, fullfile_path, content_path)
+                self.do_file_response(200, fullfile_path)
             else:
                 self.logger.warning('Invalid content. ignoring {}'.format(content_path))
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly formed URL'))
@@ -211,7 +212,10 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
         if self.headers.get('Content-Length') != '0':
             post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
             # if an input is empty, then it will remove it from the list when the dict is gen
-            query_data = urllib.parse.parse_qs(post_data)
+            query_data = urllib.parse.parse_qs(post_data, keep_blank_values=True)
+            for key,value in query_data.items():
+                if value[0] == '':
+                    value[0] = None
 
         # get QUERYSTRING
         if self.path.find('?') != -1:
@@ -271,7 +275,27 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             super().do_POST()
         return
 
-    def do_file_response(self, code, reply_file, content_path):
+    def get_query_data(self):
+        content_path = self.path
+        query_data = {}
+        if self.headers.get('Content-Length') is not None \
+                and self.headers.get('Content-Length') != '0':
+            post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
+            # if an input is empty, then it will remove it from the list when the dict is gen
+            query_data = urllib.parse.parse_qs(post_data)
+
+        if self.path.find('?') != -1:
+            content_path = self.path[0:self.path.find('?')]
+            get_data = self.path[(self.path.find('?') + 1):]
+            get_data_elements = get_data.split('&')
+            for get_data_item in get_data_elements:
+                get_data_item_split = get_data_item.split('=')
+                if len(get_data_item_split) > 1:
+                    query_data[get_data_item_split[0]] = get_data_item_split[1]
+        return content_path, query_data
+
+
+    def do_file_response(self, code, reply_file):
         if reply_file:
             try:
                 f = open(reply_file, 'rb')
@@ -294,7 +318,6 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             except ConnectionAbortedError as e:
                 self.logger.info(e)
             
-
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
         self.send_header('Content-type', mime)
@@ -304,6 +327,34 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.wfile.write(reply_str.encode('utf-8'))
             except BrokenPipeError:
                 self.logger.debug('Client dropped connection before results were sent, ignoring')
+
+    def send_random_image(self):
+        if not self.config['display']['backgrounds']:
+            background = self.config['paths']['main_dir'] \
+                + '/lib/tvheadend/htdocs/web/modules/themes/' \
+                + self.config['display']['theme']
+        else:
+            background = self.config['display']['backgrounds']
+            
+        try:
+            image_found = False
+            count = 0
+            while not image_found:
+                image = random.choice(os.listdir(background))
+                full_image_path = background+'/'+image
+                mime_lookup = mimetypes.guess_type(str(full_image_path))
+                if mime_lookup[0].startswith('image'):
+                    image_found = True
+                else:
+                    count += 1
+                    if count > 5:
+                        self.logger.debug('Image not found at {}'.format(background))
+                        self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Image Not Found'))
+                        return
+            self.do_file_response(200, full_image_path)
+        except FileNotFoundError:
+            self.logger.warning('Background Theme Folder not found')
+            self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Folder Not Found'))
 
     def put_hdhr_queue(self, index, channel, status):
         if not self.config['hdhomerun']['disable_hdhr']:
@@ -384,7 +435,7 @@ def start(config, locast, location, hdhr_queue):
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], config_obj.data['main']['web_admin_port']))
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
-    utils.logging_setup(config_obj.data['main']['config_file'])
+    utils.logging_setup(config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
