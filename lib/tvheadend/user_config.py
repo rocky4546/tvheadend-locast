@@ -12,6 +12,8 @@ import json
 import importlib
 import configparser
 
+from lib.l2p_tools import clean_exit
+
 try:
     import cryptography
     from cryptography.hazmat.backends import default_backend
@@ -28,7 +30,7 @@ import lib.user_config
 import lib.tvheadend.utils as utils
 
 ENCRYPT_STRING = 'ENC::'
-CONFIG_DEFN_PATH = 'data/config_defn'
+CONFIG_DEFN_PATH = 'lib/resources/config_defn'
 
 def get_config(script_dir, opersystem, args):
     return TVHUserConfig(script_dir, opersystem, args)
@@ -38,44 +40,23 @@ class TVHUserConfig(lib.user_config.UserConfig):
 
     defn_json = None
 
-    def __init__(self, script_dir=None, opersystem=None, args=None, config=None):
+    def __init__(self, _script_dir=None, opersystem=None, args=None, config=None):
         self.logger = None
+        self.script_dir = str(_script_dir)
+        self.config_defn_path = CONFIG_DEFN_PATH
         if TVHUserConfig.defn_json is None:
             TVHUserConfig.defn_json = self.load_config_defn(CONFIG_DEFN_PATH)
         self.config_defaults = self.init_default_config(TVHUserConfig.defn_json)
         self.data = copy.deepcopy(self.config_defaults)
-        if script_dir is not None:
-            super().__init__(script_dir, opersystem, args)
-            self.tvh_config_adjustments(opersystem, script_dir)
+        if _script_dir is not None:
+            super().__init__(_script_dir, opersystem, args)
+            self.call_oninit()
         else:
             self.set_config(config)
 
-        # list of functions to call when the variable is updated
-        self.data_functions = {
-            'main': {
-                'epg_update_frequency': utils.noop,
-                'bytes_per_read': utils.noop,
-                'verbose': utils.noop,
-                'quiet_print': utils.noop,
-            },
-            'freeaccount': {
-                'refresh_rate': utils.noop,
-                'min_pkt_rcvd': utils.noop,
-                'max_pkt_rcvd': utils.noop,
-                'pts_minimum': utils.noop,
-                'pts_max_delta': utils.noop,
-            },
-            'logger_root': {
-                'level': utils.logging_refresh,
-            },
-            'handler_loghandler': {
-                'formatter': utils.logging_refresh,
-            }
-        }
-
     def load_config_defn(self, defn_path):
         merged_defn = {}
-        for defnfile in os.listdir(defn_path):
+        for defnfile in sorted(os.listdir(defn_path)):
             defnfilepath = os.path.join(defn_path, defnfile)
             if str(defnfilepath).endswith('.json'):
                 with open(defnfilepath, 'r') as file_defn:
@@ -103,9 +84,7 @@ class TVHUserConfig(lib.user_config.UserConfig):
     def set_config(self, _config):
         self.data = copy.deepcopy(_config)
         self.logger = logging.getLogger(__name__)
-        self.get_config_path(self.data['main']['main_dir'], None)
-        self.data['main']['config_file'] = str(self.config_file)
-        self.config_handler.read(self.config_file)
+        self.config_handler.read(self.data['paths']['config_file'])
 
     def init_logger_config(self):
         log_sections = ['loggers', 'logger_root', 'handlers', 'formatters', 
@@ -114,12 +93,27 @@ class TVHUserConfig(lib.user_config.UserConfig):
             self.config_handler.add_section(section)
             for key, value in self.data[section].items():
                 self.config_handler.set(section, key, str(value))
-            with open(self.data['main']['config_file'], 'w') as config_file:
+            with open(self.data['paths']['config_file'], 'w') as config_file:
                 self.config_handler.write(config_file)
+
+    def get_config_path(self, script_dir, args):
+        
+        if args.cfg:
+            self.config_file = pathlib.Path(str(args.cfg))
+        else:
+            for x in ['data/config.ini', 'config.ini']:
+                poss_config = pathlib.Path(script_dir).joinpath(x)
+                if os.path.exists(poss_config):
+                    self.config_file = poss_config
+                    break
+        if not self.config_file or not os.path.exists(self.config_file):
+            print("Config file missing, Exiting...")
+            clean_exit(1)
+        print("Loading Configuration File: " + str(self.config_file))
 
     def import_config(self):
         self.config_handler.read(self.config_file)
-        self.data['main']['config_file'] = str(self.config_file)
+        self.data['paths']['config_file'] = str(self.config_file)
         try:
             utils.logging_setup(self.config_file)
         except KeyError:
@@ -140,7 +134,7 @@ class TVHUserConfig(lib.user_config.UserConfig):
         if args is not None and args.cfg:
             self.config_file = pathlib.Path(str(args.cfg))
         else:
-            for x in ['config/config.ini', 'config.ini']:
+            for x in ['data/config.ini', 'config.ini']:
                 poss_config = pathlib.Path(script_dir).joinpath(x)
                 if os.path.exists(poss_config):
                     self.config_file = poss_config
@@ -189,11 +183,11 @@ class TVHUserConfig(lib.user_config.UserConfig):
                             return TVHUserConfig.defn_json[module]['sections'][section]['settings'][setting]['type']
         return None
 
-    def call_function(self, func_str):
+    def call_function(self, func_str, section, key):
         mod_name, func_name = func_str.rsplit('.',1)
         mod = importlib.import_module(mod_name)
         func = getattr(mod, func_name)
-        return func(self)
+        return func(self, section, key)
         
 
 
@@ -276,10 +270,7 @@ class TVHUserConfig(lib.user_config.UserConfig):
             if type(current_value) is int:
                 updated_data[section][key][0] = int(updated_data[section][key][0])
             elif type(current_value) is bool:
-                if key in updated_data[section].keys():
-                    updated_data[section][key][0] = utils.str2bool(updated_data[section][key][0])
-                else:
-                    updated_data[section][key] = [False]
+                updated_data[section][key][0] = bool(int(updated_data[section][key][0]))
             elif type(current_value) is str:
                 pass
             elif current_value is None:
@@ -287,11 +278,16 @@ class TVHUserConfig(lib.user_config.UserConfig):
             else:
                 self.logger.debug('unknown value type for [{}][{}]  type is {}'
                     .format(section, key, type(self.data[section][key])))
-
             if self.data[section][key] != updated_data[section][key][0]:
-                updated_data[section][key].append(True)
+                if len(updated_data[section][key]) > 1:
+                    updated_data[section][key][1] = True
+                else:
+                    updated_data[section][key].append(True)
             else:
-                updated_data[section][key].append(False)
+                if len(updated_data[section][key]) > 1:
+                    updated_data[section][key][1] = False
+                else:
+                    updated_data[section][key].append(False)
 
         except KeyError:
             # not found, use default value if available
@@ -305,40 +301,34 @@ class TVHUserConfig(lib.user_config.UserConfig):
                     updated_data[section][key].append(True)
 
     def update_config(self, updated_data):
-
         for area, area_data in TVHUserConfig.defn_json.items():
             for section, section_data in area_data['sections'].items():
-                if section not in updated_data:
-                    updated_data[section]={}
-                for setting, setting_data in section_data['settings'].items():
-                    if setting_data['level'] == 4:
-                        pass
-                    elif 'writable' in setting_data and not setting_data['writable']:
+                if section in updated_data:
+                    for setting, setting_data in section_data['settings'].items():
                         if setting in updated_data[section]:
-                            updated_data[section][setting].append(False)
-                    elif 'hidden' in setting_data and setting_data['hidden'] \
-                            and setting not in updated_data[section]:
-                        pass
-                    else:
-                        self.detect_change(section, setting, updated_data)
+                            if setting_data['level'] == 4:
+                                pass
+                            elif 'writable' in setting_data and not setting_data['writable']:
+                                if setting in updated_data[section]:
+                                    updated_data[section][setting].append(False)
+                            elif 'hidden' in setting_data and setting_data['hidden'] \
+                                    and setting not in updated_data[section]:
+                                self.logger.debug('hidden:{}'.format(setting_data))
+                                pass
+                            else:
+                                self.detect_change(section, setting, updated_data)
 
         # save the changes to config.ini and self.data
         results = '<hr><h3>Status Results</h3><ul>'
         for key in updated_data.keys():
             results += self.save_config_section(key, updated_data)
-        with open(self.data['main']['config_file'], 'w') as config_file:
+        with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
 
         # need to inform things that changes occurred...
         restart = False
-        for section in updated_data.keys():
-            for (key, value) in updated_data[section].items():
-                if value[1]:
-                    try:
-                        self.data_functions[section][key](self)
-                        results += '<li>[{}][{}] implemented</li>'.format(section, key)
-                    except KeyError:
-                        restart = True
+        results += self.call_onchange(updated_data)
+
         if restart:
             results += '</ul><b>Service may need to be restarted if not all changes were implemented</b><hr><br>'
         else:
@@ -392,103 +382,22 @@ class TVHUserConfig(lib.user_config.UserConfig):
             for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
                 for key, settings in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].items()):
                     if 'onInit' in settings:
-                        self.call_function(settings['onInit'])
+                        self.call_function(settings['onInit'], section, key)
 
-    # We make the last adjustments here after super() updates
-    def tvh_config_adjustments(self, opersystem, script_dir):
+    def call_onchange(self, updated_data):
+        results = ''
+        for module in list(TVHUserConfig.defn_json.keys()):
+            for section in list(TVHUserConfig.defn_json[module]['sections'].keys()):
+                if section not in updated_data:
+                    continue
+                for key, settings in list(TVHUserConfig.defn_json[module]['sections'][section]['settings'].items()):
+                    if key in updated_data[section] and \
+                            updated_data[section][key][1] and \
+                            'onChange' in settings:
+                        self.call_function(settings['onChange'], section, key)
+                        results += '<li>[{}][{}] implemented</li>'.format(section, key)
+        return results
 
-        self.call_oninit()
-
-        if not self.data['main']['main_dir']:
-            self.data['main']['main_dir'] = script_dir
-
-        if not self.data['main']['ffmpeg_path']:
-            if opersystem in ['Windows']:
-                base_ffmpeg_dir \
-                    = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
-                self.data['main']['ffmpeg_path'] \
-                    = pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe')
-            else:
-                self.data['main']['ffmpeg_path'] = 'ffmpeg'
-        else:
-            if not os.path.exists(self.data['main']['ffmpeg_path']):
-                if opersystem in ['Windows']:
-                    base_ffmpeg_dir \
-                        = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
-                    self.data['main']['ffmpeg_path'] \
-                        = pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe')
-                else:
-                    self.data['main']['ffmpeg_path'] = 'ffmpeg'
-
-        if not self.data['player']['ffprobe_path']:
-            if opersystem in ['Windows']:
-                base_ffprobe_dir \
-                    = pathlib.Path(script_dir).joinpath('ffmpeg/bin')
-                self.data['player']['ffprobe_path'] \
-                    = pathlib.Path(base_ffprobe_dir).joinpath('ffprobe.exe')
-            else:
-                self.data['player']['ffprobe_path'] = 'ffprobe'
-
-        if self.data['main']['local_ip'] == '0.0.0.0':
-            self.data["main"]['bind_ip'] = '0.0.0.0'
-            self.data['main']['plex_accessible_ip'] \
-                = self.get_ip()
-        else:
-            self.data['main']['bind_ip'] \
-                = self.data['main']['local_ip']
-            self.data['main']['plex_accessible_ip'] \
-                = self.data['main']['local_ip']
-
-        if self.data['hdhomerun']['hdhr_id'] is None:
-            self.data['hdhomerun']['hdhr_id'] \
-                = self.hdhr_gen_device_id()
-            self.write(
-                'hdhomerun', 'hdhr_id',
-                self.data["hdhomerun"]['hdhr_id'])
-        else:
-            if not self.hdhr_validate_device_id(
-                    self.data['hdhomerun']['hdhr_id']):
-                self.data['hdhomerun']['hdhr_id'] \
-                    = self.hdhr_gen_device_id()
-                self.write(
-                    'hdhomerun', 'hdhr_id',
-                    self.data["hdhomerun"]['hdhr_id'])
-
-        if len(self.data["main"]["uuid"]) < 32:
-            self.data["main"]["uuid"] = str(uuid.uuid1()).upper()
-            self.write('main', 'uuid', self.data["main"]["uuid"])
-
-        # changing any types that cause issues with the JSON converter
-        if type(self.data['main']['cache_dir']) is not str:
-            self.data['main']['cache_dir'] \
-                = str(self.data['main']['cache_dir'])
-        if type(self.data['main']['ffmpeg_path']) is not str:
-            self.logger.debug('FFMPEG NOT A STRING')
-            self.data['main']['ffmpeg_path'] \
-                = str(self.data['main']['ffmpeg_path'])
-        if type(self.data['player']['ffprobe_path']) is not str:
-            self.logger.debug('FFPROBE NOT A STRING')
-            self.data['player']['ffprobe_path'] \
-                = str(self.data['player']['ffprobe_path'])
-
-        if CRYPTO_LOADED and self.data['main']['encrypt_key'] is None \
-                and self.data['main']['use_encryption']:
-            self.set_fernet_key()
-            if self.data['main']['locast_password'].startswith(ENCRYPT_STRING):
-                # encrypted
-                self.data['main']['locast_password'] \
-                    = self.decrypt(self.data['main']['locast_password'])
-                if self.data['main']['locast_password'] == 'UNKNOWN':
-                    self.logger.error(
-                        'Unable to decrypt password. ' +
-                        'Try updating password in config file to clear text')
-            else:
-                # not encrypted
-                clear_pwd = self.data['main']['locast_password']
-                encrypted_pwd = self.encrypt(
-                    self.data['main']['locast_password'])
-                self.write('main', 'locast_password', encrypted_pwd)
-                self.data['main']['locast_password'] = clear_pwd
 
     # ###### ENCRYPTION SECTION #######
 

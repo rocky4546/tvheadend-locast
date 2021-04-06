@@ -47,8 +47,26 @@ html {
 }
 
 .backdropContainer-withfulldrawer, .skinBody-withFullDrawer {
-        left: 18.6em !important;
+        left: 18.6em;
 }
+
+@media all and (min-width: 20em) {
+    .backdropContainer-withfulldrawer, .skinBody-withFullDrawer {
+        left: 13em;
+    }
+}
+@media all and (min-width: 40em) {
+    .backdropContainer-withfulldrawer, .skinBody-withFullDrawer {
+        left: 30%;
+    }
+}
+@media all and (min-width: 55em) {
+    .backdropContainer-withfulldrawer, .skinBody-withFullDrawer {
+        left: 18.6em;
+    }
+}
+
+
 
 th {
     font-size:1.3em;

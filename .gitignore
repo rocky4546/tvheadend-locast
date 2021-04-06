@@ -13,6 +13,7 @@ TODO.md
 *.pyc
 config_future.ini
 dev/
+data/
 cache/*_epg
 cache/stations/*_stations.json*
 cache/stations/*_facilities.json*
@@ -26,5 +27,5 @@ ffmpeg/
 #IntelliJ
 .idea/
 tvheadend-locast.iml
-
+test*
 /lib/tvheadend/htdocs/Netbeans/nbproject/private/
