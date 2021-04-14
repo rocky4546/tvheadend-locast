@@ -15,7 +15,7 @@
                         "type": "string",
                         "default": "0.0.0.0",
                         "level": 1,
-                        "onInit": "lib.tvheadend.config_callbacks.set_ip",
+                        "onInit": "lib.config.config_callbacks.set_ip",
                         "help": "Use instead of plex_accessible_ip. 0.0.0.0 means bind to all IPs and use the main IP address for json data"
                     },
                     "plex_accessible_ip":{
@@ -68,7 +68,7 @@
                         "default": null,
                         "level": 3,
                         "writable": false,
-                        "onInit": "lib.tvheadend.config_callbacks.set_uuid",
+                        "onInit": "lib.config.config_callbacks.set_uuid",
                         "help": null
                     },
                     "reporting_model":{
@@ -120,7 +120,7 @@
                         "default": null,
                         "level": 2,
                         "writable": false,
-                        "onInit": "lib.tvheadend.config_callbacks.set_hdhomerun_id",
+                        "onInit": "lib.config.config_callbacks.set_hdhomerun_id",
                         "help": "Unique CRC-based hex code for this install"
                     },
                     "udp_netmask":{

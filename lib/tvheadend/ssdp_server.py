@@ -27,10 +27,10 @@ SERVER_ID = 'HDHomeRun/1.0 UPnP/1.0'
 def ssdp_process(config):
     ssdp = SSDPServer(config)
     ssdp.register('local',
-                  'uuid:' + config["main"]["uuid"] + '::upnp:rootdevice',
-                  'upnp:rootdevice',
-                  'http://' + config["main"]["plex_accessible_ip"] + ':' +
-                  str(config["main"]["web_admin_port"]) + '/device.xml')
+        'uuid:' + config["main"]["uuid"] + '::upnp:rootdevice',
+        'upnp:rootdevice',
+        'http://' + config["main"]["plex_accessible_ip"] + ':' +
+        str(config["main"]["web_admin_port"]) + '/device.xml')
 
     ssdp.run(config["main"]["bind_ip"])
 
@@ -44,10 +44,10 @@ class SSDPServer:
     def __init__(self, _config):
         self.config = _config
         self.sock = None
-        utils.logging_setup(self.config['main']['config_file'])
+        utils.logging_setup(self.config['paths']['config_file'])
         self.logger = logging.getLogger(__name__)
-        
-    def run(self, bind_ip=''):
+
+    def run(self, _bind_ip=''):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if hasattr(socket, "SO_REUSEPORT"):
@@ -82,7 +82,7 @@ class SSDPServer:
 
     def datagram_received(self, data, host_port):
         """Handle a received multicast datagram."""
-        print("SSDP::",host_port)
+        print("SSDP::", host_port)
         (host, port) = host_port
 
         try:
@@ -114,7 +114,7 @@ class SSDPServer:
                 print('Unknown SSDP command %s %s' % (cmd[0], cmd[1]))
 
     def register(self, manifestation, usn, st, location, server=SERVER_ID, cache_control='max-age=1800', silent=False,
-                 host=None):
+        host=None):
         """Register a service or device that this SSDP server will
         respond to."""
 
@@ -128,7 +128,7 @@ class SSDPServer:
         self.known[usn]['USN'] = usn
         self.known[usn]['Ext'] = None
         self.known[usn]['Content-Length'] = 0
-        
+
         self.known[usn]['MANIFESTATION'] = manifestation
         self.known[usn]['SILENT'] = silent
         self.known[usn]['HOST'] = host
@@ -192,7 +192,7 @@ class SSDPServer:
 
         if self.known[usn]['SILENT']:
             return
-        
+
         if self.config['main']['verbose']:
             print('Sending alive notification for %s' % usn)
 

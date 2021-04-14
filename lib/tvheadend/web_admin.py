@@ -10,6 +10,8 @@ import re
 import mimetypes
 import json
 import random
+import importlib
+from importlib import resources
 from http.server import HTTPServer
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
@@ -21,9 +23,9 @@ from lib.templates import templates
 from lib.tvheadend.templates import tvh_templates
 import lib.tvheadend.channels_m3u as channels_m3u
 from lib.tvheadend.epg2xml import EPGLocast
-from lib.tvheadend.user_config import TVHUserConfig
-from lib.tvheadend.pages.configform_html import ConfigFormHTML
-from lib.tvheadend.pages.index_js import IndexJS
+from lib.config.user_config import TVHUserConfig
+from lib.web.pages.configform_html import ConfigFormHTML
+from lib.web.pages.index_js import IndexJS
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
@@ -41,7 +43,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
     locast = None
     location = None
     hdhr_queue = None
-    html_folders = ['web', 'emby', 'images', 'html', 'pages']
+    html_folders = ['modules', 'images', 'html', 'pages']
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -53,13 +55,12 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             self.logger.warning('########## ConnectionResetError occurred')
             time.sleep(1)
             super().__init__(*args)
-            
 
-    def log_message(self, format, *args):
-        self.logger.debug('[%s] %s' % (self.address_string(), format%args))
-
+    def log_message(self, _format, *args):
+        self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
 
     def do_GET(self):
+
         stream_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
         web_admin_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['web_admin_port'])
         valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
@@ -67,7 +68,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
         if content_path == '/':
             self.send_response(302)
-            self.send_header('Location', 'web/index.html')
+            self.send_header('Location', 'html/index.html')
             self.end_headers()
 
         elif content_path == '/favicon.ico':
@@ -143,7 +144,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
                 sid = str(list_key)
                 return_json = return_json + \
-                              tvh_templates['jsonLineup'].format(
+                    tvh_templates['jsonLineup'].format(
                         station_list[sid]['channel'],
                         station_list[sid]['friendlyName'],
                         stream_url + '/watch/' + sid,
@@ -164,7 +165,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
                 sid = str(list_key)
                 return_xml = return_xml + \
-                             tvh_templates['xmlLineup'].format(
+                    tvh_templates['xmlLineup'].format(
                         station_list[sid]['channel'],
                         escape(station_list[sid]['friendlyName']),
                         stream_url + '/watch/' + sid,
@@ -178,7 +179,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
         elif content_path == '/pages/configform.html' and 'area' in query_data:
             configform = ConfigFormHTML()
-            form = configform.get(self.config_obj.defn_json, query_data['area'])
+            form = configform.get(self.config_obj.defn_json.get_defn(query_data['area']), query_data['area'])
             self.do_response(200, 'text/html', form)
 
         elif content_path == '/pages/index.js':
@@ -191,9 +192,10 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
         elif valid_check:
             if valid_check and valid_check.group(2) in WebAdminHttpHandler.html_folders:
                 file_path = valid_check.group(1)
-                htdocs_path = pathlib.Path(self.script_dir).joinpath('htdocs')
-                fullfile_path = pathlib.Path(htdocs_path).joinpath(*file_path.split('/'))
-                self.do_file_response(200, fullfile_path)
+                htdocs_path = self.config["paths"]["www_pkg"]
+                path_list = file_path.split('/')
+                fullfile_path = htdocs_path + '.'.join(path_list[:-1])
+                self.do_file_response(200, fullfile_path, path_list[-1])
             else:
                 self.logger.warning('Invalid content. ignoring {}'.format(content_path))
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly formed URL'))
@@ -201,7 +203,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
         else:
             self.logger.info('UNKNOWN HTTP Request {}'.format(content_path))
             self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
-            #super().do_GET()
+            # super().do_GET()
         return
 
     def do_POST(self):
@@ -213,7 +215,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
             # if an input is empty, then it will remove it from the list when the dict is gen
             query_data = urllib.parse.parse_qs(post_data, keep_blank_values=True)
-            for key,value in query_data.items():
+            for key, value in query_data.items():
                 if value[0] == '':
                     value[0] = None
 
@@ -231,16 +233,18 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             if self.config['main']['disable_web_config']:
                 self.do_response(501, 'text/html', templates['htmlError']
                     .format('501 - Config pages disabled. '
-                    'Set [main][disable_web_config] to False in the config file to enable'))
+                            'Set [main][disable_web_config] to False in the config file to enable'))
             else:
                 # Take each key and make a [section][key] to store the value
                 config_changes = {}
+                area = query_data['area'][0]
+                del query_data['area']
                 for key in query_data:
                     key_pair = key.split('-')
                     if key_pair[0] not in config_changes:
                         config_changes[key_pair[0]] = {}
                     config_changes[key_pair[0]][key_pair[1]] = query_data[key]
-                results = self.config_obj.update_config(config_changes)
+                results = self.config_obj.update_config(area, config_changes)
                 self.do_response(200, 'text/html', results)
 
         elif content_path == '/lineup.post':
@@ -269,8 +273,8 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     templates['htmlError'].format(
                         query_data['scan'] + ' is not a valid scan command'))
         elif content_path.startswith('/emby/Sessions/Capabilities/Full'):
-                self.do_response(204, 'text/html')
-        
+            self.do_response(204, 'text/html')
+
         else:
             super().do_POST()
         return
@@ -294,18 +298,15 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
         return content_path, query_data
 
-
-    def do_file_response(self, code, reply_file):
+    def do_file_response(self, code, package, reply_file):
         if reply_file:
             try:
-                f = open(reply_file, 'rb')
-                mime_lookup = mimetypes.guess_type(str(reply_file))
+                x = importlib.resources.read_binary(package, reply_file)
+                mime_lookup = mimetypes.guess_type(reply_file)
                 self.send_response(code)
                 self.send_header('Content-type', mime_lookup[0])
                 self.end_headers()
-                x = f.read()
                 self.wfile.write(x)
-                f.close()
             except IsADirectoryError as e:
                 self.logger.info(e)
                 self.do_response(401, 'text/html', templates['htmlError'].format('401 - Unauthorized'))
@@ -317,7 +318,10 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.do_response(404, 'text/html', templates['htmlError'].format('404 - Folder Not Found'))
             except ConnectionAbortedError as e:
                 self.logger.info(e)
-            
+            except ModuleNotFoundError as e:
+                self.logger.info(e)
+                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Area Not Found'))
+
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
         self.send_header('Content-type', mime)
@@ -330,36 +334,46 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
     def send_random_image(self):
         if not self.config['display']['backgrounds']:
-            background = self.config['paths']['main_dir'] \
-                + '/lib/tvheadend/htdocs/web/modules/themes/' \
-                + self.config['display']['theme']
+            background_dir = self.config['paths']['themes_pkg'] + '.' + \
+                             self.config['display']['theme']
+            image_list = list(importlib.resources.contents(background_dir))
+            image_found = False
+            while not image_found:
+                image = random.choice(image_list)
+                mime_lookup = mimetypes.guess_type(image)
+                if mime_lookup[0] is not None and \
+                        mime_lookup[0].startswith('image'):
+                    image_found = True
+            self.do_file_response(200, background_dir, image)
+
         else:
             background = self.config['display']['backgrounds']
-            
-        try:
-            image_found = False
-            count = 0
-            while not image_found:
-                image = random.choice(os.listdir(background))
-                full_image_path = background+'/'+image
-                mime_lookup = mimetypes.guess_type(str(full_image_path))
-                if mime_lookup[0].startswith('image'):
-                    image_found = True
-                else:
-                    count += 1
-                    if count > 5:
-                        self.logger.debug('Image not found at {}'.format(background))
-                        self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Image Not Found'))
-                        return
-            self.do_file_response(200, full_image_path)
-        except FileNotFoundError:
-            self.logger.warning('Background Theme Folder not found')
-            self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Folder Not Found'))
+            try:
+                image_found = False
+                count = 0
+                while not image_found:
+                    image = random.choice(os.listdir(background))
+                    full_image_path = pathlib.Path(background).joinpath(image)
+                    mime_lookup = mimetypes.guess_type(str(full_image_path))
+                    if mime_lookup[0].startswith('image'):
+                        image_found = True
+                    else:
+                        count += 1
+                        if count > 5:
+                            self.logger.debug('Image not found at {}'.format(background))
+                            self.do_response(404, 'text/html',
+                                templates['htmlError'].format('404 - Background Image Not Found'))
+                            return
+                self.do_file_response(200, full_image_path)
+            except FileNotFoundError:
+                self.logger.warning('Background Theme Folder not found')
+                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Folder Not Found'))
 
     def put_hdhr_queue(self, index, channel, status):
         if not self.config['hdhomerun']['disable_hdhr']:
             WebAdminHttpHandler.hdhr_queue.put(
                 {'tuner': index, 'channel': channel, 'status': status})
+
 
 class WebAdminHttpServer(Thread):
 
@@ -421,6 +435,7 @@ def FactoryWebAdminHttpHandler(index):
     class CustomWebAdminHttpHandler(WebAdminHttpHandler):
         def __init__(self, *args, **kwargs):
             super(CustomWebAdminHttpHandler, self).__init__(*args, **kwargs)
+
     return CustomWebAdminHttpHandler
 
 
@@ -429,6 +444,7 @@ def start(config, locast, location, hdhr_queue):
     main starting point for all classes and services in this file.  
     Called from main.
     """
+
     config_copy = copy.deepcopy(config)
     config_obj = TVHUserConfig(config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -437,7 +453,8 @@ def start(config, locast, location, hdhr_queue):
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
     utils.logging_setup(config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
-    logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
+    logger.debug(
+        'Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
         WebAdminHttpServer(server_socket, config_obj, locast, location, hdhr_queue, i)
     try:
