@@ -446,7 +446,7 @@ def start(config, locast, location, hdhr_queue):
     """
 
     config_copy = copy.deepcopy(config)
-    config_obj = TVHUserConfig(config=config_copy)
+    config_obj = TVHUserConfig(_config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], config_obj.data['main']['web_admin_port']))

@@ -693,8 +693,8 @@ def start(_config, _locast, _location, _hdhr_queue):
     main starting point for all classes and services in this file.  
     Called from main.
     """
-    config_copy = copy.deepcopy(config)
-    config_obj = TVHUserConfig(config=config_copy)
+    config_copy = copy.deepcopy(_config)
+    config_obj = TVHUserConfig(_config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((config_obj.data['main']['bind_ip'], int(config_obj.data['main']['plex_accessible_port'])))
