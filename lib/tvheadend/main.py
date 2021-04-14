@@ -1,6 +1,6 @@
 import sys
 import time
-import platform 
+import platform
 import argparse
 import logging
 from threading import Thread
@@ -10,10 +10,11 @@ import lib.tvheadend.locast_service as locast_service
 import lib.tvheadend.ssdp_server as ssdp_server
 import lib.tvheadend.tuner_interface as tuner_interface
 import lib.tvheadend.web_admin as web_admin
-import lib.tvheadend.stations as stations 
+import lib.tvheadend.stations as stations
 import lib.location as location
 import lib.tvheadend.utils as utils
 import lib.tvheadend.epg2xml as epg2xml
+import lib.plugins.plugin_handler as plugin_handler
 import lib.tvheadend.hdhr_server as hdhr_server
 from lib.l2p_tools import clean_exit
 
@@ -27,10 +28,8 @@ try:
 except ImportError:
     # pip.main(['install', 'cryptography'])
     print('Unable to load cryptography module, will not encrypt passwords')
-    
 
-import lib.tvheadend.user_config as user_config
-
+import lib.config.user_config as user_config
 
 if sys.version_info.major == 2 or sys.version_info < (3, 6):
     print('Error: Locast2Plex requires python 3.6+.')
@@ -44,9 +43,12 @@ def get_args():
 
 
 def main(script_dir):
-
     """ main startup method for app """
-    
+    hdhr_serverx = None
+    ssdp_serverx = None
+    webadmin = None
+    tuner = None
+
     # Gather args
     args = get_args()
 
@@ -62,6 +64,10 @@ def main(script_dir):
         clean_exit(1)
 
     logger.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
+
+    logger.info('Getting Plugins...')
+    plugins = plugin_handler.PluginHandler(config_obj)
+
     if config['main']['quiet_print']:
         utils.block_print()
     location_info = location.DMAFinder(config)
@@ -95,7 +101,7 @@ def main(script_dir):
     try:
         logger.info('Starting Stations thread...')
         stations_server = Thread(target=stations.stations_process, args=(config, locast, location_info.location,))
-        #stations_server.daemon = True
+        # stations_server.daemon = True
         stations_server.start()
         while not stations.check_station_file(config, location_info.location):
             time.sleep(1)
@@ -104,16 +110,16 @@ def main(script_dir):
         logger.info('Starting admin website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
             config['main']['web_admin_port']))
-        webadmin = Process(target=web_admin.start, args=(config, locast, 
-            location_info.location, hdhr_queue,))
+        webadmin = Process(target=web_admin.start, args=(config, locast,
+        location_info.location, hdhr_queue,))
         webadmin.start()
         time.sleep(0.1)
 
         logger.info('Starting streaming tuner website on {}:{}'.format(
             config['main']['plex_accessible_ip'],
             config['main']['plex_accessible_port']))
-        tuner = Process(target=tuner_interface.start, args=(config, locast, 
-            location_info.location, hdhr_queue,))
+        tuner = Process(target=tuner_interface.start, args=(config, locast,
+        location_info.location, hdhr_queue,))
         tuner.start()
         time.sleep(0.1)
 
@@ -125,7 +131,7 @@ def main(script_dir):
 
         logger.info('Starting EPG process...')
         epg_server = Thread(target=epg2xml.epg_process, args=(config, location_info.location,))
-        #epg_server.daemon = True
+        # epg_server.daemon = True
         epg_server.start()
         time.sleep(0.1)
 
@@ -145,14 +151,18 @@ def main(script_dir):
 
     except KeyboardInterrupt:
         logger.info('^C received, shutting down the server')
-        if not config['hdhomerun']['disable_hdhr']:
+        if not config['hdhomerun']['disable_hdhr'] and hdhr_serverx:
             hdhr_serverx.terminate()
             hdhr_serverx.join()
-        if not config['main']['disable_ssdp']:
+        if not config['main']['disable_ssdp'] and ssdp_serverx:
             ssdp_serverx.terminate()
             ssdp_serverx.join()
-        webadmin.terminate()
-        webadmin.join()
-        tuner.terminate()
-        tuner.join()
+        if webadmin:
+            webadmin.terminate()
+            webadmin.join()
+        if tuner:
+            tuner.terminate()
+            tuner.join()
+        if config_obj:
+            config_obj.defn_json.terminate()
         clean_exit()

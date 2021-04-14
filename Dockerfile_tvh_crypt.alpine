@@ -7,7 +7,7 @@ RUN apk add --no-cache --update bash tzdata ffmpeg curl && \
     apk del builddeps
 
 COPY *.py /app/
-COPY data/ /app/data/
 COPY lib/ /app/lib/
+COPY plugins /app/plugins
 RUN touch /app/is_container
 ENTRYPOINT ["python3", "/app/tvh_main.py"]

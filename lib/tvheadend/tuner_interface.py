@@ -13,6 +13,7 @@ import socket
 import re
 import json
 import traceback
+from logging import config
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 from collections import OrderedDict
@@ -21,7 +22,7 @@ import lib.m3u8 as m3u8
 import lib.tvheadend.stations as stations
 from lib.templates import templates
 import lib.tvheadend.utils as utils
-from lib.tvheadend.user_config import TVHUserConfig
+from lib.config.user_config import TVHUserConfig
 from lib.tvheadend.atsc import ATSCMsg
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
@@ -38,7 +39,6 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     local_locast = None
     logger = None
 
-
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         self.script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
@@ -54,9 +54,9 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         TunerHttpHandler.logger = logging.getLogger(__name__)
         super().__init__(*args)
 
-    def log_message(self, format, *args):
-        self.logger.debug('[%s] %s' % (self.address_string(), format%args))
-        
+    def log_message(self, _format, *args):
+        self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
+
     def do_GET(self):
         base_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
         content_path = self.path
@@ -73,7 +73,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.do_tuning(channel)
 
         elif content_path.startswith('/logreset'):
-            logging.config.fileConfig(fname=self.config['main']['config_file'], disable_existing_loggers=False)
+            logging.config.fileConfig(fname=self.config['paths']['config_file'], disable_existing_loggers=False)
             self.do_response(200, 'text/html')
 
         elif content_path.startswith('/watch'):
@@ -140,7 +140,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
             channel_uri = self.get_stream_uri(sid)
             if not channel_uri:
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
-               
+
             self.send_response(302)
             self.send_header('Location', channel_uri)
             self.end_headers()
@@ -600,7 +600,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                         added += 1
 
                 if added == 0 and duration > 0:
-                    time.sleep(duration*0.3)
+                    time.sleep(duration * 0.3)
                 elif self.is_time_to_refresh():
                     stream_uri = self.get_stream_uri(sid)
                     self.logger.debug('M3U8: {}'.format(stream_uri))
@@ -618,7 +618,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                             self.logger.warning(f"Segment {uri} not available. Skipping..")
                             continue
                         atsc_msg = ATSCMsg()
-                        chunk_updated = atsc_msg.update_sdt_names(chunk[:80], b'Locast', 
+                        chunk_updated = atsc_msg.update_sdt_names(chunk[:80], b'Locast',
                             self.set_service_name(station_list, sid).encode())
                         chunk = chunk_updated + chunk[80:]
                         duration = data['duration']
@@ -688,7 +688,7 @@ def FactoryHttpHandler():
     return CustomHttpHandler
 
 
-def start(config, locast, location, hdhr_queue):
+def start(_config, _locast, _location, _hdhr_queue):
     """
     main starting point for all classes and services in this file.  
     Called from main.
@@ -701,10 +701,11 @@ def start(config, locast, location, hdhr_queue):
     server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
     utils.logging_setup(config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
-    logger.debug('Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
+    logger.debug(
+        'Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
     logger.info('Available tuners={}'.format(config_obj.data['main']['tuner_count']))
     for i in range(int(config_obj.data['main']['concurrent_listeners'])):
-        TunerHttpServer(server_socket, config_obj, locast, location, hdhr_queue)
+        TunerHttpServer(server_socket, config_obj, _locast, _location, _hdhr_queue)
     try:
         while True:
             time.sleep(3600)
