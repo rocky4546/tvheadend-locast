@@ -53,7 +53,7 @@
                         "type": "string",
                         "default": "root",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     }
                 }
@@ -69,7 +69,7 @@
                         "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
                         "default": "WARNING",
                         "level": 1,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": "Default is WARNING"
                     },
                     "handlers":{
@@ -77,7 +77,7 @@
                         "type": "string",
                         "default": "loghandler",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     }
                 }
@@ -92,7 +92,7 @@
                         "type": "string",
                         "default": "loghandler",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     }
                 }
@@ -107,7 +107,7 @@
                         "type": "string",
                         "default": "extend,simple",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     }
                 }
@@ -122,7 +122,7 @@
                         "type": "string",
                         "default": "StreamHandler",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     },
                     "formatter":{
@@ -131,7 +131,7 @@
                         "values": ["extend", "simple"],
                         "default": "extend",
                         "level": 2,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": "Use simple for syslog and extend for file logging"
                     },
                     "args":{
@@ -139,7 +139,7 @@
                         "type": "string",
                         "default": "(sys.stdout,)",
                         "level": 4,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
                     }
                 }
@@ -154,7 +154,7 @@
                         "type": "string",
                         "default": "%(asctime)s-%(levelname)s:%(module)s %(message)s",
                         "level": 3,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": "Format for extend logging"
                     }
                 }
@@ -169,7 +169,7 @@
                         "type": "string",
                         "default": "%(levelname)s:%(module)s %(message)s",
                         "level": 3,
-                        "onChange": "lib.tvheadend.config_callbacks.logging_refresh",
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": "Format for simple logging"
                     }
                 }

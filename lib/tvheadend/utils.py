@@ -4,9 +4,10 @@ import struct
 import logging
 import logging.config
 import datetime
-
+import socket
 
 VERSION = '0.8.0-alpha'
+
 
 def get_version_str():
     return VERSION
@@ -25,14 +26,13 @@ def block_print():
 def enable_print():
     sys.stdout = sys.__stdout__
 
-    
+
 def str2bool(s):
     return str(s).lower() in ['true', '1', 'yes', 'on']
 
 
-
 def tm_parse(tm):
-    tm_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=tm/1000)
+    tm_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=tm / 1000)
     tm = str(tm_date.strftime('%Y%m%d%H%M%S +0000'))
     return tm
 
@@ -43,25 +43,40 @@ def is_file_expired(filepath, days=0, hours=0):
     current_time = datetime.datetime.utcnow()
     file_time = datetime.datetime.utcfromtimestamp(os.path.getmtime(filepath))
     if days == 0:
-        if int((current_time - file_time).total_seconds()/3600) > hours:
+        if int((current_time - file_time).total_seconds() / 3600) > hours:
             return True
     elif (current_time - file_time).days > days:
         return True
     return False
 
 
-def merge_dict(d1, d2):
+def merge_dict(d1, d2, override=False, ignore_conflicts=False):
     for key in d2:
         if key in d1:
             if isinstance(d1[key], dict) and isinstance(d2[key], dict):
-                merge_dict(d1[key], d2[key])
+                merge_dict(d1[key], d2[key], override, ignore_conflicts)
             elif d1[key] == d2[key]:
                 pass
-            else:
+            elif override:
+                d1[key] = d2[key]
+            elif not ignore_conflicts:
                 raise Exception('Conflict when merging dictionaries {}'.format(str(key)))
         else:
             d1[key] = d2[key]
     return d1
+
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.255.255.255', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
 
 
 # BYTE METHODS
@@ -86,6 +101,6 @@ def set_u64(integer):
 def set_str(string, add_null):
     # places the length in a single byte, the string and then a null byte if add_null is true
     if add_null:
-        return struct.pack('B%dsB' % (len(string)), len(string)+1, string, 0)
+        return struct.pack('B%dsB' % (len(string)), len(string) + 1, string, 0)
     else:
         return struct.pack('B%ds' % (len(string)), len(string), string)

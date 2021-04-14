@@ -2,7 +2,7 @@ import lib.tvheadend.stations as stations
 from io import StringIO
 
 
-def get_channels_m3u(config, base_url):
+def get_channels_m3u(_config, _base_url):
 
     format_descriptor = '#EXTM3U'
     record_marker = '#EXTINF'
@@ -25,14 +25,14 @@ def get_channels_m3u(config, base_url):
                 'tvg-id=\'' + sid + '\' ' +
                 (('tvg-logo=\'' + station_list[sid]['logoUrl'] + '\' ')
                     if 'logoUrl' in station_list[sid].keys() else '') +
-                'group-title=\'Locast\',' + set_service_name(config, station_list, sid)
+                'group-title=\'Locast\',' + set_service_name(_config, station_list, sid)
             )
         )
         fakefile.write(
             '%s\n' % (
                 (
                     '%s%s/watch/%s' %
-                    ('http://', base_url, str(sid))
+                    ('http://', _base_url, str(sid))
                 )
             )
         )

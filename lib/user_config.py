@@ -10,8 +10,7 @@ def get_config(script_dir, opersystem, args):
     return UserConfig(script_dir, opersystem, args).data
 
 
-class UserConfig():
-
+class UserConfig:
     config_file = None
     config_handler = configparser.ConfigParser(interpolation=None)
     script_dir = None
@@ -26,7 +25,7 @@ class UserConfig():
             "locast_username": None,
             "locast_password": None,
             'disable_ssdp': False,
-            'epg_update_frequency': 43200, # 12 hours
+            'epg_update_frequency': 43200,  # 12 hours
             'epg_update_days': 7,
             'override_latitude': None,
             'override_longitude': None,
@@ -44,12 +43,10 @@ class UserConfig():
         }
     }
 
-
     def __init__(self, script_dir, opersystem, args):
         self.get_config_path(script_dir, args)
         self.import_config()
         self.config_adjustments(opersystem, script_dir)
-
 
     def get_config_path(self, script_dir, args):
         if args.cfg:
@@ -66,13 +63,11 @@ class UserConfig():
             clean_exit(1)
         print("Loading Configuration File: " + str(self.config_file))
 
-
     def import_config(self):
         self.config_handler.read(self.config_file)
         for each_section in self.config_handler.sections():
             for (each_key, each_val) in self.config_handler.items(each_section):
                 self.data[each_section.lower()][each_key.lower()] = each_val
-
 
     def write(self, section, key, value):
         self.data[section][key] = value
@@ -80,7 +75,6 @@ class UserConfig():
 
         with open(self.config_file, 'w') as config_file:
             self.config_handler.write(config_file)
-
 
     def config_adjustments(self, opersystem, script_dir):
 
@@ -102,11 +96,3 @@ class UserConfig():
         print("Server is set to run on  " +
               str(self.data["main"]["plex_accessible_ip"]) + ":" +
               str(self.data["main"]["plex_accessible_port"]))
-
-        if (self.data["main"]["override_latitude"] is not None) and (self.data["main"]["override_longitude"] is not None):
-            self.data["main"]["mock_location"] = {
-                "latitude": self.data["main"]["override_latitude"],
-                "longitude": self.data["main"]["override_longitude"]
-            }
-
-

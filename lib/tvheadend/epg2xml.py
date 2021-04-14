@@ -7,7 +7,8 @@ import pathlib
 import logging
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
+import urllib.error
+from xml.etree import ElementTree
 
 import lib.tvheadend.stations as stations
 import lib.tvheadend.utils as utils
@@ -56,14 +57,14 @@ class EPGLocast:
         if not cache_dir.is_dir():
             cache_dir.mkdir()
 
-        out = ET.Element('tv')
+        out = ElementTree.Element('tv')
         out.set('source-info-url', 'https://www.locast.org')
         out.set('source-info-name', 'locast.org')
         out.set('generator-info-name', 'locastepg')
         out.set('generator-info-url', 'github.com/rocky4546/tvheadend-locast')
         with open(out_path, 'wb') as f:
             f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-            f.write(ET.tostring(out, encoding='UTF-8'))
+            f.write(ElementTree.tostring(out, encoding='UTF-8'))
 
     def generate_epg_file(self):
 
@@ -92,7 +93,7 @@ class EPGLocast:
 
         self.remove_stale_cache(cache_dir, todaydate)
 
-        out = ET.Element('tv')
+        out = ElementTree.Element('tv')
         out.set('source-info-url', 'https://www.locast.org')
         out.set('source-info-name', 'locast.org')
         out.set('generator-info-name', 'locastepg')
@@ -236,7 +237,7 @@ class EPGLocast:
 
                         if 'rating' not in event.keys():
                             event['rating'] = "N/A"
-                        r = ET.SubElement(prog_out, 'rating')
+                        r = ElementTree.SubElement(prog_out, 'rating')
                         self.sub_el(r, 'value', text=event['rating'])
 
                         if 'seasonNumber' in event.keys() and 'episodeNumber' in event.keys():
@@ -260,7 +261,7 @@ class EPGLocast:
         with xml_lock:
             with open(out_path, 'wb') as f:
                 f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-                f.write(ET.tostring(out, encoding='UTF-8'))
+                f.write(ElementTree.tostring(out, encoding='UTF-8'))
 
     def get_epg(self):
         epg_path = pathlib.Path(self.config['paths']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')
@@ -273,16 +274,16 @@ class EPGLocast:
                 return_str = epg_file.read().decode('utf-8')
         return return_str
 
-    def get_cached(self, cache_dir, cache_key, url):
-        cache_path = cache_dir.joinpath(cache_key + '.json')
+    def get_cached(self, _cache_dir, _cache_key, _url):
+        cache_path = _cache_dir.joinpath(_cache_key + '.json')
         if cache_path.is_file():
             self.logger.debug('FROM CACHE:' + str(cache_path))
             with open(cache_path, 'rb') as f:
                 return f.read()
         else:
-            self.logger.debug('Fetching:  ' + url)
+            self.logger.debug('Fetching:  ' + _url)
             try:
-                resp = urllib.request.urlopen(url)
+                resp = urllib.request.urlopen(_url)
                 result = resp.read()
             except urllib.error.HTTPError as e:
                 if e.code == 400:
@@ -319,7 +320,7 @@ class EPGLocast:
         return dt_str
 
     def sub_el(self, parent, name, text=None, **kwargs):
-        el = ET.SubElement(parent, name, **kwargs)
+        el = ElementTree.SubElement(parent, name, **kwargs)
         if text:
             el.text = text
         return el

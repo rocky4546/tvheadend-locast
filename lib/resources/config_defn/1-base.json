@@ -26,7 +26,7 @@
                         "values": ["appletv", "black", "blueradiance", 
                             "dark", "dark-red", "halloween", "holiday", 
                             "light", "light-blue", "light-pink", 
-                            "light-purple", "light-red", "spring", "random", "wmc"],
+                            "light-purple", "light-red", "spring", "wmc"],
                         "level": 0,
                         "help": "Changes the way the page appears"
                     },
@@ -50,7 +50,7 @@
                         "default": null,
                         "level": 1,
                         "writable": false,
-                        "onInit": "lib.tvheadend.config_callbacks.set_version",
+                        "onInit": "lib.config.config_callbacks.set_version",
                         "help": "Current version installed"
                     },
                     "tuner_count":{
