@@ -58,7 +58,9 @@
                         "type": "integer",
                         "default": 4,
                         "level": 2,
-                        "help": "Number of streams active at one time."
+                        "onInit": "lib.config.config_callbacks.check_value_4",
+                        "onChange": "lib.config.config_callbacks.check_value_4",
+                        "help": "Number of streams active at one time. Between 1 and 4"
                     },
                     "concurrent_listeners":{
                         "label": "concurrent_listeners",
