@@ -1,3 +1,16 @@
+'''
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+'''
+
 import sys
 import time
 import platform
@@ -7,18 +20,14 @@ from threading import Thread
 from multiprocessing import Queue, Process
 
 
-from lib.l2p_tools import clean_exit
+from lib.tvheadend.utils import clean_exit
 
-import lib.tvheadend.locast_service as locast_service
 import lib.tvheadend.ssdp_server as ssdp_server
-import lib.tvheadend.stations as stations
 import lib.tvheadend.utils as utils
-import lib.tvheadend.epg2xml as epg2xml
 import lib.tvheadend.hdhr_server as hdhr_server
 import lib.clients.web_tuner as web_tuner
 import lib.clients.web_admin as web_admin
 import lib.plugins.plugin_handler as plugin_handler
-import lib.location as location
 import lib.config.config_defn as config_defn
 
 try:
@@ -66,6 +75,7 @@ def main(script_dir):
         logger.critical("No password available.  Terminating process")
         clean_exit(1)
 
+    logger.warning('MIT License, Copyright (C) 2021 ROCKY4546')
     logger.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
 
     logger.info('Getting Plugins...')

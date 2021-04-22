@@ -1,3 +1,16 @@
+'''
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+'''
+
 import os
 import urllib
 import copy
@@ -11,17 +24,14 @@ import mimetypes
 import json
 import random
 import importlib
-from http.server import HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
 
-import lib.tuner_interface
-import lib.tvheadend.stations as stations
 import lib.tvheadend.utils as utils
 import lib.clients.channels as channels
 from lib.clients.epg2xml import EPG
 
-from lib.templates import templates
 from lib.tvheadend.templates import tvh_templates
 from lib.config.user_config import TVHUserConfig
 from lib.web.pages.configform_html import ConfigFormHTML
@@ -32,7 +42,7 @@ from lib.db.db_plugins import DBPlugins
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
 
-class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
+class WebAdminHttpHandler(BaseHTTPRequestHandler):
     # class variables
     # Either None or the UDP target
     # defines when the UDP stream is terminated for each instance of the http server
@@ -119,7 +129,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
         elif content_path == '/config.json':
             if self.config['main']['disable_web_config']:
-                self.do_response(501, 'text/html', templates['htmlError']
+                self.do_response(501, 'text/html', tvh_templates['htmlError']
                     .format('501 - Config pages disabled.'
                             ' Set [main][disable_web_config] to False in the config file to enable'))
             else:
@@ -166,11 +176,11 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.do_file_response(200, fullfile_path, path_list[-1])
             else:
                 self.logger.warning('Invalid content. ignoring {}'.format(content_path))
-                self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly formed URL'))
+                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Badly formed URL'))
 
         else:
             self.logger.info('UNKNOWN HTTP Request {}'.format(content_path))
-            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
+            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
             # super().do_GET()
         return
 
@@ -200,7 +210,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
         if content_path == '/pages/configform.html':
             if self.config['main']['disable_web_config']:
-                self.do_response(501, 'text/html', templates['htmlError']
+                self.do_response(501, 'text/html', tvh_templates['htmlError']
                     .format('501 - Config pages disabled. '
                             'Set [main][disable_web_config] to False in the config file to enable'))
             else:
@@ -239,7 +249,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             else:
                 self.logger.warning("Unknown scan command " + query_data['scan'])
                 self.do_response(400, 'text/html',
-                    templates['htmlError'].format(
+                    tvh_templates['htmlError'].format(
                         query_data['scan'] + ' is not a valid scan command'))
         elif content_path.startswith('/emby/Sessions/Capabilities/Full'):
             self.do_response(204, 'text/html')
@@ -304,18 +314,18 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.wfile.write(x)
             except IsADirectoryError as e:
                 self.logger.info(e)
-                self.do_response(401, 'text/html', templates['htmlError'].format('401 - Unauthorized'))
+                self.do_response(401, 'text/html', tvh_templates['htmlError'].format('401 - Unauthorized'))
             except FileNotFoundError as e:
                 self.logger.info(e)
-                self.do_response(404, 'text/html', templates['htmlError'].format('404 - File Not Found'))
+                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - File Not Found'))
             except NotADirectoryError as e:
                 self.logger.info(e)
-                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Folder Not Found'))
+                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Folder Not Found'))
             except ConnectionAbortedError as e:
                 self.logger.info(e)
             except ModuleNotFoundError as e:
                 self.logger.info(e)
-                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Area Not Found'))
+                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Area Not Found'))
 
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
@@ -366,12 +376,12 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                         if count > 5:
                             self.logger.debug('Image not found at {}'.format(background))
                             self.do_response(404, 'text/html',
-                                templates['htmlError'].format('404 - Background Image Not Found'))
+                                tvh_templates['htmlError'].format('404 - Background Image Not Found'))
                             return
                 self.do_file_response(200, full_image_path)
             except FileNotFoundError:
                 self.logger.warning('Background Theme Folder not found')
-                self.do_response(404, 'text/html', templates['htmlError'].format('404 - Background Folder Not Found'))
+                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Background Folder Not Found'))
 
     def put_hdhr_queue(self, index, channel, status):
         if not self.config['hdhomerun']['disable_hdhr']:
