@@ -38,17 +38,10 @@ class ConfigDefn:
         if _defn_file and _defn_path:
             self.merge_defn_file(_defn_path, _defn_file)
 
-    def init_database(self):
-        if self.db:
-            self.db.drop_tables()
-            self.db.create_tables()
-        else:
-            self.logger.warning('Trying to initialize the database without the database object created')
-
     def set_config(self, _config):
         self.config = _config
         if self.db is None:
-            self.db = DBConfigDefn(self.config, self.config['database']['defn_db'])
+            self.db = DBConfigDefn(self.config)
             if self.config_defn:
                 self.save_defn_to_db()
         self.logger = logging.getLogger(__name__)
@@ -71,8 +64,8 @@ class ConfigDefn:
     def merge_defn_obj(self, _defn_obj):
         """ will merge and terminate defn object
         """
+        self.config_defn = utils.merge_dict(self.config_defn, _defn_obj.config_defn)
         self.update_restricted_items(_defn_obj.config_defn)
-        _defn_obj.terminate()
 
     def garbage_collect(self):
         self.logger.debug('garbage collecting for Thread:{}'.format(threading.get_ident()))
@@ -113,7 +106,7 @@ class ConfigDefn:
         return config_defaults
 
     def get_defn(self, _area):
-        area_dict = self.db.get_area_dict(_area)
+        area_dict = self.db.get_area_dict(_area)[0]
         sections = self.db.get_sections_dict(_area)
         area_dict['sections'] = sections
         return area_dict
@@ -190,16 +183,24 @@ class ConfigDefn:
                                 return False
         return None
 
-    def update_restricted_items(self, _defn):
-        for area, area_data in _defn.items():
-            for section, section_data in area_data['sections'].items():
-                for key, settings in section_data['settings'].items():
-                    if settings['level'] == 4:
-                        self.restricted_items.append([section, key])
-                    elif 'hidden' in settings and settings['hidden']:
-                        self.restricted_items.append([section, key])
+    def update_restricted_items(self, _defn_file):
+        for area, area_data in _defn_file.items():
+            self.update_restricted_items_area(area_data)
+
+    def update_restricted_items_area(self, _defn_area):
+        for section, section_data in _defn_area['sections'].items():
+            for key, settings in section_data['settings'].items():
+                if settings['level'] == 4:
+                    self.restricted_items.append([section, key])
+                elif 'hidden' in settings and settings['hidden']:
+                    self.restricted_items.append([section, key])
 
     def get_restricted_items(self):
+        if not self.restricted_items:
+            area_list = self.db.get_areas()
+            for area in area_list:
+                area_dict = self.get_defn(area)
+                self.update_restricted_items_area(area_dict)
         return self.restricted_items
 
     @property

@@ -16,8 +16,8 @@
     --line-background: rgba(255, 255, 255, 0.08);
     --line-size: 0.08em;
     --scrollbar-thumb-background: rgba(255, 255, 255, 0.3);
-    --drawer-background: #2c2c2e;
-    --docked-drawer-background: #1c1c1e;
+    --drawer-background: rgba(44, 44, 46, 1.0);
+    --docked-drawer-background: rgba(28, 28, 30, 0.5);
     --logo-url:  /modules/themes/logowhite.png;
 }
 .layout-tv:root {

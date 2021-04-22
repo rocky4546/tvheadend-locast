@@ -30,7 +30,6 @@ class UserConfig:
             'override_latitude': None,
             'override_longitude': None,
             'override_zipcode': None,
-            'mock_location': None,
             'use_old_plex_interface': False,
             'bytes_per_read': '1152000',
             'reporting_model': 'l2p',
@@ -38,7 +37,6 @@ class UserConfig:
             'reporting_firmware_name': 'locast2plex',
             'reporting_firmware_ver': 'v' + get_version_str(),
             'tuner_type': "Antenna",
-            'fcc_delay': 1296000,  # 15 days
             'verbose': False
         }
     }
@@ -77,10 +75,6 @@ class UserConfig:
             self.config_handler.write(config_file)
 
     def config_adjustments(self, opersystem, script_dir):
-
-        if not self.data["main"]["locast_username"] or not self.data["main"]["locast_password"]:
-            print("Locast Login Credentials Missing. Exiting...")
-            clean_exit(1)
 
         # Tuner Count Cannot be greater than 3
         try:

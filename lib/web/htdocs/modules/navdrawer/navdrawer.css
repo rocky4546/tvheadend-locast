@@ -136,6 +136,8 @@
 }
 .navMenuOption-selected {
     font-weight: 700 !important;
+    background-color: var(--theme-icon-focus-background)
+    color: var(--theme-accent-text-color)
 }
 .navDrawerLogo {
     width: 100%;

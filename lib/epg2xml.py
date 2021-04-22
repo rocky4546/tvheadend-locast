@@ -98,11 +98,11 @@ def generate_epg_file(config, location):
                     channel_realname = str(dma_channels[sid]['friendlyName'])
                     channel_callsign = str(dma_channels[sid]['callSign'])
 
-                    if 'logo226Url' in channel_item.keys():
-                        channel_logo = channel_item['logo226Url']
-                        
-                    elif 'logoUrl' in channel_item.keys():
+                    if 'logoUrl' in channel_item.keys():
                         channel_logo = channel_item['logoUrl']
+                        
+                    elif 'logo226Url' in channel_item.keys():
+                        channel_logo = channel_item['logo226Url']
 
                     c_out = sub_el(out, 'channel', id=sid)
                     sub_el(c_out, 'display-name', text='%s %s' % (channel_number, channel_callsign))
@@ -112,7 +112,7 @@ def generate_epg_file(config, location):
                     sub_el(c_out, 'display-name', text=channel_callsign)
                     sub_el(c_out, 'display-name', text=channel_realname)
 
-                    if channel_logo != None:
+                    if channel_logo != None and config["locast"]["epg_channel_icons"]:
                         sub_el(c_out, 'icon', src=channel_logo)
 
         # Now list Program informations
@@ -162,7 +162,7 @@ def generate_epg_file(config, location):
                         sub_el(prog_out, 'category', lang='en', text=f.strip())
                         sub_el(prog_out, 'genre', lang='en', text=f.strip())
 
-                    if event["preferredImage"] is not None:
+                    if event["preferredImage"] and config['locast']['epg_program_icons']:
                         sub_el(prog_out, 'icon', src=event["preferredImage"])
 
                     if 'rating' not in event.keys():

@@ -26,7 +26,7 @@ def stations_process(_config, _locast, _location):
             Stations.location = _location
             stations = Stations()
             stations.refresh_dma_stations_and_channels()
-            time.sleep(_config["main"]["fcc_delay"])
+            time.sleep(_config["locast"]["fcc_timeout"])
             # Work in eastern time, since that is what the FCC is using to determine maintenance times
             current_time = datetime.datetime.now(tz=EST5EDT())
             # if we find we're returning from delay at a time that the FCC is doing maintenance, sleep a bit more...
@@ -166,6 +166,9 @@ class Stations:
 
             offline_file_time = self.get_offline_file_time(facility_zip_dl_path)
             online_file_time = self.get_online_file_time(facility_url)
+
+
+
 
             if not offline_file_time <= online_file_time:
                 self.logger.debug("Cached facilities database is current.")

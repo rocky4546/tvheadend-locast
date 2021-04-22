@@ -114,6 +114,30 @@
                         "level": 3,
                         "writable": false,
                         "help": "Location of database holding definition data"
+                    },
+                    "plugins_db":{
+                        "label": "Plugin Manifest Database",
+                        "type": "path",
+                        "default": "plugins",
+                        "level": 3,
+                        "writable": false,
+                        "help": "Location of database holding plugin manifests"
+                    },
+                    "channels_db":{
+                        "label": "Channels Database",
+                        "type": "path",
+                        "default": "channels",
+                        "level": 3,
+                        "writable": false,
+                        "help": "Location of database holding channels data"
+                    },
+                    "epg_db":{
+                        "label": "EPG Database",
+                        "type": "path",
+                        "default": "epg",
+                        "level": 3,
+                        "writable": false,
+                        "help": "Location of database holding program data for each day"
                     }
                 }
             }

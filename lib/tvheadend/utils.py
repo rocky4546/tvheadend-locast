@@ -9,6 +9,7 @@ import socket
 VERSION = '0.8.0-alpha'
 
 
+
 def get_version_str():
     return VERSION
 
@@ -35,6 +36,15 @@ def tm_parse(tm):
     tm_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=tm / 1000)
     tm = str(tm_date.strftime('%Y%m%d%H%M%S +0000'))
     return tm
+
+
+def date_parse(date_secs, format_str):
+    if not date_secs:
+        return date_secs
+    dt_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=date_secs / 1000)
+    dt_str = str(dt_date.strftime(format_str))
+    return dt_str
+
 
 
 def is_file_expired(filepath, days=0, hours=0):

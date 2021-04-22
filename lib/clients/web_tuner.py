@@ -24,20 +24,22 @@ from lib.templates import templates
 import lib.tvheadend.utils as utils
 from lib.config.user_config import TVHUserConfig
 from lib.tvheadend.atsc import ATSCMsg
+from lib.config.config_defn import ConfigDefn
+from lib.db.db_plugins import DBPlugins
+from lib.db.db_channels import DBChannels
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
 
 class TunerHttpHandler(BaseHTTPRequestHandler):
     # class variables
-    station_obj = None
-    locast = None
-    location = None
+    plugins = None
+    namespace_list = None
     hdhr_queue = None
     config = None
     rmg_station_scans = []
-    local_locast = None
     logger = None
+    channels_db = None
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -51,26 +53,26 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.buffer_prev_time = None
         self.block_max_pts = 0
         self.small_pkt_streaming = False
-        TunerHttpHandler.logger = logging.getLogger(__name__)
         super().__init__(*args)
+        
 
     def log_message(self, _format, *args):
         self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
 
     def do_GET(self):
         base_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
-        content_path = self.path
+        content_path, query_data = self.get_query_data()
         if content_path.startswith('/auto/v'):
             channel = content_path.replace('/auto/v', '')
             if '.' in channel:
                 station_list = TunerHttpHandler.station_obj.get_dma_stations_and_channels()
                 for station in station_list:
-                    if station_list[station]['channel'] == channel:
-                        self.do_tuning(station)
+                    if station_list[station]['number'] == channel:
+                        self.do_tuning(station, query_data['name'], query_data['instance'])
                         return
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
             else:
-                self.do_tuning(channel)
+                self.do_tuning(channel, query_data['name'], query_data['instance'])
 
         elif content_path.startswith('/logreset'):
             logging.config.fileConfig(fname=self.config['paths']['config_file'], disable_existing_loggers=False)
@@ -78,7 +80,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
 
         elif content_path.startswith('/watch'):
             sid = content_path.replace('/watch/', '')
-            self.do_tuning(sid)
+            self.do_tuning(sid, query_data['name'], query_data['instance'])
         else:
             self.logger.warning("Unknown request to " + content_path)
             self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
@@ -106,6 +108,52 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly Formatted Message'))
         return
 
+
+    def get_query_data(self):
+        content_path = self.path
+        query_data = {}
+        if self.headers.get('Content-Length') is not None \
+                and self.headers.get('Content-Length') != '0':
+            post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
+            # if an input is empty, then it will remove it from the list when the dict is gen
+            query_data = urllib.parse.parse_qs(post_data)
+
+        if self.path.find('?') != -1:
+            content_path = self.path[0:self.path.find('?')]
+            get_data = self.path[(self.path.find('?') + 1):]
+            get_data_elements = get_data.split('&')
+            for get_data_item in get_data_elements:
+                get_data_item_split = get_data_item.split('=')
+                if len(get_data_item_split) > 1:
+                    query_data[get_data_item_split[0]] = get_data_item_split[1]
+        if 'name' not in query_data:
+            query_data['name'] = None
+        if 'instance' not in query_data:
+            query_data['instance'] = None
+        if query_data['instance'] or query_data['name']:
+            return content_path, query_data
+
+        path_list = content_path.split('/')
+        if len(path_list) > 2:
+            namespace = None
+            instance = None
+            for ns in TunerHttpHandler.namespace_list:
+                if path_list[1].lower() == ns.lower():
+                    namespace = ns
+                    del path_list[1]
+                    instance_list = TunerHttpHandler.namespace_list[namespace]
+                    if len(path_list) > 2:
+                        for inst in instance_list:
+                            if inst.lower() == path_list[1].lower():
+                                instance = inst
+                                del path_list[1]
+                    query_data['name'] = namespace
+                    query_data['instance'] = instance
+                    content_path = '/'.join(path_list)
+                    break
+        return content_path, query_data
+
+
     def do_response(self, code, mime, reply_str=None):
         self.send_response(code)
         self.send_header('Content-type', mime)
@@ -125,29 +173,32 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def write_buffer(self, msg):
         self.wfile.write(msg)
 
-    def get_stream_uri(self, sid):
-        if self.config['main']['quiet_print']:
-            utils.block_print()
-        uri = self.locast.get_station_stream_uri(sid)
-        if self.config['main']['quiet_print']:
-            utils.enable_print()
+    def get_stream_uri(self, sid, _namespace, _instance):
+        if not _namespace:
+            ch_data = self.channels_db.get_channel(sid, _namespace, _instance)
+            if ch_data:
+                _namespace = ch_data['namespace']
+                _instance = ch_data['instance']
+            else:
+                return None
+        uri = self.plugins.plugins[_namespace].plugin_obj.get_channel_uri(sid, _instance)
         return uri
 
-    def do_tuning(self, sid):
+    def do_tuning(self, sid, _namespace, _instance):
         # sid is the id for the channel requested
         # with m3u8 redirect, there is no way to know when it is being used
         if self.config['player']['stream_type'] == 'm3u8redirect':
-            channel_uri = self.get_stream_uri(sid)
+            channel_uri = self.get_stream_uri(sid, _namespace, _instance)
             if not channel_uri:
                 self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
-
+                return
             self.send_response(302)
             self.send_header('Location', channel_uri)
             self.end_headers()
             self.logger.info('Sending M3U8 file directly to client')
             return
 
-        station_list = TunerHttpHandler.station_obj.get_dma_stations_and_channels()
+        station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
         tuner_found = False
         self.bytes_per_read = int(int(self.config['main']['bytes_per_read']) / 1316) * 1316
         # keep track of how many tuners we can use at a time
@@ -156,8 +207,8 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
             # the first idle tuner gets it
             if scan_status == 'Idle':
                 try:
-                    TunerHttpHandler.rmg_station_scans[index] = station_list[sid]['channel']
-                    self.put_hdhr_queue(index, station_list[sid]['channel'], 'Stream')
+                    TunerHttpHandler.rmg_station_scans[index] = station_list[sid]['number']
+                    self.put_hdhr_queue(index, station_list[sid]['number'], 'Stream')
                 except KeyError:
                     self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
                     self.logger.warning('KeyError on allocating idle tuner.  index={}, sid={}'
@@ -178,7 +229,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-type', 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E')
                 self.end_headers()
-                self.stream_direct(sid, station_list)
+                self.stream_direct(sid, _namespace, _instance, station_list)
                 self.logger.info('2 Locast Connection Closed')
                 TunerHttpHandler.rmg_station_scans[index] = 'Idle'
             else:
@@ -194,12 +245,10 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
             self.wfile.write(reply_str.encode('utf-8'))
 
     def stream_video(self, sid, station_list):
-        if self.config['main']['quiet_print']:
-            utils.block_print()
-        channel_uri = self.get_stream_uri(sid)
-        if self.config['main']['quiet_print']:
-            utils.enable_print()
-
+        channel_uri = self.get_stream_uri(sid, _namespace, _instance)
+        if not channel_uri:
+            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+            return
         self.ffmpeg_proc = self.open_ffmpeg_proc(channel_uri, station_list, sid)
 
         # get initial video_data. if that works, then keep grabbing it
@@ -506,11 +555,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def refresh_stream(self, sid, station_list):
 
         self.last_refresh = time.time()
-        if self.config['main']['quiet_print']:
-            utils.block_print()
-        channel_uri = self.get_stream_uri(sid)
-        if self.config['main']['quiet_print']:
-            utils.enable_print()
+        channel_uri = self.get_stream_uri(sid, _namespace, _instance)
         try:
             self.ffmpeg_proc.terminate()
             self.ffmpeg_proc.wait(timeout=0.1)
@@ -534,9 +579,9 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     # returns the service name used to sync with the EPG channel name
     def set_service_name(self, station_list, sid):
         service_name = self.config['epg']['epg_prefix'] + \
-                       str(station_list[sid]['channel']) + \
+                       str(station_list[sid]['number']) + \
                        self.config['epg']['epg_suffix'] + \
-                       ' ' + station_list[sid]['friendlyName']
+                       ' ' + station_list[sid]['display_name']
         return service_name
 
     def open_ffmpeg_proc(self, channel_uri, station_list, sid):
@@ -555,12 +600,15 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
         return ffmpeg_process
 
-    def stream_direct(self, sid, station_list):
+    def stream_direct(self, sid, _namespace, _instance, station_list):
         segments = OrderedDict()
         duration = 1
         file_filter = None
         self.last_refresh = time.time()
-        stream_uri = self.get_stream_uri(sid)
+        stream_uri = self.get_stream_uri(sid, _namespace, _instance)
+        if not stream_uri:
+            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+            return
         self.logger.debug('M3U8: {}'.format(stream_uri))
         if self.config['player']['stream_filter'] is not None:
             file_filter = re.compile(self.config['player']['stream_filter'])
@@ -602,7 +650,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 if added == 0 and duration > 0:
                     time.sleep(duration * 0.3)
                 elif self.is_time_to_refresh():
-                    stream_uri = self.get_stream_uri(sid)
+                    stream_uri = self.get_stream_uri(sid, _namespace, _instance)
                     self.logger.debug('M3U8: {}'.format(stream_uri))
                     self.last_refresh = time.time()
 
@@ -646,66 +694,62 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
 
 class TunerHttpServer(Thread):
 
-    def __init__(self, server_socket, config_obj, locast_service, location, _hdhr_queue):
+    def __init__(self, server_socket, _plugins):
         Thread.__init__(self)
-
-        TunerHttpHandler.configObj = config_obj
-        TunerHttpHandler.config = config_obj.data
-
-        self.bind_ip = config_obj.data['main']['bind_ip']
-        self.bind_port = config_obj.data['main']['plex_accessible_port']
-
-        stations.Stations.config = config_obj.data
-        stations.Stations.locast = locast_service
-        stations.Stations.location = location
-        TunerHttpHandler.station_obj = stations.Stations()
-        TunerHttpHandler.locast = locast_service
-        TunerHttpHandler.location = location
-        TunerHttpHandler.hdhr_queue = _hdhr_queue
-
-        # init station scans 
-        tmp_rmg_scans = []
-        for x in range(int(config_obj.data['main']['tuner_count'])):
-            tmp_rmg_scans.append('Idle')
-        TunerHttpHandler.rmg_station_scans = tmp_rmg_scans
-
+        self.bind_ip = _plugins.config_obj.data['main']['bind_ip']
+        self.bind_port = _plugins.config_obj.data['main']['plex_accessible_port']
         self.socket = server_socket
         self.start()
 
+
     def run(self):
-        HttpHandlerClass = FactoryHttpHandler()
+        HttpHandlerClass = FactoryTunerHttpHandler()
         httpd = HTTPServer((self.bind_ip, int(self.bind_port)), HttpHandlerClass, False)
         httpd.socket = self.socket
         httpd.server_bind = self.server_close = lambda self: None
         httpd.serve_forever()
 
-
-def FactoryHttpHandler():
+def FactoryTunerHttpHandler():
     class CustomHttpHandler(TunerHttpHandler):
         def __init__(self, *args, **kwargs):
             super(CustomHttpHandler, self).__init__(*args, **kwargs)
-
     return CustomHttpHandler
 
+def init_class_var(_plugins, _hdhr_queue):
+    TunerHttpHandler.logger = logging.getLogger(__name__)
+    TunerHttpHandler.plugins = _plugins
+    TunerHttpHandler.config = _plugins.config_obj.data
+    TunerHttpHandler.hdhr_queue = _hdhr_queue
 
-def start(_config, _locast, _location, _hdhr_queue):
+    if not _plugins.config_obj.defn_json:
+        _plugins.config_obj.defn_json = ConfigDefn(_config=_plugins.config_obj.data)
+
+    plugins_db = DBPlugins(_plugins.config_obj.data)
+    TunerHttpHandler.namespace_list = plugins_db.get_instances()
+    TunerHttpHandler.channels_db = DBChannels(_plugins.config_obj.data)
+
+    tmp_rmg_scans = []
+    for x in range(int(_plugins.config_obj.data['main']['tuner_count'])):
+        tmp_rmg_scans.append('Idle')
+    TunerHttpHandler.rmg_station_scans = tmp_rmg_scans
+
+def start(_plugins, _hdhr_queue):
     """
     main starting point for all classes and services in this file.  
     Called from main.
     """
-    config_copy = copy.deepcopy(_config)
-    config_obj = TVHUserConfig(_config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((config_obj.data['main']['bind_ip'], int(config_obj.data['main']['plex_accessible_port'])))
-    server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
-    utils.logging_setup(config_obj.data['paths']['config_file'])
+    server_socket.bind((_plugins.config_obj.data['main']['bind_ip'], int(_plugins.config_obj.data['main']['plex_accessible_port'])))
+    server_socket.listen(int(_plugins.config_obj.data['main']['concurrent_listeners']))
+    utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug(
-        'Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
-    logger.info('Available tuners={}'.format(config_obj.data['main']['tuner_count']))
-    for i in range(int(config_obj.data['main']['concurrent_listeners'])):
-        TunerHttpServer(server_socket, config_obj, _locast, _location, _hdhr_queue)
+        'Now listening for requests. Number of listeners={}'.format(_plugins.config_obj.data['main']['concurrent_listeners']))
+    logger.info('Available tuners={}'.format(_plugins.config_obj.data['main']['tuner_count']))
+    init_class_var(_plugins, _hdhr_queue)
+    for i in range(int(_plugins.config_obj.data['main']['concurrent_listeners'])):
+        TunerHttpServer(server_socket, _plugins)
     try:
         while True:
             time.sleep(3600)
