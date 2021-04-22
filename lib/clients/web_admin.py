@@ -11,21 +11,23 @@ import mimetypes
 import json
 import random
 import importlib
-from importlib import resources
 from http.server import HTTPServer
 from urllib.parse import urlparse
 from xml.sax.saxutils import escape
 
+import lib.tuner_interface
 import lib.tvheadend.stations as stations
 import lib.tvheadend.utils as utils
-import lib.tuner_interface
+import lib.clients.channels as channels
+from lib.clients.epg2xml import EPG
+
 from lib.templates import templates
 from lib.tvheadend.templates import tvh_templates
-import lib.tvheadend.channels_m3u as channels_m3u
-from lib.tvheadend.epg2xml import EPGLocast
 from lib.config.user_config import TVHUserConfig
 from lib.web.pages.configform_html import ConfigFormHTML
 from lib.web.pages.index_js import IndexJS
+from lib.config.config_defn import ConfigDefn
+from lib.db.db_plugins import DBPlugins
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
@@ -34,21 +36,17 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
     # class variables
     # Either None or the UDP target
     # defines when the UDP stream is terminated for each instance of the http server
-    udp_server_status = []
     hdhr_station_scan = -1
-    udp_socket = None
-    config_obj = None
+    plugins = None
+    namespace_list = None
     config = None
-    station_obj = None
-    locast = None
-    location = None
     hdhr_queue = None
-    html_folders = ['modules', 'images', 'html', 'pages']
+    rmg_station_scans = []
+    logger = None
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         self.script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
-        self.logger = logging.getLogger(__name__)
         try:
             super().__init__(*args)
         except ConnectionResetError:
@@ -77,15 +75,17 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             self.end_headers()
 
         elif content_path == '/discover.json':
+            ns_inst_path = self.get_ns_inst_path(query_data)
             self.do_response(200,
                 'application/json',
-                tvh_templates['jsonDiscover'].format(self.config['main']['reporting_friendly_name'],
+                tvh_templates['jsonDiscover'].format(
+                    self.config['main']['reporting_friendly_name'],
                     self.config['main']['reporting_model'],
                     self.config['main']['reporting_firmware_name'],
                     self.config['main']['reporting_firmware_ver'],
                     self.config['hdhomerun']['hdhr_id'],
                     self.config['main']['tuner_count'],
-                    web_admin_url))
+                    web_admin_url, ns_inst_path))
 
         elif content_path == '/device.xml':
             self.do_response(200,
@@ -96,6 +96,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     self.config['main']['uuid']
                 ))
 
+        # TBD NEED TO WORK ON THIS TO FIX FOR PLEX SCAN
         elif content_path == '/lineup_status.json':
             if WebAdminHttpHandler.hdhr_station_scan < 0:
                 return_json = tvh_templates['jsonLineupStatusIdle'] \
@@ -122,64 +123,31 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     .format('501 - Config pages disabled.'
                             ' Set [main][disable_web_config] to False in the config file to enable'))
             else:
-                self.do_response(200, 'application/json', json.dumps(self.config_obj.filter_config_data()))
+                self.do_response(200, 'application/json', json.dumps(self.plugins.config_obj.filter_config_data()))
 
         elif content_path == '/channels.m3u':
             self.do_response(200, 'audio/x-mpegurl',
-                channels_m3u.get_channels_m3u(self.config, stream_url))
+                channels.get_channels_m3u(self.config, stream_url, query_data['name'], query_data['instance']))
 
         elif content_path == '/playlist':
             self.send_response(302)
-            self.send_header('Location', '/channels.m3u')
+            self.send_header('Location', self.path.replace('playlist','channels.m3u'))
             self.end_headers()
 
         elif content_path == '/lineup.json':
-            station_list = WebAdminHttpHandler.station_obj.get_dma_stations_and_channels()
-            return_json = ''
-            for index, list_key in enumerate(station_list):
-                if 'HD' in station_list[list_key]:
-                    hd = ',\n    "HD": 1'
-                else:
-                    hd = ''
-
-                sid = str(list_key)
-                return_json = return_json + \
-                    tvh_templates['jsonLineup'].format(
-                        station_list[sid]['channel'],
-                        station_list[sid]['friendlyName'],
-                        stream_url + '/watch/' + sid,
-                        hd)
-                if len(station_list) != (index + 1):
-                    return_json = return_json + ','
-            return_json = "[" + return_json + "]"
-            self.do_response(200, 'application/json', return_json)
+            self.do_response(200, 'application/json', channels.get_channels_json(self.config, stream_url, query_data['name'], query_data['instance']))
 
         elif content_path == '/lineup.xml':  # must encode the strings
-            station_list = WebAdminHttpHandler.station_obj.get_dma_stations_and_channels()
-            return_xml = ''
-            for list_key in station_list:
-                if 'HD' in station_list[list_key]:
-                    hd = '    <HD>1</HD>'
-                else:
-                    hd = ''
-
-                sid = str(list_key)
-                return_xml = return_xml + \
-                    tvh_templates['xmlLineup'].format(
-                        station_list[sid]['channel'],
-                        escape(station_list[sid]['friendlyName']),
-                        stream_url + '/watch/' + sid,
-                        hd)
-            return_xml = "<Lineup>" + return_xml + "</Lineup>"
-            self.do_response(200, 'application/xml', return_xml)
+            self.do_response(200, 'application/xml', channels.get_channels_xml(self.config, stream_url, query_data['name'], query_data['instance']))
 
         elif content_path == '/xmltv.xml':
-            epg = EPGLocast(self.config, self.location)
-            self.do_response(200, 'application/xml', epg.get_epg())
+            epg = EPG(self.plugins, query_data['name'], query_data['instance'])
+            reply_str = epg.get_epg_xml()
+            self.do_response(200, 'application/xml', reply_str)
 
         elif content_path == '/pages/configform.html' and 'area' in query_data:
             configform = ConfigFormHTML()
-            form = configform.get(self.config_obj.defn_json.get_defn(query_data['area']), query_data['area'])
+            form = configform.get(self.plugins.config_obj.defn_json.get_defn(query_data['area']), query_data['area'])
             self.do_response(200, 'text/html', form)
 
         elif content_path == '/pages/index.js':
@@ -190,7 +158,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             self.send_random_image()
 
         elif valid_check:
-            if valid_check and valid_check.group(2) in WebAdminHttpHandler.html_folders:
+            if valid_check:
                 file_path = valid_check.group(1)
                 htdocs_path = self.config["paths"]["www_pkg"]
                 path_list = file_path.split('/')
@@ -205,6 +173,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
             self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
             # super().do_GET()
         return
+
 
     def do_POST(self):
         content_path = self.path
@@ -244,7 +213,7 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                     if key_pair[0] not in config_changes:
                         config_changes[key_pair[0]] = {}
                     config_changes[key_pair[0]][key_pair[1]] = query_data[key]
-                results = self.config_obj.update_config(area, config_changes)
+                results = self.plugins.config_obj.update_config(area, config_changes)
                 self.do_response(200, 'text/html', results)
 
         elif content_path == '/lineup.post':
@@ -296,7 +265,33 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 get_data_item_split = get_data_item.split('=')
                 if len(get_data_item_split) > 1:
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
+        if 'name' not in query_data:
+            query_data['name'] = None
+        if 'instance' not in query_data:
+            query_data['instance'] = None
+        if query_data['instance'] or query_data['name']:
+            return content_path, query_data
+
+        path_list = content_path.split('/')
+        if len(path_list) > 2:
+            namespace = None
+            instance = None
+            for ns in WebAdminHttpHandler.namespace_list:
+                if path_list[1].lower() == ns.lower():
+                    namespace = ns
+                    del path_list[1]
+                    instance_list = WebAdminHttpHandler.namespace_list[namespace]
+                    if len(path_list) > 2:
+                        for inst in instance_list:
+                            if inst.lower() == path_list[1].lower():
+                                instance = inst
+                                del path_list[1]
+                    query_data['name'] = namespace
+                    query_data['instance'] = instance
+                    content_path = '/'.join(path_list)
+                    break
         return content_path, query_data
+
 
     def do_file_response(self, code, package, reply_file):
         if reply_file:
@@ -331,6 +326,15 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
                 self.wfile.write(reply_str.encode('utf-8'))
             except BrokenPipeError:
                 self.logger.debug('Client dropped connection before results were sent, ignoring')
+
+    def get_ns_inst_path(self, _query_data):
+        if _query_data['name']:
+            path = '/'+_query_data['name']
+        else:
+            path = ''
+        if _query_data['instance']:
+            path += '/'+_query_data['instance']
+        return path
 
     def send_random_image(self):
         if not self.config['display']['backgrounds']:
@@ -377,86 +381,60 @@ class WebAdminHttpHandler(lib.tuner_interface.PlexHttpHandler):
 
 class WebAdminHttpServer(Thread):
 
-    def __init__(self, server_socket, config_object, locast_service, location, _hdhr_queue, _index):
+    def __init__(self, server_socket, _plugins):
         Thread.__init__(self)
-
-        WebAdminHttpHandler.config_obj = config_object
-        WebAdminHttpHandler.config = config_object.data
-
-        self.bind_ip = config_object.data['main']['bind_ip']
-        self.bind_port = config_object.data['main']['web_admin_port']
-
-        stations.Stations.config = config_object.data
-        stations.Stations.locast = locast_service
-        stations.Stations.location = location
-        WebAdminHttpHandler.station_obj = stations.Stations()
-        WebAdminHttpHandler.locast = locast_service
-        WebAdminHttpHandler.location = location
-        WebAdminHttpHandler.hdhr_queue = _hdhr_queue
-
-        # init station scans 
-        tmp_rmg_scans = []
-        for x in range(int(config_object.data['main']['tuner_count'])):
-            tmp_rmg_scans.append('Idle')
-
-        tmp_udp_status = []
-        for x in range(int(config_object.data['main']['concurrent_listeners'])):
-            tmp_udp_status.append(None)
-
-        tmp_udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        tmp_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if hasattr(socket, "SO_REUSEPORT"):
-            try:
-                tmp_udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-            except socket.error as le:
-                # RHEL6 defines SO_REUSEPORT but it doesn't work
-                if le.errno == ENOPROTOOPT:
-                    pass
-                else:
-                    raise
-
-        WebAdminHttpHandler.rmg_station_scans = tmp_rmg_scans
-        WebAdminHttpHandler.udp_server_status = tmp_udp_status
-        WebAdminHttpHandler.udp_socket = tmp_udp_socket
-
-        self.index = _index
+        self.bind_ip = _plugins.config_obj.data['main']['bind_ip']
+        self.bind_port = _plugins.config_obj.data['main']['web_admin_port']
         self.socket = server_socket
         self.start()
 
     def run(self):
-        HttpHandlerClass = FactoryWebAdminHttpHandler(self.index)
+        HttpHandlerClass = FactoryWebAdminHttpHandler()
         httpd = HTTPServer((self.bind_ip, self.bind_port), HttpHandlerClass, False)
         httpd.socket = self.socket
         httpd.server_bind = self.server_close = lambda self: None
         httpd.serve_forever()
 
 
-def FactoryWebAdminHttpHandler(index):
+def FactoryWebAdminHttpHandler():
     class CustomWebAdminHttpHandler(WebAdminHttpHandler):
         def __init__(self, *args, **kwargs):
             super(CustomWebAdminHttpHandler, self).__init__(*args, **kwargs)
-
     return CustomWebAdminHttpHandler
 
+def init_class_var(_plugins, _hdhr_queue):
+    WebAdminHttpHandler.logger = logging.getLogger(__name__)
+    WebAdminHttpHandler.plugins = _plugins
+    WebAdminHttpHandler.config = _plugins.config_obj.data
+    WebAdminHttpHandler.hdhr_queue = _hdhr_queue
+    if not _plugins.config_obj.defn_json:
+        _plugins.config_obj.defn_json = ConfigDefn(_config=_plugins.config_obj.data)
 
-def start(config, locast, location, hdhr_queue):
+    plugins_db = DBPlugins(_plugins.config_obj.data)
+    WebAdminHttpHandler.namespace_list = plugins_db.get_instances()
+
+    tmp_rmg_scans = []
+    for x in range(int(_plugins.config_obj.data['main']['tuner_count'])):
+        tmp_rmg_scans.append('Idle')
+    WebAdminHttpHandler.rmg_station_scans = tmp_rmg_scans
+
+
+def start(_plugins, _hdhr_queue):
     """
     main starting point for all classes and services in this file.  
     Called from main.
     """
-
-    config_copy = copy.deepcopy(config)
-    config_obj = TVHUserConfig(_config=config_copy)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((config_obj.data['main']['bind_ip'], config_obj.data['main']['web_admin_port']))
-    server_socket.listen(int(config_obj.data['main']['concurrent_listeners']))
-    utils.logging_setup(config_obj.data['paths']['config_file'])
+    server_socket.bind((_plugins.config_obj.data['main']['bind_ip'], _plugins.config_obj.data['main']['web_admin_port']))
+    server_socket.listen(int(_plugins.config_obj.data['main']['concurrent_listeners']))
+    utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug(
-        'Now listening for requests. Number of listeners={}'.format(config_obj.data['main']['concurrent_listeners']))
-    for i in range(int(config_obj.data['main']['concurrent_listeners'])):
-        WebAdminHttpServer(server_socket, config_obj, locast, location, hdhr_queue, i)
+        'Now listening for requests. Number of listeners={}'.format(_plugins.config_obj.data['main']['concurrent_listeners']))
+    init_class_var(_plugins, _hdhr_queue)
+    for i in range(int(_plugins.config_obj.data['main']['concurrent_listeners'])):
+        WebAdminHttpServer(server_socket, _plugins)
     try:
         while True:
             time.sleep(3600)

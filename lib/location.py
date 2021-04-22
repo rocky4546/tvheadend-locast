@@ -21,7 +21,7 @@ class DMAFinder():
 
 
     def __init__(self, config):
-        self.mock_location = config["main"]["mock_location"]
+        self.mock_location = None
         self.zipcode = config["main"]["override_zipcode"]
 
         # Check for user's location

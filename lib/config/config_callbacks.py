@@ -123,7 +123,7 @@ def set_ffprobe_path(_config_obj, _section, _key):
 def load_encrypted_setting(_config_obj, _section, _key):
     if CRYPTO_LOADED and _config_obj.data['main']['encrypt_key'] is None \
             and _config_obj.data['main']['use_encryption']:
-        _config_obj.data['main']['encrypt_key'] = encryption.set_fernet_key()
+        _config_obj.data['main']['encrypt_key'] = encryption.set_fernet_key().decode('utf-8')
         if _config_obj.data[_section][_key].startswith(ENCRYPT_STRING):
             # encrypted
             _config_obj.data[_section][_key] \

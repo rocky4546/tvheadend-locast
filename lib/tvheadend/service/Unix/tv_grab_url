@@ -62,7 +62,7 @@ then
 fi
 if [ "$uflag" ]
 then
-  wget -q --retry-connrefused --tries=5 --timeout=2 -O - $url
+  wget -q --retry-connrefused --tries=5 --timeout=30 -O - $url
 fi
 
 exit 0

@@ -1,0 +1,81 @@
+import lib.tvheadend.stations as stations
+from io import StringIO
+from xml.sax.saxutils import escape
+
+from lib.tvheadend.templates import tvh_templates
+from lib.db.db_channels import DBChannels
+
+
+def get_channels_m3u(_config, _base_url, namespace, instance):
+
+    format_descriptor = '#EXTM3U'
+    record_marker = '#EXTINF'
+
+    db = DBChannels(_config)
+    ch_data = db.get_channels(namespace, instance)
+    fakefile = StringIO()
+    fakefile.write(
+            '%s\n' % format_descriptor
+        )
+        
+    for sid, sid_data in ch_data.items():
+        fakefile.write(
+            '%s\n' % (
+                record_marker + ':-1' + ' ' +
+                'channelID=\'' + sid + '\' ' +
+                'tvg-num=\'' + sid_data['number'] + '\' ' +
+                'tvg-chno=\'' + sid_data['number'] + '\' ' +
+                'tvg-name=\'' + sid_data['display_name'] + '\' ' +
+                'tvg-id=\'' + sid + '\' ' +
+                (('tvg-logo=\'' + sid_data['thumbnail'] + '\' ')
+                    if sid_data['thumbnail'] else '') +
+                'group-title=\''+sid_data['namespace']+'\',' + set_service_name(_config, sid_data)
+            )
+        )
+        fakefile.write(
+            '%s\n' % (
+                (
+                    '%s%s/%s/watch/%s' %
+                    ('http://', _base_url, sid_data['namespace'], str(sid))
+                )
+            )
+        )
+    return fakefile.getvalue()
+    
+    
+def get_channels_json(_config, _base_url, namespace, instance):
+    db = DBChannels(_config)
+    ch_data = db.get_channels(namespace, instance)
+    return_json = ''
+    for sid, sid_data in ch_data.items():
+        return_json = return_json + \
+            tvh_templates['jsonLineup'].format(
+                sid_data['number'],
+                sid_data['display_name'],
+                _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,
+                sid_data['json']['HD'])
+        return_json = return_json + ','
+    return "[" + return_json[:-1] + "]"
+
+
+def get_channels_xml(_config, _base_url, namespace, instance):
+    db = DBChannels(_config)
+    ch_data = db.get_channels(namespace, instance)
+    return_xml = ''
+    for sid, sid_data in ch_data.items():
+        return_xml = return_xml + \
+            tvh_templates['xmlLineup'].format(
+                sid_data['number'],
+                escape(sid_data['display_name']),
+                _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,
+                sid_data['json']['HD'])
+    return "<Lineup>" + return_xml + "</Lineup>"
+
+
+# returns the service name used to sync with the EPG channel name
+def set_service_name(config, sid_data):
+    service_name = config['epg']['epg_prefix'] + \
+        str(sid_data['number']) + \
+        config['epg']['epg_suffix'] + \
+        ' ' + sid_data['display_name']
+    return service_name

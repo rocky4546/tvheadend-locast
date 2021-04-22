@@ -76,22 +76,8 @@
     </style>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script type="text/javascript" src="/pages/index.js"></script>
     <script type="text/javascript" src="/modules/navdrawer/navdrawer.js"></script>
-
-    <script>
-
-        $(document).ready(setTimeout(function(){
-            logo = getComputedStyle(document.documentElement)
-                .getPropertyValue('--logo-url');
-            $('#content').html("<img class='splash' src='"+logo+"'>")
-        }, 1000));
-
-        function load_url(url) {
-            $('#content').load(url);
-        }
-</script>
-
+    <script type="text/javascript" src="/pages/index.js"></script>
 </head>
 
 <body>

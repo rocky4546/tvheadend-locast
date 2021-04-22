@@ -8,8 +8,8 @@ tvh_templates = {
             "FirmwareVersion": "{3}",
             "DeviceID": "{4}",
             "TunerCount": {5},
-            "BaseURL": "http://{6}",
-            "LineupURL": "http://{6}/lineup.json"
+            "BaseURL": "http://{6}{7}",
+            "LineupURL": "http://{6}{7}/lineup.json"
         }}""",
 
     'jsonLineupStatusScanning':
@@ -31,14 +31,16 @@ tvh_templates = {
         """{{
             "GuideNumber": "{}",
             "GuideName": "{}",
-            "URL": "http://{}"{}
+            "URL": "http://{}",
+            "HD": "{}"
         }}""",
 
     'xmlLineup':
         """<Program>
             <GuideNumber>{}</GuideNumber>
             <GuideName>{}</GuideName>
-            <URL>http://{}</URL>{}
+            <URL>http://{}</URL>
+            <HD>{}</HD>
         </Program>""",
 
     'xmlDevice':

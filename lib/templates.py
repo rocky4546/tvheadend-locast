@@ -233,7 +233,8 @@ templates = {
 """{{
     "GuideNumber": "{}",
     "GuideName": "{}",
-    "URL": "http://{}"
+    "URL": "http://{}",
+    "HD": "{}"
 }}"""
 
 
