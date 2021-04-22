@@ -8,6 +8,7 @@ import logging
 import urllib.parse
 import urllib.request
 import urllib.error
+import xml.dom.minidom as minidom
 from xml.etree import ElementTree
 
 import lib.tvheadend.stations as stations
@@ -140,7 +141,7 @@ class EPGLocast:
                         self.sub_el(c_out, 'display-name', text=channel_callsign)
                         self.sub_el(c_out, 'display-name', text=channel_realname)
 
-                        if channel_logo is not None:
+                        if channel_logo and self.config['locast']['epg_channel_icon']:
                             self.sub_el(c_out, 'icon', src=channel_logo)
                     else:
                         self.logger.debug('EPG: Skipping channel id={} {}'.format(sid, type(sid)))
@@ -232,7 +233,7 @@ class EPGLocast:
                             self.sub_el(prog_out, 'category', lang='en', text=f.strip())
                             self.sub_el(prog_out, 'genre', lang='en', text=f.strip())
 
-                        if event["preferredImage"] is not None:
+                        if event['preferredImage'] and self.config['locast']['epg_program_icon']:
                             self.sub_el(prog_out, 'icon', src=event["preferredImage"])
 
                         if 'rating' not in event.keys():
@@ -259,9 +260,9 @@ class EPGLocast:
 
         xml_lock = FileLock(out_lock_path)
         with xml_lock:
+            epg_dom = minidom.parseString(ElementTree.tostring(out, encoding='UTF-8', method='xml'))
             with open(out_path, 'wb') as f:
-                f.write(b'<?xml version="1.0" encoding="UTF-8"?>\n')
-                f.write(ElementTree.tostring(out, encoding='UTF-8'))
+                f.write(epg_dom.toprettyxml(encoding='UTF-8'))
 
     def get_epg(self):
         epg_path = pathlib.Path(self.config['paths']['cache_dir']).joinpath(str(self.location['DMA']) + '_epg.xml')

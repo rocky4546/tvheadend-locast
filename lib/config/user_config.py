@@ -3,6 +3,7 @@ import pathlib
 import logging
 import copy
 import configparser
+import json
 
 from lib.l2p_tools import clean_exit
 from lib.user_config import UserConfig
@@ -16,23 +17,22 @@ def get_config(script_dir, opersystem, args):
 
 
 class TVHUserConfig(UserConfig):
-    defn_json = None
 
     def __init__(self, _script_dir=None, _opersystem=None, _args=None, _config=None):
         self.logger = None
+        self.defn_json = None
         self.script_dir = str(_script_dir)
-        if not TVHUserConfig.defn_json:
-            TVHUserConfig.defn_json = config_defn.load_default_config_defns()
-        self.data = TVHUserConfig.defn_json.get_default_config()
+        if not self.defn_json:
+            self.defn_json = config_defn.load_default_config_defns()
+        self.data = self.defn_json.get_default_config()
         if _script_dir is not None:
             super().__init__(_script_dir, _opersystem, _args)
-            TVHUserConfig.defn_json.call_oninit(self)
-            TVHUserConfig.defn_json.set_config(self.data)
-            TVHUserConfig.defn_json.init_database()
-            TVHUserConfig.defn_json.save_defn_to_db()
+            self.defn_json.call_oninit(self)
+            self.defn_json.set_config(self.data)
+            self.defn_json.save_defn_to_db()
         else:
             self.set_config(_config)
-            TVHUserConfig.defn_json.garbage_collect()
+            self.defn_json.garbage_collect()
 
     def set_config(self, _config):
         self.data = copy.deepcopy(_config)
@@ -86,24 +86,27 @@ class TVHUserConfig(UserConfig):
             clean_exit(1)
 
     def fix_value_type(self, _section, _key, _value):
-        val_type = TVHUserConfig.defn_json.get_type(_section, _key, _value)
-        if val_type == 'boolean':
-            return self.config_handler.getboolean(_section, _key)
-        elif val_type == 'list':
-            if not TVHUserConfig.defn_json.validate_list_item(_section, _key, _value):
-                logging.warning('INVALID VALUE ({}) FOR CONFIG ITEM [{}][{}]'
-                    .format(_value, _section, _key))
-            return _value
-        elif val_type == 'integer':
-            return int(_value)
-        elif val_type == 'float':
-            return float(_value)
-        else:
+        try:
+            val_type = self.defn_json.get_type(_section, _key, _value)
+            if val_type == 'boolean':
+                return self.config_handler.getboolean(_section, _key)
+            elif val_type == 'list':
+                if not self.defn_json.validate_list_item(_section, _key, _value):
+                    logging.warning('INVALID VALUE ({}) FOR CONFIG ITEM [{}][{}]'
+                        .format(_value, _section, _key))
+                return _value
+            elif val_type == 'integer':
+                return int(_value)
+            elif val_type == 'float':
+                return float(_value)
+            else:
+                return _value
+        except (configparser.NoOptionError, configparser.NoSectionError, TypeError):
             return _value
 
     # removes sensitive data from config and returns a copy
     def filter_config_data(self):
-        restricted_list = TVHUserConfig.defn_json.get_restricted_items()
+        restricted_list = self.defn_json.get_restricted_items()
         filtered_config = copy.deepcopy(self.data)
         for item in restricted_list:
             del filtered_config[item[0]][item[1]]
@@ -139,7 +142,11 @@ class TVHUserConfig(UserConfig):
         self.data = utils.merge_dict(self.data, _delta_config_dict, ignore_conflicts=True)
 
     def update_config(self, _area, _updated_data):
-        area_data = TVHUserConfig.defn_json.get_defn(_area)
+        # make sure the config_handler has all the data from the file
+        self.config_handler.read(self.data['paths']['config_file'])
+
+    
+        area_data = self.defn_json.get_defn(_area)
         for section, section_data in area_data['sections'].items():
             if section in _updated_data:
                 for setting, setting_data in section_data['settings'].items():
@@ -160,7 +167,7 @@ class TVHUserConfig(UserConfig):
 
         # save the changes to config.ini and self.data
         results = '<hr><h3>Status Results</h3><ul>'
-        config_defaults = TVHUserConfig.defn_json.get_default_config_area(_area)
+        config_defaults = self.defn_json.get_default_config_area(_area)
         for key in _updated_data.keys():
             results += self.save_config_section(key, _updated_data, config_defaults)
         with open(self.data['paths']['config_file'], 'w') as config_file:
@@ -168,7 +175,7 @@ class TVHUserConfig(UserConfig):
 
         # need to inform things that changes occurred...
         restart = False
-        results += TVHUserConfig.defn_json.call_onchange(_area, _updated_data, self)
+        results += self.defn_json.call_onchange(_area, _updated_data, self)
 
         if restart:
             results += '</ul><b>Service may need to be restarted if not all changes were implemented</b><hr><br>'

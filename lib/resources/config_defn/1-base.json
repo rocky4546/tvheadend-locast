@@ -67,20 +67,6 @@
                         "level": 2,
                         "help": "Number of simultaneous HTTP requests.  Should be at least twice the counts"
                     },
-                    "epg_update_frequency":{
-                        "label": "epg_update_frequency",
-                        "type": "integer",
-                        "default": 43200,
-                        "level": 2,
-                        "help": "Default=12 hours.  Time between FORCED updates. Updates also occur on HTTP requests"
-                    },
-                    "epg_update_days":{
-                        "label": "epg_update_days",
-                        "type": "integer",
-                        "default": 7,
-                        "level": 2,
-                        "help": "Locast max is 7 days"
-                    },
                     "use_old_plex_interface":{
                         "label": "use_old_plex_interface",
                         "type": "boolean",

@@ -126,7 +126,6 @@ def hdhr_get_valid_device_id(_device_id):
 
 
 def hdhr_gen_device_id():
-    logger.debug('########################### IT WORKED ##########################')
     baseid = '105' + ''.join(random.choice('0123456789ABCDEF') for i in range(4)) + '0'
     return hdhr_get_valid_device_id(baseid)
 
