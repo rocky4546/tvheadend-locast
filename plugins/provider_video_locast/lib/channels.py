@@ -1,3 +1,16 @@
+'''
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+'''
+
 import time
 import urllib
 import ssl
@@ -11,9 +24,8 @@ import datetime
 import sys
 
 import lib.m3u8 as m3u8
-from lib.l2p_tools import clean_exit
-from lib.filelock import FileLock
-from lib.dma_markets import get_dma_info
+from lib.tvheadend.utils import clean_exit
+from lib.tvheadend.filelock import FileLock
 import lib.tvheadend.exceptions as exceptions
 from lib.tvheadend.decorators import handle_url_except
 from lib.tvheadend.decorators import handle_json_except
@@ -92,6 +104,9 @@ class Channels:
                     'number': channel,
                     'name': friendly_name,
                     'HD': hd,
+                    'group_hdtv': self.locast.config['locast']['m3u_group_hdtv'],
+                    'group_sdtv': self.locast.config['locast']['m3u_group_sdtv'],
+                    'groups_other': None,    # array list of groups/categories
                     'thumbnail': thumbnail
                     }
                 ch_list.append(channel)

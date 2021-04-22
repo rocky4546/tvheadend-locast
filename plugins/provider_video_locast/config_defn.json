@@ -65,6 +65,20 @@
                         "default": 400,
                         "level": 2,
                         "help": "Default=4 hours. When a HTTP request for epg data is received, will refresh the data if older than this value."
+                    },
+                    "m3u_group_hdtv":{
+                        "label": "HDTV Group Name",
+                        "type": "string",
+                        "default": null,
+                        "level": 1,
+                        "help": "Default=not used.  When set, will add the group for any HD channels in the m3u file."
+                    },
+                    "m3u_group_sdtv":{
+                        "label": "SDTV Group Name",
+                        "type": "string",
+                        "default": null,
+                        "level": 1,
+                        "help": "Default=not used.  When set, will add the group for any non-HD channels in the m3u file."
                     }
                 }
             },

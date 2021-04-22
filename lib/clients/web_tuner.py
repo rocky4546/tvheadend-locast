@@ -1,3 +1,16 @@
+'''
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+'''
+
 import datetime
 import os
 import subprocess
@@ -8,19 +21,17 @@ import pathlib
 import logging
 import requests
 import time
-from threading import Thread
 import socket
 import re
 import json
 import traceback
+from threading import Thread
 from logging import config
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 from collections import OrderedDict
 
 import lib.m3u8 as m3u8
-import lib.tvheadend.stations as stations
-from lib.templates import templates
 import lib.tvheadend.utils as utils
 from lib.config.user_config import TVHUserConfig
 from lib.tvheadend.atsc import ATSCMsg
@@ -70,7 +81,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     if station_list[station]['number'] == channel:
                         self.do_tuning(station, query_data['name'], query_data['instance'])
                         return
-                self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             else:
                 self.do_tuning(channel, query_data['name'], query_data['instance'])
 
@@ -83,7 +94,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
             self.do_tuning(sid, query_data['name'], query_data['instance'])
         else:
             self.logger.warning("Unknown request to " + content_path)
-            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Not Implemented'))
+            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
         return
 
     def do_POST(self):
@@ -105,7 +116,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 if len(get_data_item_split) > 1:
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
 
-        self.do_response(501, 'text/html', templates['htmlError'].format('501 - Badly Formatted Message'))
+        self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Badly Formatted Message'))
         return
 
 
@@ -190,7 +201,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         if self.config['player']['stream_type'] == 'm3u8redirect':
             channel_uri = self.get_stream_uri(sid, _namespace, _instance)
             if not channel_uri:
-                self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
                 return
             self.send_response(302)
             self.send_header('Location', channel_uri)
@@ -210,7 +221,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     TunerHttpHandler.rmg_station_scans[index] = station_list[sid]['number']
                     self.put_hdhr_queue(index, station_list[sid]['number'], 'Stream')
                 except KeyError:
-                    self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+                    self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
                     self.logger.warning('KeyError on allocating idle tuner.  index={}, sid={}'
                         .format(index, sid))
                     return
@@ -233,7 +244,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 self.logger.info('2 Locast Connection Closed')
                 TunerHttpHandler.rmg_station_scans[index] = 'Idle'
             else:
-                self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown streamtype'))
+                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown streamtype'))
                 self.logger.error('Unknown [player][stream_type] {}'
                     .format(self.config['player']['stream_type']))
         else:
@@ -241,13 +252,13 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
             self.send_response(400, 'All tuners already in use.')
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            reply_str = templates['htmlError'].format('All tuners already in use.')
+            reply_str = tvh_templates['htmlError'].format('All tuners already in use.')
             self.wfile.write(reply_str.encode('utf-8'))
 
     def stream_video(self, sid, station_list):
         channel_uri = self.get_stream_uri(sid, _namespace, _instance)
         if not channel_uri:
-            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             return
         self.ffmpeg_proc = self.open_ffmpeg_proc(channel_uri, station_list, sid)
 
@@ -607,7 +618,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.last_refresh = time.time()
         stream_uri = self.get_stream_uri(sid, _namespace, _instance)
         if not stream_uri:
-            self.do_response(501, 'text/html', templates['htmlError'].format('501 - Unknown channel'))
+            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             return
         self.logger.debug('M3U8: {}'.format(stream_uri))
         if self.config['player']['stream_filter'] is not None:

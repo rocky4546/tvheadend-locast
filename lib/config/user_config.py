@@ -1,3 +1,16 @@
+'''
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+'''
+
 import os
 import pathlib
 import logging
@@ -5,18 +18,18 @@ import copy
 import configparser
 import json
 
-from lib.l2p_tools import clean_exit
-from lib.user_config import UserConfig
-
 import lib.tvheadend.utils as utils
 import lib.config.config_defn as config_defn
+from lib.tvheadend.utils import clean_exit
 
 
 def get_config(script_dir, opersystem, args):
     return TVHUserConfig(script_dir, opersystem, args)
 
 
-class TVHUserConfig(UserConfig):
+class TVHUserConfig:
+
+    config_handler = configparser.ConfigParser(interpolation=None)
 
     def __init__(self, _script_dir=None, _opersystem=None, _args=None, _config=None):
         self.logger = None
@@ -26,7 +39,8 @@ class TVHUserConfig(UserConfig):
             self.defn_json = config_defn.load_default_config_defns()
         self.data = self.defn_json.get_default_config()
         if _script_dir is not None:
-            super().__init__(_script_dir, _opersystem, _args)
+            config_file = self.get_config_path(_script_dir, _args)
+            self.import_config(config_file)
             self.defn_json.call_oninit(self)
             self.defn_json.set_config(self.data)
             self.defn_json.save_defn_to_db()
@@ -51,17 +65,17 @@ class TVHUserConfig(UserConfig):
                 self.config_handler.set(section, key, str(value))
         with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
-        utils.logging_setup(self.config_file)
+        utils.logging_setup(self.data['paths']['config_file'])
 
-    def import_config(self):
-        self.config_handler.read(self.config_file)
-        self.data['paths']['config_file'] = str(self.config_file)
+    def import_config(self, config_file):
+        self.config_handler.read(config_file)
+        self.data['paths']['config_file'] = str(config_file)
         try:
-            utils.logging_setup(self.config_file)
+            utils.logging_setup(config_file)
         except KeyError:
             self.init_logger_config()
         self.logger = logging.getLogger(__name__)
-        self.logger.info("Loading Configuration File: " + str(self.config_file))
+        self.logger.info("Loading Configuration File: " + str(config_file))
 
         for each_section in self.config_handler.sections():
             lower_section = each_section.lower()
@@ -74,16 +88,17 @@ class TVHUserConfig(UserConfig):
 
     def get_config_path(self, _script_dir, args=None):
         if args is not None and args.cfg:
-            self.config_file = pathlib.Path(str(args.cfg))
+            config_file = pathlib.Path(str(args.cfg))
         else:
             for x in ['data/config.ini', 'config.ini']:
                 poss_config = pathlib.Path(_script_dir).joinpath(x)
                 if os.path.exists(poss_config):
-                    self.config_file = poss_config
+                    config_file = poss_config
                     break
-        if not self.config_file or not os.path.exists(self.config_file):
+        if not config_file or not os.path.exists(config_file):
             print("ERROR: Config file missing, Exiting...")
             clean_exit(1)
+        return config_file
 
     def fix_value_type(self, _section, _key, _value):
         try:
@@ -234,5 +249,5 @@ class TVHUserConfig(UserConfig):
         except configparser.NoSectionError:
             self.config_handler.add_section(_section)
             self.config_handler.set(_section, _key, _value)
-        with open(self.config_file, 'w') as config_file:
+        with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
