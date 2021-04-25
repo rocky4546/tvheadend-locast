@@ -35,6 +35,7 @@ import lib.m3u8 as m3u8
 import lib.tvheadend.utils as utils
 from lib.config.user_config import TVHUserConfig
 from lib.tvheadend.atsc import ATSCMsg
+from lib.tvheadend.templates import tvh_templates
 from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
 from lib.db.db_channels import DBChannels
