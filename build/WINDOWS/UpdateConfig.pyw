@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -7,12 +7,16 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
-""" calls the main rountine running in the tvheadend folder """
 import os
 import pip
 import sys
@@ -26,9 +30,9 @@ import logging
 try:
     import cryptography
 except ImportError:
-    pip.main(['install', 'cryptography']) 
+    pip.main(['install', 'cryptography'])
 
-from lib.tvheadend.user_config import get_config
+from lib.config.user_config import get_config
 
 
 def get_args():
@@ -40,10 +44,9 @@ def get_args():
     return parser.parse_args()
 
 
-
 # Startup Logic
 if __name__ == '__main__':
-    #os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # os.chdir(os.path.dirname(os.path.abspath(__file__)))
     script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
     opersystem = platform.system()
 
@@ -78,11 +81,11 @@ if __name__ == '__main__':
 
     configObj = get_config(install_dir, opersystem, args)
 
-    if configObj.data['main']['locast_password'] == 'UNKNOWN':
+    if configObj.data['locast']['password'] == 'UNKNOWN':
         #  two different users trying to decrypt the encrypted password
         #  ignore the error and update with password passed in
-        logging.info('ignoring password error and ' \
-            + 'replacing password with one provided by user')
+        logging.info('ignoring password error and '
+                     + 'replacing password with one provided by user')
 
     base64_bytes = args.pwd.encode('ascii')
     try:
@@ -91,17 +94,17 @@ if __name__ == '__main__':
         # assume password is not base 64 encoded
         message_bytes = base64_bytes
         pass
-        
+
     message = message_bytes.decode('ascii')
     pwd = message
     print("user=", args.user,
-          "pwd=", pwd)
+        "pwd=", pwd)
 
     # update config object
-    configObj.data["main"]["locast_username"] = args.user
-    configObj.config_handler.set("main", "locast_username", args.user)
-    configObj.data["main"]["locast_password"] = pwd
-    configObj.config_handler.set("main", "locast_password", pwd)
+    configObj.data["locast"]["username"] = args.user
+    configObj.config_handler.set("locast", "username", args.user)
+    configObj.data["locast"]["password"] = pwd
+    configObj.config_handler.set("locast", "password", pwd)
 
     with open(config_file, 'w') as config_fileptr:
         configObj.config_handler.write(config_fileptr)

@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,17 +6,21 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import os
 import pathlib
 import logging
 import copy
 import configparser
-import json
 
 import lib.tvheadend.utils as utils
 import lib.config.config_defn as config_defn
@@ -39,7 +43,7 @@ class TVHUserConfig:
             self.defn_json = config_defn.load_default_config_defns()
         self.data = self.defn_json.get_default_config()
         if _script_dir is not None:
-            config_file = self.get_config_path(_script_dir, _args)
+            config_file = TVHUserConfig.get_config_path(_script_dir, _args)
             self.import_config(config_file)
             self.defn_json.call_oninit(self)
             self.defn_json.set_config(self.data)
@@ -86,7 +90,9 @@ class TVHUserConfig:
                 self.data[lower_section][lower_key] = \
                     self.fix_value_type(lower_section, lower_key, each_val)
 
-    def get_config_path(self, _script_dir, args=None):
+    @staticmethod
+    def get_config_path(_script_dir, args=None):
+        config_file = None
         if args is not None and args.cfg:
             config_file = pathlib.Path(str(args.cfg))
         else:
@@ -95,10 +101,11 @@ class TVHUserConfig:
                 if os.path.exists(poss_config):
                     config_file = poss_config
                     break
-        if not config_file or not os.path.exists(config_file):
+        if config_file and os.path.exists(config_file):
+            return config_file
+        else:
             print("ERROR: Config file missing, Exiting...")
             clean_exit(1)
-        return config_file
 
     def fix_value_type(self, _section, _key, _value):
         try:
@@ -160,8 +167,8 @@ class TVHUserConfig:
         # make sure the config_handler has all the data from the file
         self.config_handler.read(self.data['paths']['config_file'])
 
-    
         area_data = self.defn_json.get_defn(_area)
+        
         for section, section_data in area_data['sections'].items():
             if section in _updated_data:
                 for setting, setting_data in section_data['settings'].items():

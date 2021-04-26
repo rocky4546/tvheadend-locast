@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,38 +6,38 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
-import datetime
 import os
 import subprocess
 import errno
 import urllib
-import copy
 import pathlib
 import logging
-import requests
 import time
 import socket
-import re
 import json
-import traceback
 from threading import Thread
 from logging import config
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
-from collections import OrderedDict
 
-import lib.m3u8 as m3u8
 import lib.tvheadend.utils as utils
-from lib.config.user_config import TVHUserConfig
-from lib.tvheadend.atsc import ATSCMsg
+from lib.tvheadend.templates import tvh_templates
 from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
 from lib.db.db_channels import DBChannels
+from lib.streams.m3u8_redirect import M3U8Redirect
+from lib.streams.internal_proxy import InternalProxy
+from lib.streams.ffmpeg_proxy import FFMpegProxy
 
 MIN_TIME_BETWEEN_LOCAST = 0.4
 
@@ -51,6 +51,8 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     rmg_station_scans = []
     logger = None
     channels_db = None
+    m3u8_redirect = None
+    internal_proxy = None
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -64,37 +66,39 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         self.buffer_prev_time = None
         self.block_max_pts = 0
         self.small_pkt_streaming = False
+        self.real_namespace = None
+        self.real_instance = None
         super().__init__(*args)
-        
 
     def log_message(self, _format, *args):
         self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
 
     def do_GET(self):
-        base_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
         content_path, query_data = self.get_query_data()
         if content_path.startswith('/auto/v'):
             channel = content_path.replace('/auto/v', '')
-            if '.' in channel:
-                station_list = TunerHttpHandler.station_obj.get_dma_stations_and_channels()
-                for station in station_list:
+            station_list = TunerHttpHandler.channels_db.get_channels(query_data['name'], query_data['instance'])
+            if channel not in station_list.keys():
+                # check channel number
+                for station in station_list.keys():
                     if station_list[station]['number'] == channel:
                         self.do_tuning(station, query_data['name'], query_data['instance'])
                         return
-                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             else:
                 self.do_tuning(channel, query_data['name'], query_data['instance'])
+                return
+            self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
 
         elif content_path.startswith('/logreset'):
             logging.config.fileConfig(fname=self.config['paths']['config_file'], disable_existing_loggers=False)
-            self.do_response(200, 'text/html')
+            self.do_mime_response(200, 'text/html')
 
         elif content_path.startswith('/watch'):
             sid = content_path.replace('/watch/', '')
             self.do_tuning(sid, query_data['name'], query_data['instance'])
         else:
             self.logger.warning("Unknown request to " + content_path)
-            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
+            self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
         return
 
     def do_POST(self):
@@ -116,9 +120,8 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 if len(get_data_item_split) > 1:
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
 
-        self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Badly Formatted Message'))
+        self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Badly Formatted Message'))
         return
-
 
     def get_query_data(self):
         content_path = self.path
@@ -146,7 +149,6 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
 
         path_list = content_path.split('/')
         if len(path_list) > 2:
-            namespace = None
             instance = None
             for ns in TunerHttpHandler.namespace_list:
                 if path_list[1].lower() == ns.lower():
@@ -164,18 +166,22 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     break
         return content_path, query_data
 
+    def do_mime_response(self, code, mime, reply_str=None):
+        self.do_dict_response({ 
+            'code': code, 'headers': {'Content-type': mime},
+            'text': reply_str
+            })
 
-    def do_response(self, code, mime, reply_str=None):
-        self.send_response(code)
-        self.send_header('Content-type', mime)
+    def do_dict_response(self, rsp_dict):
+        """
+        { 'code': '[code]', 'headers': { '[name]': '[value]', ... }, 'text': b'...' }
+        """
+        self.send_response(rsp_dict['code'])
+        for header, value in rsp_dict['headers'].items():
+            self.send_header(header, value)
         self.end_headers()
-        if reply_str:
-            self.wfile.write(reply_str.encode('utf-8'))
-
-    def put_hdhr_queue(self, index, channel, status):
-        if not self.config['hdhomerun']['disable_hdhr']:
-            TunerHttpHandler.hdhr_queue.put(
-                {'tuner': index, 'channel': channel, 'status': status})
+        if rsp_dict['text']:
+            self.wfile.write(rsp_dict['text'].encode('utf-8'))
 
     def read_buffer(self):
         video_data = self.ffmpeg_proc.stdout.read(self.bytes_per_read)
@@ -184,81 +190,52 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def write_buffer(self, msg):
         self.wfile.write(msg)
 
-    def get_stream_uri(self, sid, _namespace, _instance):
-        if not _namespace:
-            ch_data = self.channels_db.get_channel(sid, _namespace, _instance)
-            if ch_data:
-                _namespace = ch_data['namespace']
-                _instance = ch_data['instance']
-            else:
-                return None
-        uri = self.plugins.plugins[_namespace].plugin_obj.get_channel_uri(sid, _instance)
-        return uri
+    def get_stream_uri(self, sid):
+        return self.plugins.plugins[self.real_namespace].plugin_obj.get_channel_uri(sid, self.real_instance)
 
     def do_tuning(self, sid, _namespace, _instance):
-        # sid is the id for the channel requested
-        # with m3u8 redirect, there is no way to know when it is being used
-        if self.config['player']['stream_type'] == 'm3u8redirect':
-            channel_uri = self.get_stream_uri(sid, _namespace, _instance)
-            if not channel_uri:
-                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
-                return
-            self.send_response(302)
-            self.send_header('Location', channel_uri)
-            self.end_headers()
-            self.logger.info('Sending M3U8 file directly to client')
+        try:
+            station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
+            self.real_namespace = station_list[sid]['namespace']
+            self.real_instance = station_list[sid]['instance']
+        except KeyError:
+            self.logger.warning('Unknown channel id {}'.format(sid))
+            self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             return
 
-        station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
-        tuner_found = False
-        self.bytes_per_read = int(int(self.config['main']['bytes_per_read']) / 1316) * 1316
-        # keep track of how many tuners we can use at a time
-        index = 0
-        for index, scan_status in enumerate(TunerHttpHandler.rmg_station_scans):
-            # the first idle tuner gets it
-            if scan_status == 'Idle':
-                try:
-                    TunerHttpHandler.rmg_station_scans[index] = station_list[sid]['number']
-                    self.put_hdhr_queue(index, station_list[sid]['number'], 'Stream')
-                except KeyError:
-                    self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
-                    self.logger.warning('KeyError on allocating idle tuner.  index={}, sid={}'
-                        .format(index, sid))
-                    return
-                tuner_found = True
-                break
+        if self.config[self.real_namespace.lower()]['player-stream_type'] == 'm3u8redirect':
+            self.do_dict_response(TunerHttpHandler.m3u8_redirect.gen_response(station_list[sid]))
+            return
 
-        if tuner_found:
-            if self.config['player']['stream_type'] == 'ffmpegproxy':
-                self.send_response(200)
-                self.send_header('Content-type', 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E')
-                self.end_headers()
-                self.stream_video(sid, station_list)
-                self.logger.info('1 Locast Connection Closed')
-                TunerHttpHandler.rmg_station_scans[index] = 'Idle'
-            elif self.config['player']['stream_type'] == 'internalproxy':
-                self.send_response(200)
-                self.send_header('Content-type', 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E')
-                self.end_headers()
-                self.stream_direct(sid, _namespace, _instance, station_list)
-                self.logger.info('2 Locast Connection Closed')
-                TunerHttpHandler.rmg_station_scans[index] = 'Idle'
+        elif self.config[self.real_namespace.lower()]['player-stream_type'] == 'internalproxy':
+            resp = TunerHttpHandler.internal_proxy.gen_response(station_list[sid]['number'], TunerHttpHandler)
+            self.do_dict_response(resp)
+            if resp['tuner'] < 0:
+                return
             else:
-                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown streamtype'))
-                self.logger.error('Unknown [player][stream_type] {}'
-                    .format(self.config['player']['stream_type']))
-        else:
-            self.logger.warning('All tuners already in use')
-            self.send_response(400, 'All tuners already in use.')
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            reply_str = tvh_templates['htmlError'].format('All tuners already in use.')
-            self.wfile.write(reply_str.encode('utf-8'))
+                TunerHttpHandler.internal_proxy.stream_direct(station_list[sid], self.wfile)
+                
+                self.logger.info('2 Locast Connection Closed')
+                TunerHttpHandler.rmg_station_scans[resp['tuner']] = 'Idle'
 
-    def stream_video(self, sid, station_list):
-        channel_uri = self.get_stream_uri(sid, _namespace, _instance)
+        elif self.config[self.real_namespace.lower()]['player-stream_type'] == 'ffmpegproxy':
+            resp = TunerHttpHandler.ffmpeg_proxy.gen_response(station_list[sid]['number'], TunerHttpHandler)
+            self.do_dict_response(resp)
+            if resp['tuner'] < 0:
+                return
+            else:
+                self.stream_direct(sid, station_list)
+                self.logger.info('1 Locast Connection Closed')
+                TunerHttpHandler.rmg_station_scans[resp['tuner']] = 'Idle'
+        else:
+            self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown streamtype'))
+            self.logger.error('Unknown [player-stream_type] {}'
+                .format(self.config[self.real_namespace.lower()]['player-stream_type']))
+
+    def stream_ffmpeg(self, sid, station_list):
+        channel_uri = self.get_stream_uri(sid)
         if not channel_uri:
-            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
+            self.do_mime_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
             return
         self.ffmpeg_proc = self.open_ffmpeg_proc(channel_uri, station_list, sid)
 
@@ -274,7 +251,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 video_data = self.read_buffer()
             else:
                 try:
-                    if self.config['freeaccount']['is_free_account']:
+                    if self.config[self.real_namespace.lower()]['is_free_account']:
                         video_data = self.check_pts(video_data, station_list, sid)
                     self.write_buffer(video_data)
 
@@ -311,7 +288,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def check_pts(self, video_data, station_list, sid):
         while True:
             # check the dts in videoData to see if we should throw it away
-            ffprobe_command = [self.config['player']['ffprobe_path'],
+            ffprobe_command = [self.config['paths']['ffprobe_path'],
                 '-print_format', 'json',
                 '-v', 'quiet', '-show_packets',
                 '-select_streams', 'v:0',
@@ -333,7 +310,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 # This occurs when the buffer size is too small, so no video packets are sent
                 self.logger.debug('Packet received with no video packet included')
                 break
-            elif pkt_len < int(self.config['freeaccount']['min_pkt_rcvd']):
+            elif pkt_len < int(self.config[self.real_namespace.lower()]['player-min_pkt_rcvd']):
                 # need to keep it from hitting bottom
                 self.bytes_per_read = int(self.bytes_per_read * 1.5 / 1316) * 1316  # increase buffer size by 50%
                 # self.stream_queue.set_bytes_per_read(self.bytes_per_read)
@@ -341,11 +318,11 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                     'MIN pkts rcvd limit, adjusting READ BUFFER to =',
                     self.bytes_per_read,
                     'Pkts Rcvd=', pkt_len))
-            elif pkt_len > int(self.config['freeaccount']['max_pkt_rcvd']):
+            elif pkt_len > int(self.config[self.real_namespace.lower()]['player-max_pkt_rcvd']):
                 # adjust the byte read to keep the number of packets below 100
                 # do not adjust up if packets are too low.
                 self.bytes_per_read = int(self.bytes_per_read
-                                          * int(self.config['freeaccount']['max_pkt_rcvd']) * 0.9
+                                          * int(self.config[self.real_namespace.lower()]['player-max_pkt_rcvd']) * 0.9
                                           / pkt_len / 1316) * 1316
                 # self.stream_queue.set_bytes_per_read(self.bytes_per_read)
                 self.logger.debug('{} {}  {}{}'.format(
@@ -370,8 +347,8 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
                 'Delta=', delta_pts,
                 'Pkts Rcvd=', pkt_len))
             time.sleep(0.1)
-            pts_minimum = int(self.config['freeaccount']['pts_minimum'])
-            if delta_pts > int(self.config['freeaccount']['pts_max_delta']) \
+            pts_minimum = int(self.config[self.real_namespace.lower()]['player-pts_minimum'])
+            if delta_pts > int(self.config[self.real_namespace.lower()]['player-pts_max_delta']) \
                     or (last_pts < pts_minimum and not self.small_pkt_streaming):
                 # PTS is 90,000 per second.
                 # if delta is big, then this is bad PTS
@@ -520,7 +497,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         while i < num_of_pkts:
             next_pkt_pts = pts_json['packets'][i]['pts']
             if abs(next_pkt_pts - prev_pkt_dts) \
-                    > int(self.config['freeaccount']['pts_max_delta']):
+                    > int(self.config[self.real_namespace.lower()]['player-pts_max_delta']):
                 # found place where bad packets start
                 # only video codecs have byte position info
                 byte_offset = int(int(pts_json['packets'][i]['pos']) / 1316) * 1316
@@ -552,12 +529,12 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         return byte_offset
 
     def is_time_to_refresh(self):
-        if self.config['freeaccount']['is_free_account']:
+        if self.config[self.real_namespace.lower()]['is_free_account']:
             delta_time = time.time() - self.last_refresh
-            refresh_rate = int(self.config['freeaccount']['refresh_rate'])
-            if refresh_rate > 0 and delta_time > int(self.config['freeaccount']['refresh_rate']):
+            refresh_rate = int(self.config[self.real_namespace.lower()]['player-refresh_rate'])
+            if refresh_rate > 0 and delta_time > int(self.config[self.real_namespace.lower()]['player-refresh_rate']):
                 self.logger.info('Refresh time expired. Refresh rate is {} seconds'
-                    .format(self.config['freeaccount']['refresh_rate']))
+                    .format(self.config[self.real_namespace.lower()]['player-refresh_rate']))
                 return True
         return False
 
@@ -566,7 +543,7 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     def refresh_stream(self, sid, station_list):
 
         self.last_refresh = time.time()
-        channel_uri = self.get_stream_uri(sid, _namespace, _instance)
+        channel_uri = self.get_stream_uri(sid)
         try:
             self.ffmpeg_proc.terminate()
             self.ffmpeg_proc.wait(timeout=0.1)
@@ -589,14 +566,21 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
     #######
     # returns the service name used to sync with the EPG channel name
     def set_service_name(self, station_list, sid):
-        service_name = self.config['epg']['epg_prefix'] + \
-                       str(station_list[sid]['number']) + \
-                       self.config['epg']['epg_suffix'] + \
-                       ' ' + station_list[sid]['display_name']
+        prefix = self.config[self.real_namespace.lower()]['epg-prefix']
+        suffix = self.config[self.real_namespace.lower()]['epg-suffix']
+        if prefix is None:
+            prefix = ""
+        if suffix is None:
+            suffix = ""
+
+        service_name = prefix + \
+            str(station_list[sid]['number']) + \
+            suffix + \
+            ' ' + station_list[sid]['display_name']
         return service_name
 
     def open_ffmpeg_proc(self, channel_uri, station_list, sid):
-        ffmpeg_command = [self.config['player']['ffmpeg_path'],
+        ffmpeg_command = [self.config['paths']['ffmpeg_path'],
             '-i', str(channel_uri),
             '-c:v', 'copy',
             '-c:a', 'copy',
@@ -611,120 +595,30 @@ class TunerHttpHandler(BaseHTTPRequestHandler):
         ffmpeg_process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
         return ffmpeg_process
 
-    def stream_direct(self, sid, _namespace, _instance, station_list):
-        segments = OrderedDict()
-        duration = 1
-        file_filter = None
-        self.last_refresh = time.time()
-        stream_uri = self.get_stream_uri(sid, _namespace, _instance)
-        if not stream_uri:
-            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Unknown channel'))
-            return
-        self.logger.debug('M3U8: {}'.format(stream_uri))
-        if self.config['player']['stream_filter'] is not None:
-            file_filter = re.compile(self.config['player']['stream_filter'])
-        while True:
-            try:
-                added = 0
-                removed = 0
-                playlist = m3u8.load(stream_uri)
-                for segment_dict in list(segments.keys()):
-                    is_found = False
-                    for segment_m3u8 in playlist.segments:
-                        uri = segment_m3u8.absolute_uri
-                        if segment_dict == uri:
-                            is_found = True
-                            break
-                    if not is_found:
-                        del segments[segment_dict]
-                        removed += 1
-                        self.logger.debug(f"Removed {segment_dict} from play queue")
-                        continue
-                    else:
-                        break
-
-                for m3u8_segment in playlist.segments:
-                    uri = m3u8_segment.absolute_uri
-                    if uri not in segments:
-                        played = False
-                        if file_filter is not None:
-                            m = file_filter.match(uri)
-                            if m:
-                                played = True
-                        segments[uri] = {
-                            'played': played,
-                            'duration': m3u8_segment.duration
-                        }
-                        self.logger.debug(f"Added {uri} to play queue")
-                        added += 1
-
-                if added == 0 and duration > 0:
-                    time.sleep(duration * 0.3)
-                elif self.is_time_to_refresh():
-                    stream_uri = self.get_stream_uri(sid, _namespace, _instance)
-                    self.logger.debug('M3U8: {}'.format(stream_uri))
-                    self.last_refresh = time.time()
-
-                for uri, data in segments.items():
-                    if not data["played"]:
-                        start_download = datetime.datetime.utcnow()
-                        chunk = requests.get(uri).content
-                        end_download = datetime.datetime.utcnow()
-                        download_secs = (
-                            end_download - start_download).total_seconds()
-                        data['played'] = True
-                        if not chunk:
-                            self.logger.warning(f"Segment {uri} not available. Skipping..")
-                            continue
-                        atsc_msg = ATSCMsg()
-                        chunk_updated = atsc_msg.update_sdt_names(chunk[:80], b'Locast',
-                            self.set_service_name(station_list, sid).encode())
-                        chunk = chunk_updated + chunk[80:]
-                        duration = data['duration']
-                        runtime = (datetime.datetime.utcnow() - start_download).total_seconds()
-                        target_diff = 0.3 * duration
-                        wait = target_diff - runtime
-                        self.logger.info(f"Serving {uri} ({duration}s)")
-                        self.write_buffer(chunk)
-                        if wait > 0:
-                            time.sleep(wait)
-            except IOError as e:
-                # Check we hit a broken pipe when trying to write back to the client
-                if e.errno in [errno.EPIPE, errno.ECONNABORTED, errno.ECONNRESET, errno.ECONNREFUSED]:
-                    # Normal process.  Client request end of stream
-                    self.logger.info('2. Connection dropped by end device {}'.format(e))
-                    break
-                else:
-                    self.logger.error('{}{}'.format(
-                        '3 UNEXPECTED EXCEPTION=', e))
-                    raise
-            except Exception as e:
-                traceback.print_exc()
-                break
-
 
 class TunerHttpServer(Thread):
 
     def __init__(self, server_socket, _plugins):
         Thread.__init__(self)
-        self.bind_ip = _plugins.config_obj.data['main']['bind_ip']
-        self.bind_port = _plugins.config_obj.data['main']['plex_accessible_port']
+        self.bind_ip = _plugins.config_obj.data['web']['bind_ip']
+        self.bind_port = _plugins.config_obj.data['web']['plex_accessible_port']
         self.socket = server_socket
         self.start()
 
-
     def run(self):
         HttpHandlerClass = FactoryTunerHttpHandler()
-        httpd = HTTPServer((self.bind_ip, int(self.bind_port)), HttpHandlerClass, False)
+        httpd = HTTPServer((self.bind_ip, int(self.bind_port)), HttpHandlerClass, bind_and_activate=False)
         httpd.socket = self.socket
         httpd.server_bind = self.server_close = lambda self: None
         httpd.serve_forever()
+
 
 def FactoryTunerHttpHandler():
     class CustomHttpHandler(TunerHttpHandler):
         def __init__(self, *args, **kwargs):
             super(CustomHttpHandler, self).__init__(*args, **kwargs)
     return CustomHttpHandler
+
 
 def init_class_var(_plugins, _hdhr_queue):
     TunerHttpHandler.logger = logging.getLogger(__name__)
@@ -738,11 +632,15 @@ def init_class_var(_plugins, _hdhr_queue):
     plugins_db = DBPlugins(_plugins.config_obj.data)
     TunerHttpHandler.namespace_list = plugins_db.get_instances()
     TunerHttpHandler.channels_db = DBChannels(_plugins.config_obj.data)
+    TunerHttpHandler.m3u8_redirect = M3U8Redirect(_plugins, _hdhr_queue)
+    TunerHttpHandler.internal_proxy = InternalProxy(_plugins, _hdhr_queue)
+    TunerHttpHandler.ffmpeg_proxy = FFMpegProxy(_plugins, _hdhr_queue)
 
     tmp_rmg_scans = []
-    for x in range(int(_plugins.config_obj.data['main']['tuner_count'])):
+    for x in range(int(_plugins.config_obj.data['locast']['player-tuner_count'])):
         tmp_rmg_scans.append('Idle')
     TunerHttpHandler.rmg_station_scans = tmp_rmg_scans
+
 
 def start(_plugins, _hdhr_queue):
     """
@@ -751,15 +649,18 @@ def start(_plugins, _hdhr_queue):
     """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((_plugins.config_obj.data['main']['bind_ip'], int(_plugins.config_obj.data['main']['plex_accessible_port'])))
-    server_socket.listen(int(_plugins.config_obj.data['main']['concurrent_listeners']))
+    server_socket.bind(
+        (_plugins.config_obj.data['web']['bind_ip'],
+        int(_plugins.config_obj.data['web']['plex_accessible_port'])))
+    server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
     utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug(
-        'Now listening for requests. Number of listeners={}'.format(_plugins.config_obj.data['main']['concurrent_listeners']))
-    logger.info('Available tuners={}'.format(_plugins.config_obj.data['main']['tuner_count']))
+        'Now listening for requests. Number of listeners={}'
+            .format(_plugins.config_obj.data['web']['concurrent_listeners']))
+    logger.info('Available tuners={}'.format(_plugins.config_obj.data['locast']['player-tuner_count']))
     init_class_var(_plugins, _hdhr_queue)
-    for i in range(int(_plugins.config_obj.data['main']['concurrent_listeners'])):
+    for i in range(int(_plugins.config_obj.data['web']['concurrent_listeners'])):
         TunerHttpServer(server_socket, _plugins)
     try:
         while True:

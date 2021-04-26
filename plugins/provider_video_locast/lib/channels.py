@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import time
 import urllib
@@ -43,7 +48,7 @@ class Channels:
         self.locast = _locast
         self.db = DBChannels(self.locast.config)
 
-    def refresh_channels(self):
+    def refresh_channels(self, required=False):
         self.logger.debug('Checking Channel data for {}'.format(self.locast.name))
         #fcc_stations = FCCData(self.locast)
         last_update = self.db.get_status(self.locast.name, constants.INSTANCE)
@@ -54,7 +59,7 @@ class Channels:
             delta = datetime.datetime.now() - last_update
             if delta.days >= self.locast.config['locast']['channel_update_timeout']:
                 update_needed = True
-        if update_needed:
+        if update_needed or required:
             ch_dict = self.get_locast_channels()
             self.db.save_channel_list(self.locast.name, constants.INSTANCE, ch_dict)
 
@@ -104,8 +109,8 @@ class Channels:
                     'number': channel,
                     'name': friendly_name,
                     'HD': hd,
-                    'group_hdtv': self.locast.config['locast']['m3u_group_hdtv'],
-                    'group_sdtv': self.locast.config['locast']['m3u_group_sdtv'],
+                    'group_hdtv': self.locast.config['locast']['m3u-group_hdtv'],
+                    'group_sdtv': self.locast.config['locast']['m3u-group_sdtv'],
                     'groups_other': None,    # array list of groups/categories
                     'thumbnail': thumbnail
                     }
