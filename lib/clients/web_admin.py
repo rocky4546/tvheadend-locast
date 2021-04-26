@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,14 +6,18 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import os
 import urllib
-import copy
 import time
 import pathlib
 import logging
@@ -24,16 +28,15 @@ import mimetypes
 import json
 import random
 import importlib
+import importlib.resources
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
-from xml.sax.saxutils import escape
 
 import lib.tvheadend.utils as utils
 import lib.clients.channels as channels
 from lib.clients.epg2xml import EPG
 
 from lib.tvheadend.templates import tvh_templates
-from lib.config.user_config import TVHUserConfig
 from lib.web.pages.configform_html import ConfigFormHTML
 from lib.web.pages.index_js import IndexJS
 from lib.config.config_defn import ConfigDefn
@@ -44,8 +47,6 @@ MIN_TIME_BETWEEN_LOCAST = 0.4
 
 class WebAdminHttpHandler(BaseHTTPRequestHandler):
     # class variables
-    # Either None or the UDP target
-    # defines when the UDP stream is terminated for each instance of the http server
     hdhr_station_scan = -1
     plugins = None
     namespace_list = None
@@ -69,8 +70,8 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
 
-        stream_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['plex_accessible_port'])
-        web_admin_url = self.config['main']['plex_accessible_ip'] + ':' + str(self.config['main']['web_admin_port'])
+        stream_url = self.config['web']['plex_accessible_ip'] + ':' + str(self.config['web']['plex_accessible_port'])
+        web_admin_url = self.config['web']['plex_accessible_ip'] + ':' + str(self.config['web']['web_admin_port'])
         valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
         content_path, query_data = self.get_query_data()
 
@@ -85,23 +86,23 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
         elif content_path == '/discover.json':
-            ns_inst_path = self.get_ns_inst_path(query_data)
+            ns_inst_path = WebAdminHttpHandler.get_ns_inst_path(query_data)
             self.do_response(200,
                 'application/json',
                 tvh_templates['jsonDiscover'].format(
-                    self.config['main']['reporting_friendly_name'],
-                    self.config['main']['reporting_model'],
-                    self.config['main']['reporting_firmware_name'],
-                    self.config['main']['reporting_firmware_ver'],
+                    self.config['hdhomerun']['reporting_friendly_name'],
+                    self.config['hdhomerun']['reporting_model'],
+                    self.config['hdhomerun']['reporting_firmware_name'],
+                    self.config['main']['version'],
                     self.config['hdhomerun']['hdhr_id'],
-                    self.config['main']['tuner_count'],
+                    self.config['locast']['player-tuner_count'],
                     web_admin_url, ns_inst_path))
 
         elif content_path == '/device.xml':
             self.do_response(200,
                 'application/xml',
-                tvh_templates['xmlDevice'].format(self.config['main']['reporting_friendly_name'],
-                    self.config['main']['reporting_model'],
+                tvh_templates['xmlDevice'].format(self.config['hdhomerun']['reporting_friendly_name'],
+                    self.config['hdhomerun']['reporting_model'],
                     self.config['hdhomerun']['hdhr_id'],
                     self.config['main']['uuid']
                 ))
@@ -110,7 +111,7 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
         elif content_path == '/lineup_status.json':
             if WebAdminHttpHandler.hdhr_station_scan < 0:
                 return_json = tvh_templates['jsonLineupStatusIdle'] \
-                    .replace("Antenna", self.config['main']['tuner_type'])
+                    .replace("Antenna", self.config['hdhomerun']['tuner_type'])
             else:
                 WebAdminHttpHandler.hdhr_station_scan += 20
                 if WebAdminHttpHandler.hdhr_station_scan > 100:
@@ -128,10 +129,10 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
             self.do_response(200, 'application/json', return_json)
 
         elif content_path == '/config.json':
-            if self.config['main']['disable_web_config']:
+            if self.config['web']['disable_web_config']:
                 self.do_response(501, 'text/html', tvh_templates['htmlError']
                     .format('501 - Config pages disabled.'
-                            ' Set [main][disable_web_config] to False in the config file to enable'))
+                            ' Set [web][disable_web_config] to False in the config file to enable'))
             else:
                 self.do_response(200, 'application/json', json.dumps(self.plugins.config_obj.filter_config_data()))
 
@@ -141,14 +142,16 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
 
         elif content_path == '/playlist':
             self.send_response(302)
-            self.send_header('Location', self.path.replace('playlist','channels.m3u'))
+            self.send_header('Location', self.path.replace('playlist', 'channels.m3u'))
             self.end_headers()
 
         elif content_path == '/lineup.json':
-            self.do_response(200, 'application/json', channels.get_channels_json(self.config, stream_url, query_data['name'], query_data['instance']))
+            self.do_response(200, 'application/json', channels.get_channels_json(
+                self.config, stream_url, query_data['name'], query_data['instance']))
 
         elif content_path == '/lineup.xml':  # must encode the strings
-            self.do_response(200, 'application/xml', channels.get_channels_xml(self.config, stream_url, query_data['name'], query_data['instance']))
+            self.do_response(200, 'application/xml', channels.get_channels_xml(
+                self.config, stream_url, query_data['name'], query_data['instance']))
 
         elif content_path == '/xmltv.xml':
             epg = EPG(self.plugins, query_data['name'], query_data['instance'])
@@ -184,7 +187,6 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
             # super().do_GET()
         return
 
-
     def do_POST(self):
         content_path = self.path
         query_data = {}
@@ -209,23 +211,24 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
 
         if content_path == '/pages/configform.html':
-            if self.config['main']['disable_web_config']:
+            if self.config['web']['disable_web_config']:
                 self.do_response(501, 'text/html', tvh_templates['htmlError']
                     .format('501 - Config pages disabled. '
-                            'Set [main][disable_web_config] to False in the config file to enable'))
+                            'Set [web][disable_web_config] to False in the config file to enable'))
             else:
                 # Take each key and make a [section][key] to store the value
                 config_changes = {}
                 area = query_data['area'][0]
                 del query_data['area']
                 for key in query_data:
-                    key_pair = key.split('-')
+                    key_pair = key.split('-', 1)
                     if key_pair[0] not in config_changes:
                         config_changes[key_pair[0]] = {}
                     config_changes[key_pair[0]][key_pair[1]] = query_data[key]
                 results = self.plugins.config_obj.update_config(area, config_changes)
                 self.do_response(200, 'text/html', results)
 
+        # TBD NEED TO WORK ON THIS TO FIX FOR PLEX SCAN
         elif content_path == '/lineup.post':
             if query_data['scan'] == 'start':
                 WebAdminHttpHandler.hdhr_station_scan = 0
@@ -251,11 +254,10 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
                 self.do_response(400, 'text/html',
                     tvh_templates['htmlError'].format(
                         query_data['scan'] + ' is not a valid scan command'))
-        elif content_path.startswith('/emby/Sessions/Capabilities/Full'):
-            self.do_response(204, 'text/html')
-
         else:
-            super().do_POST()
+            self.logger.info('UNKNOWN HTTP POST Request {}'.format(content_path))
+            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
+
         return
 
     def get_query_data(self):
@@ -284,7 +286,6 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
 
         path_list = content_path.split('/')
         if len(path_list) > 2:
-            namespace = None
             instance = None
             for ns in WebAdminHttpHandler.namespace_list:
                 if path_list[1].lower() == ns.lower():
@@ -302,13 +303,17 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
                     break
         return content_path, query_data
 
-
-    def do_file_response(self, code, package, reply_file):
-        if reply_file:
+    def do_file_response(self, _code, _package, _reply_file):
+        if _reply_file:
             try:
-                x = importlib.resources.read_binary(package, reply_file)
-                mime_lookup = mimetypes.guess_type(reply_file)
-                self.send_response(code)
+                if _package:
+                    x = importlib.resources.read_binary(_package, _reply_file)
+                else:
+                    x_path = pathlib.Path(str(_reply_file))
+                    with open(x_path, 'br') as reader:
+                        x = reader.read()
+                mime_lookup = mimetypes.guess_type(_reply_file)
+                self.send_response(_code)
                 self.send_header('Content-type', mime_lookup[0])
                 self.end_headers()
                 self.wfile.write(x)
@@ -327,17 +332,18 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
                 self.logger.info(e)
                 self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Area Not Found'))
 
-    def do_response(self, code, mime, reply_str=None):
-        self.send_response(code)
-        self.send_header('Content-type', mime)
+    def do_response(self, _code, _mime, _reply_str=None):
+        self.send_response(_code)
+        self.send_header('Content-type', _mime)
         self.end_headers()
-        if reply_str:
+        if _reply_str:
             try:
-                self.wfile.write(reply_str.encode('utf-8'))
+                self.wfile.write(_reply_str.encode('utf-8'))
             except BrokenPipeError:
                 self.logger.debug('Client dropped connection before results were sent, ignoring')
 
-    def get_ns_inst_path(self, _query_data):
+    @staticmethod
+    def get_ns_inst_path(_query_data):
         if _query_data['name']:
             path = '/'+_query_data['name']
         else:
@@ -352,57 +358,67 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
                              self.config['display']['theme']
             image_list = list(importlib.resources.contents(background_dir))
             image_found = False
-            while not image_found:
+            count = 10
+            image = None
+            while not image_found and count > 0:
                 image = random.choice(image_list)
                 mime_lookup = mimetypes.guess_type(image)
                 if mime_lookup[0] is not None and \
                         mime_lookup[0].startswith('image'):
                     image_found = True
-            self.do_file_response(200, background_dir, image)
-
+                count -= 1
+            if image_found:
+                self.do_file_response(200, background_dir, image)
+            else:
+                self.logger.warning('No Background Image found: ' + background_dir)
+                self.do_response(404, 'text/html', tvh_templates['htmlError']
+                    .format('404 - Background Image Not Found'))
         else:
             background = self.config['display']['backgrounds']
             try:
                 image_found = False
-                count = 0
-                while not image_found:
-                    image = random.choice(os.listdir(background))
+                count = 10
+                full_image_path = None
+                while not image_found and count > 0:
+                    image = random.choice(list(pathlib.Path(background).rglob('*.*')))
                     full_image_path = pathlib.Path(background).joinpath(image)
                     mime_lookup = mimetypes.guess_type(str(full_image_path))
                     if mime_lookup[0].startswith('image'):
                         image_found = True
-                    else:
-                        count += 1
-                        if count > 5:
-                            self.logger.debug('Image not found at {}'.format(background))
-                            self.do_response(404, 'text/html',
-                                tvh_templates['htmlError'].format('404 - Background Image Not Found'))
-                            return
-                self.do_file_response(200, full_image_path)
-            except FileNotFoundError:
-                self.logger.warning('Background Theme Folder not found')
-                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Background Folder Not Found'))
+                    count -= 1
+                if image_found:
+                    self.do_file_response(200, None, full_image_path)
+                else:
+                    self.logger.debug('Image not found at {}'.format(background))
+                    self.do_response(404, 'text/html',
+                        tvh_templates['htmlError'].format('404 - Background Image Not Found'))
 
-    def put_hdhr_queue(self, index, channel, status):
+            except (FileNotFoundError, IndexError):
+                self.logger.warning('Background Theme Folder not found: ' + background)
+                self.do_response(404, 'text/html', tvh_templates['htmlError']
+                    .format('404 - Background Folder Not Found'))
+
+    def put_hdhr_queue(self, _index, _channel, _status):
         if not self.config['hdhomerun']['disable_hdhr']:
             WebAdminHttpHandler.hdhr_queue.put(
-                {'tuner': index, 'channel': channel, 'status': status})
+                {'tuner': _index, 'channel': _channel, 'status': _status})
 
 
 class WebAdminHttpServer(Thread):
 
     def __init__(self, server_socket, _plugins):
         Thread.__init__(self)
-        self.bind_ip = _plugins.config_obj.data['main']['bind_ip']
-        self.bind_port = _plugins.config_obj.data['main']['web_admin_port']
+        self.bind_ip = _plugins.config_obj.data['web']['bind_ip']
+        self.bind_port = _plugins.config_obj.data['web']['web_admin_port']
         self.socket = server_socket
         self.start()
 
     def run(self):
         HttpHandlerClass = FactoryWebAdminHttpHandler()
-        httpd = HTTPServer((self.bind_ip, self.bind_port), HttpHandlerClass, False)
+        httpd = HTTPServer((self.bind_ip, self.bind_port), HttpHandlerClass, bind_and_activate=False)
         httpd.socket = self.socket
         httpd.server_bind = self.server_close = lambda self: None
+        httpd.server_activate()
         httpd.serve_forever()
 
 
@@ -411,6 +427,7 @@ def FactoryWebAdminHttpHandler():
         def __init__(self, *args, **kwargs):
             super(CustomWebAdminHttpHandler, self).__init__(*args, **kwargs)
     return CustomWebAdminHttpHandler
+
 
 def init_class_var(_plugins, _hdhr_queue):
     WebAdminHttpHandler.logger = logging.getLogger(__name__)
@@ -424,7 +441,7 @@ def init_class_var(_plugins, _hdhr_queue):
     WebAdminHttpHandler.namespace_list = plugins_db.get_instances()
 
     tmp_rmg_scans = []
-    for x in range(int(_plugins.config_obj.data['main']['tuner_count'])):
+    for x in range(int(_plugins.config_obj.data['locast']['player-tuner_count'])):
         tmp_rmg_scans.append('Idle')
     WebAdminHttpHandler.rmg_station_scans = tmp_rmg_scans
 
@@ -436,14 +453,15 @@ def start(_plugins, _hdhr_queue):
     """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((_plugins.config_obj.data['main']['bind_ip'], _plugins.config_obj.data['main']['web_admin_port']))
-    server_socket.listen(int(_plugins.config_obj.data['main']['concurrent_listeners']))
+    server_socket.bind((_plugins.config_obj.data['web']['bind_ip'], _plugins.config_obj.data['web']['web_admin_port']))
+    server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
     utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
     logger = logging.getLogger(__name__)
     logger.debug(
-        'Now listening for requests. Number of listeners={}'.format(_plugins.config_obj.data['main']['concurrent_listeners']))
+        'Now listening for requests. Number of listeners={}'
+            .format(_plugins.config_obj.data['web']['concurrent_listeners']))
     init_class_var(_plugins, _hdhr_queue)
-    for i in range(int(_plugins.config_obj.data['main']['concurrent_listeners'])):
+    for i in range(int(_plugins.config_obj.data['web']['concurrent_listeners'])):
         WebAdminHttpServer(server_socket, _plugins)
     try:
         while True:

@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 
 class ConfigFormHTML:
@@ -92,12 +97,21 @@ class ConfigFormHTML:
             '<table>'
         ])
         section_html = '<tbody>'
+        subsection = None
+        is_section_new = False
         for setting, setting_data in section_data['settings'].items():
             if setting_data['level'] == 4:
                 continue
             title = ''
             readonly = ''
 
+            new_section = None
+            if '-' in setting:
+                new_section = setting.split('-', 1)[0]
+            if new_section != subsection and new_section is not None:
+                is_section_new = True
+                subsection = new_section
+                
             background_color = '#F0F0F0'
             if setting_data['help'] is not None:
                 title = ''.join([' title="', setting_data['help'], '"'])
@@ -140,9 +154,9 @@ class ConfigFormHTML:
                 ])
 
             elif setting_data['type'] == 'list':
-                dlevelsetting = ''
+                dlsetting = ''
                 if section_data['name'] == 'display' and setting == 'display_level':
-                    dlevelsetting = ' class="dlevelsetting" '
+                    dlsetting = ' class="dlsetting" '
 
                 option_html = ''.join(['<option value="">default</option>'])
                 for value in setting_data['values']:
@@ -151,9 +165,14 @@ class ConfigFormHTML:
                 input_html = ''.join([
                     '<select STYLE="background-color: ',
                     background_color, ';"', readonly,
-                    dlevelsetting,
+                    dlsetting,
                     'name="', section_data['name'], '-', setting, '">',
                     option_html, '</select>'])
+
+            if is_section_new:
+                is_section_new = False
+                section_html = ''.join([section_html,
+                '<tr class="hlevel"><td><hr><h3>', subsection.upper(), '</h3></td></tr>'])
 
             section_html = ''.join([section_html,
                 '<tr class="dlevel', str(setting_data['level']),

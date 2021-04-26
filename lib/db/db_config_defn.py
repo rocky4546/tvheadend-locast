@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,68 +6,77 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import json
 
 from lib.db.db import DB
 
+sqlcmds = {
+    'ct': [
+        """
+        CREATE TABLE IF NOT EXISTS area (
+            name VARCHAR(255) NOT NULL,
+            icon VARCHAR(255) NOT NULL,
+            label VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            PRIMARY KEY(name)
+            )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS section (
+            area VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            icon VARCHAR(255) NOT NULL,
+            label VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            settings TEXT NOT NULL,
+            FOREIGN KEY(area) REFERENCES area(name),
+            UNIQUE(area, name)
+            )
+        """
+    ],
 
-sqlcmds =  {
-    'ct': ["""
-    CREATE TABLE IF NOT EXISTS area (
-        name VARCHAR(255) NOT NULL,
-        icon VARCHAR(255) NOT NULL,
-        label VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        PRIMARY KEY(name)
-        )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS section (
-        area VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        icon VARCHAR(255) NOT NULL,
-        label VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        settings TEXT NOT NULL,
-        FOREIGN KEY(area) REFERENCES area(name),
-        UNIQUE(area, name)
-        )
-    """],
+    'dt': [
+        """
+        DROP TABLE IF EXISTS area
+        """,
+        """
+        DROP TABLE IF EXISTS section
+        """],
 
-    'dt': ["""
-    DROP TABLE IF EXISTS area
-    """,
-    """
-    DROP TABLE IF EXISTS section
-    """],
-
-    'area_add': """
-    INSERT OR REPLACE INTO area (
-        name, icon, label, description
-        ) VALUES ( ?, ?, ?, ? )
-    """,
-    'section_add': """
-    INSERT OR REPLACE INTO section (
-        area, name, icon, label, description, settings
-        ) VALUES ( ?, ?, ?, ?, ?, ? )
-    """,
+    'area_add':
+        """
+        INSERT OR REPLACE INTO area (
+            name, icon, label, description
+            ) VALUES ( ?, ?, ?, ? )
+        """,
+    'section_add':
+        """
+        INSERT OR REPLACE INTO section (
+            area, name, icon, label, description, settings
+            ) VALUES ( ?, ?, ?, ?, ?, ? )
+        """,
     'area_get':
-    """
-    SELECT * from area WHERE name LIKE ? ORDER BY rowid
-    """,
+        """
+        SELECT * from area WHERE name LIKE ? ORDER BY rowid
+        """,
     'section_get':
-    """
-    SELECT * from section WHERE area = ? ORDER BY rowid
-    """,
+        """
+        SELECT * from section WHERE area = ? ORDER BY rowid
+        """,
     'area_keys_get':
-    """
-    SELECT name from area ORDER BY rowid
-    """
+        """
+        SELECT name from area ORDER BY rowid
+        """
 }
 
 

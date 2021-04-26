@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 from io import StringIO
 from xml.sax.saxutils import escape
@@ -18,13 +23,13 @@ from lib.tvheadend.templates import tvh_templates
 from lib.db.db_channels import DBChannels
 
 
-def get_channels_m3u(_config, _base_url, namespace, instance):
+def get_channels_m3u(_config, _base_url, _namespace, _instance):
 
     format_descriptor = '#EXTM3U'
     record_marker = '#EXTINF'
 
     db = DBChannels(_config)
-    ch_data = db.get_channels(namespace, instance)
+    ch_data = db.get_channels(_namespace, _instance)
     fakefile = StringIO()
     fakefile.write(
             '%s\n' % format_descriptor
@@ -68,9 +73,9 @@ def get_channels_m3u(_config, _base_url, namespace, instance):
     return fakefile.getvalue()
     
     
-def get_channels_json(_config, _base_url, namespace, instance):
+def get_channels_json(_config, _base_url, _namespace, _instance):
     db = DBChannels(_config)
-    ch_data = db.get_channels(namespace, instance)
+    ch_data = db.get_channels(_namespace, _instance)
     return_json = ''
     for sid, sid_data in ch_data.items():
         return_json = return_json + \
@@ -83,9 +88,9 @@ def get_channels_json(_config, _base_url, namespace, instance):
     return "[" + return_json[:-1] + "]"
 
 
-def get_channels_xml(_config, _base_url, namespace, instance):
+def get_channels_xml(_config, _base_url, _namespace, _instance):
     db = DBChannels(_config)
-    ch_data = db.get_channels(namespace, instance)
+    ch_data = db.get_channels(_namespace, _instance)
     return_xml = ''
     for sid, sid_data in ch_data.items():
         return_xml = return_xml + \
@@ -98,9 +103,15 @@ def get_channels_xml(_config, _base_url, namespace, instance):
 
 
 # returns the service name used to sync with the EPG channel name
-def set_service_name(config, sid_data):
-    service_name = config['epg']['epg_prefix'] + \
-        str(sid_data['number']) + \
-        config['epg']['epg_suffix'] + \
-        ' ' + sid_data['display_name']
+def set_service_name(_config, _sid_data):
+    prefix = _config[_sid_data['namespace'].lower()]['epg-prefix']
+    suffix = _config[_sid_data['namespace'].lower()]['epg-suffix']
+    if prefix is None:
+        prefix = ""
+    if suffix is None:
+        suffix = ""
+    service_name = prefix + \
+        str(_sid_data['number']) + \
+        suffix + \
+        ' ' + _sid_data['display_name']
     return service_name

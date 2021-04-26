@@ -1,14 +1,20 @@
-# Licensed under the MIT license
-# http://opensource.org/licenses/mit-license.php
+"""
+MIT License
 
-# Copyright 2005, Tim Potter <tpot@samba.org>
-# Copyright 2006 John-Mark Gurney <gurney_j@resnet.uroegon.edu>
-# Copyright (C) 2006 Fluendo, S.A. (www.fluendo.com).
-# Copyright 2006,2007,2008,2009 Frank Scholz <coherence@beebits.net>
-# Copyright 2016 Erwan Martin <public@fzwte.net>
-#
-# Implementation of a SSDP server.
-#
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import random
 import socket
@@ -29,10 +35,10 @@ def ssdp_process(config):
     ssdp.register('local',
         'uuid:' + config["main"]["uuid"] + '::upnp:rootdevice',
         'upnp:rootdevice',
-        'http://' + config["main"]["plex_accessible_ip"] + ':' +
-        str(config["main"]["web_admin_port"]) + '/device.xml')
+        'http://' + config["web"]["plex_accessible_ip"] + ':' +
+        str(config["web"]["web_admin_port"]) + '/device.xml')
 
-    ssdp.run(config["main"]["bind_ip"])
+    ssdp.run(config["web"]["bind_ip"])
 
 
 class SSDPServer:
@@ -82,13 +88,13 @@ class SSDPServer:
 
     def datagram_received(self, data, host_port):
         """Handle a received multicast datagram."""
-        print("SSDP::", host_port)
+        self.logger.debug("SSDP:: {}".format(host_port))
         (host, port) = host_port
 
         try:
             header, payload = data.decode().split('\r\n\r\n')[:2]
         except ValueError as err:
-            print(err)
+            self.logger.error(err)
             return
 
         lines = header.split('\r\n')
@@ -99,26 +105,23 @@ class SSDPServer:
         headers = [x.split(':', 1) for x in lines]
         headers = dict([(x[0].lower(), x[1]) for x in headers])
 
-        if self.config['main']['verbose']:
-            print('SSDP command %s %s - from %s:%d' % (cmd[0], cmd[1], host, port))
-            print('with headers: {}.'.format(headers))
+        self.logger.debug('SSDP command %s %s - from %s:%d' % (cmd[0], cmd[1], host, port))
+        self.logger.debug('with headers: {}.'.format(headers))
         if cmd[0] == 'M-SEARCH' and cmd[1] == '*':
             # SSDP discovery
             self.discovery_request(headers, (host, port))
         elif cmd[0] == 'NOTIFY' and cmd[1] == '*':
             # SSDP presence
-            if self.config['main']['verbose']:
-                print('NOTIFY *')
+            self.logger.debug('NOTIFY *')
         else:
-            if self.config['main']['verbose']:
-                print('Unknown SSDP command %s %s' % (cmd[0], cmd[1]))
+            self.logger.debug('Unknown SSDP command %s %s' % (cmd[0], cmd[1]))
 
-    def register(self, manifestation, usn, st, location, server=SERVER_ID, cache_control='max-age=1800', silent=False,
-        host=None):
+    def register(self, manifestation, usn, st, location, server=SERVER_ID,
+            cache_control='max-age=1800', silent=False, host=None):
         """Register a service or device that this SSDP server will
         respond to."""
 
-        print('Registering %s (%s)' % (st, location))
+        self.logger.debug('Registering %s (%s)' % (st, location))
 
         self.known[usn] = {}
         self.known[usn]['Server'] = server
@@ -137,19 +140,18 @@ class SSDPServer:
             self.do_notify(usn)
 
     def unregister(self, usn):
-        print("Un-registering %s" % usn)
+        self.logger.debug("Un-registering %s" % usn)
         del self.known[usn]
 
     def is_known(self, usn):
         return usn in self.known
 
     def send_it(self, response, destination, delay, usn):
-        if self.config['main']['verbose']:
-            print('send discovery response delayed by %ds for %s to %r' % (delay, usn, destination))
+        self.logger.debug('send discovery response delayed by %ds for %s to %r' % (delay, usn, destination))
         try:
             self.sock.sendto(response.encode(), destination)
         except (AttributeError, socket.error) as msg:
-            print("failure sending out byebye notification: %r" % msg)
+            self.logger.error("failure sending out byebye notification: %r" % msg)
 
     def discovery_request(self, headers, host_port):
         """Process a discovery request.  The response must be sent to
@@ -157,8 +159,7 @@ class SSDPServer:
 
         (host, port) = host_port
 
-        if self.config['main']['verbose']:
-            print('Discovery request from (%s,%d) for %s' % (host, port, headers['st']))
+        self.logger.debug('Discovery request from (%s,%d) for %s' % (host, port, headers['st']))
 
         # Do we know about this service?
         for i in list(self.known.values()):
@@ -193,8 +194,7 @@ class SSDPServer:
         if self.known[usn]['SILENT']:
             return
 
-        if self.config['main']['verbose']:
-            print('Sending alive notification for %s' % usn)
+        self.logger.debug('Sending alive notification for %s' % usn)
 
         resp = [
             'NOTIFY * HTTP/1.1',
@@ -212,20 +212,18 @@ class SSDPServer:
         resp.extend([': '.join(x) for x in list(stcpy.items())])
         resp.extend(('', ''))
 
-        if self.config['main']['verbose']:
-            print('do_notify content', resp)
+        self.logger.debug('do_notify content', resp)
 
         try:
             self.sock.sendto('\r\n'.join(resp).encode(), (SSDP_ADDR, SSDP_PORT))
             self.sock.sendto('\r\n'.join(resp).encode(), (SSDP_ADDR, SSDP_PORT))
         except (AttributeError, socket.error) as msg:
-            if self.config['main']['verbose']:
-                print("failure sending out alive notification: %r" % msg)
+            self.logger.debug("failure sending out alive notification: %r" % msg)
 
     def do_byebye(self, usn):
         """Do byebye"""
 
-        print('Sending byebye notification for %s' % usn)
+        self.logger.debug('Sending byebye notification for %s' % usn)
 
         resp = [
             'NOTIFY * HTTP/1.1',
@@ -242,11 +240,11 @@ class SSDPServer:
             del stcpy['last-seen']
             resp.extend([': '.join(x) for x in list(stcpy.items())])
             resp.extend(('', ''))
-            print('do_byebye content', resp)
+            self.logger.debug('do_byebye content', resp)
             if self.sock:
                 try:
                     self.sock.sendto('\r\n'.join(resp), (SSDP_ADDR, SSDP_PORT))
                 except (AttributeError, socket.error) as msg:
-                    print("failure sending out byebye notification: %r" % msg)
+                    self.logger.error("failure sending out byebye notification: %r" % msg)
         except KeyError as msg:
-            print("error building byebye notification: %r" % msg)
+            self.logger.error("error building byebye notification: %r" % msg)

@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,31 +6,35 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import logging
-import urllib
 import requests
+import time
+from datetime import datetime
 
 from lib.tvheadend.decorators import handle_url_except
 from lib.tvheadend.decorators import handle_json_except
 import lib.tvheadend.exceptions as exceptions
 
-from lib.tvheadend.utils import clean_exit
-
 from . import constants
-from .location import Location
 
 
 class Authenticate:
 
     logger = None
 
-    def __init__(self, _config):
-        self.config = _config
+    def __init__(self, _config_obj):
+        self.config_obj = _config_obj
+        self.config = _config_obj.data
         self.location = None
         self.token = None
         if not self.login():
@@ -39,12 +43,12 @@ class Authenticate:
     @handle_url_except 
     def login(self):
         if not self.username:
-            self.logger.error("Username not specified in config.ini.  Exiting...")
+            self.logger.error("[locast][login-username] not specified in config.ini.  Exiting...")
             return None
         if not self.password:
-            self.logger.error("Password not specified in config.ini.  Exiting...")
+            self.logger.error("[locast][login-password] not specified in config.ini.  Exiting...")
             return None
-        if self.config['main']['login_invalid'] is not None:
+        if self.config['locast']['login-invalid'] is not None:
             self.logger.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
             return None
 
@@ -53,7 +57,7 @@ class Authenticate:
         if not self.token:
             self.logger.error('Invalid Locast Login Credentials. Exiting...')
             current_time = str(int(time.time()))
-            config_obj.write('main', 'login_invalid', current_time)
+            self.config_obj.write('locast', 'login-invalid', current_time)
             return None
         return self.validate_user()
 
@@ -96,19 +100,19 @@ class Authenticate:
 
     @property
     def is_free_account(self):
-        self.config['freeaccount']['is_free_account']
+        return self.config['locast']['is_free_account']
 
     @is_free_account.setter
     def is_free_account(self, state):
-        self.config['freeaccount']['is_free_account'] = state
+        self.config['locast']['is_free_account'] = state
 
     @property
     def username(self):
-        return self.config['main']['locast_username']
+        return self.config['locast']['login-username']
 
     @property
     def password(self):
-        return self.config['main']['locast_password']        
+        return self.config['locast']['login-password']        
 
 
 Authenticate.logger = logging.getLogger(__name__)

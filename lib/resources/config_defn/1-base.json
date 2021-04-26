@@ -44,7 +44,7 @@
                 "icon": "sensor_window",
                 "description": "Contains the general settings for the app",
                 "settings":{
-                    "reporting_firmware_ver":{
+                    "version":{
                         "label": "Software Version",
                         "type": "string",
                         "default": null,
@@ -53,42 +53,14 @@
                         "onInit": "lib.config.config_callbacks.set_version",
                         "help": "Current version installed"
                     },
-                    "tuner_count":{
-                        "label": "tuner_count",
-                        "type": "integer",
-                        "default": 4,
-                        "level": 2,
-                        "onInit": "lib.config.config_callbacks.check_value_4",
-                        "onChange": "lib.config.config_callbacks.check_value_4",
-                        "help": "Number of streams active at one time. Between 1 and 4"
-                    },
-                    "concurrent_listeners":{
-                        "label": "concurrent_listeners",
-                        "type": "integer",
-                        "default": 5,
-                        "level": 2,
-                        "help": "Number of simultaneous HTTP requests.  Should be at least twice the counts"
-                    },
-                    "use_old_plex_interface":{
-                        "label": "use_old_plex_interface",
-                        "type": "boolean",
-                        "default": false,
-                        "level": 4,
+                    "uuid":{
+                        "label": "UUID",
+                        "type": "string",
+                        "default": null,
+                        "level": 3,
+                        "writable": false,
+                        "onInit": "lib.config.config_callbacks.set_uuid",
                         "help": null
-                    },
-                    "bytes_per_read":{
-                        "label": "bytes_per_read",
-                        "type": "integer",
-                        "default": 255304,
-                        "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "quiet_print":{
-                        "label": "quiet_print",
-                        "type": "boolean",
-                        "default": true,
-                        "level": 3,
-                        "help": "Print statements in locast2plex modules are silenced."
                     },
                     "encrypt_key":{
                         "label": "encrypt_key",
@@ -103,27 +75,6 @@
                         "default": false,
                         "level": 2,
                         "help": "Will encrypt the password using a self-generated key.  Use with only one user running service."
-                    },
-                    "login_invalid":{
-                        "label": "login_invalid",
-                        "type": "integer",
-                        "default": null,
-                        "level": 2,
-                        "help": "Normally empty, but if locast login locks out, it will be set. Lockouts are normally 60 minutes. Manually clearing entry will allow a re-login attempt on restart"
-                    },
-                    "login_timeout":{
-                        "label": "login_timeout",
-                        "type": "integer",
-                        "default": 4000,
-                        "level": 4,
-                        "help": null
-                    },
-                    "disable_web_config":{
-                        "label": "disable_web_config",
-                        "type": "boolean",
-                        "default": false,
-                        "level": 3,
-                        "help": "Security setting to disable the ability to edit the configuration remotely"
                     }
                 }
             }

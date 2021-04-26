@@ -5,9 +5,9 @@
         "label": "Clients",
         "description": "Settings that support different clients",
         "sections":{
-            "main":{
-                "label": "Main",
-                "icon": "sensor_window",
+            "web":{
+                "label": "Web Sites",
+                "icon": "language",
                 "description": "Contains the general settings for the app",
                 "settings":{
                     "local_ip":{
@@ -48,6 +48,64 @@
                         "level": 1,
                         "help": "Port for main web-site.  TVHeadend can use any port; however, others such as Plex and Emby need it on port 80 for full HDHR compatilibity"
                     },
+                    "disable_web_config":{
+                        "label": "disable_web_config",
+                        "type": "boolean",
+                        "default": false,
+                        "level": 3,
+                        "help": "Security setting to disable the ability to edit the configuration remotely"
+                    },
+                    "concurrent_listeners":{
+                        "label": "concurrent_listeners",
+                        "type": "integer",
+                        "default": 5,
+                        "level": 2,
+                        "help": "Number of simultaneous HTTP requests.  Should be at least twice the counts"
+                    }
+                }
+            },
+            "epg":{
+                "label": "EPG",
+                "icon": "tune",
+                "description": "TV Guide or EPG settings",
+                "settings":{
+                    "description":{
+                        "label": "description",
+                        "type": "list",
+                        "default": "extend",
+                        "values": ["normal", "brief", "extend"],
+                        "level": 1,
+                        "help": null
+                    },
+                    "genre":{
+                        "label": "genre",
+                        "type": "list",
+                        "default": "tvheadend",
+                        "values": ["normal", "tvheadend"],
+                        "level": 1,
+                        "help": "TVHeadend uses specific genre to get colors on tv guide"
+                    },
+                    "epg_channel_icon":{
+                        "label": "EPG Channel Icon",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 2,
+                        "help": "When true will include the icon for each channel inside the xmltv.xml file"
+                    },
+                    "epg_program_icon":{
+                        "label": "EPG Program Icon",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 2,
+                        "help": "When true will include the icon for each program inside the xmltv.xml file"
+                    }
+                }
+            },
+            "ssdp":{
+                "label": "SSDP",
+                "icon": "vignette",
+                "description": "SSDP protocol on port 1900 (partially implemented)",
+                "settings":{
                     "disable_ssdp":{
                         "label": "disable_ssdp",
                         "type": "boolean",
@@ -55,50 +113,12 @@
                         "level": 2,
                         "help": "Not required for TVHeadend.  Needed for Emby, Plex, etc"
                     },
-                    "verbose":{
-                        "label": "verbose",
-                        "type": "boolean",
-                        "default": false,
-                        "level": 3,
-                        "help": "Used in locast2plex SSDP module."
-                    },
-                    "uuid":{
-                        "label": "UUID",
+                    "udp_netmask":{
+                        "label": "udp_netmask",
                         "type": "string",
                         "default": null,
-                        "level": 3,
-                        "writable": false,
-                        "onInit": "lib.config.config_callbacks.set_uuid",
-                        "help": null
-                    },
-                    "reporting_model":{
-                        "label": "reporting_model",
-                        "type": "string",
-                        "default": "HDHR5-4US",
-                        "level": 4,
-                        "help": null
-                    },
-                    "reporting_friendly_name":{
-                        "label": "reporting_friendly_name",
-                        "type": "string",
-                        "default": "Locast Rocky4546",
-                        "level": 4,
-                        "help": null
-                    },
-                    "reporting_firmware_name":{
-                        "label": "reporting_firmware_name",
-                        "type": "string",
-                        "default": "hdhomerun5_atsc",
-                        "level": 4,
-                        "help": null
-                    },
-                    "tuner_type":{
-                        "label": "tuner_type",
-                        "type": "string",
-                        "default": "Antenna",
-                        "level": 4,
-                        "writable": false,
-                        "help": null
+                        "level": 2,
+                        "help": "Used to reduce traffic from UDP broadcast messages. Recommend using anetmask filter to a single IP, i.e., 192.168.1.130/32"
                     }
                 }
             },
@@ -129,43 +149,35 @@
                         "default": null,
                         "level": 2,
                         "help": "Used to reduce traffic from UDP broadcast messages. Recommend using anetmask filter to a single IP, i.e., 192.168.1.130/32"
-                    }
-                }
-            },
-            "epg":{
-                "label": "EPG",
-                "icon": "tune",
-                "description": "TV Guide or EPG settings",
-                "settings":{
-                    "epg_prefix":{
-                        "label": "epg_prefix",
-                        "type": "string",
-                        "default": "",
-                        "level": 1,
-                        "help": "Used with channel number to order channel list"
                     },
-                    "epg_suffix":{
-                        "label": "epg_suffix",
+                    "reporting_model":{
+                        "label": "reporting_model",
                         "type": "string",
-                        "default": "L",
-                        "level": 1,
-                        "help": "Used with channel number to order channel list"
-                    },
-                    "description":{
-                        "label": "description",
-                        "type": "list",
-                        "default": "extend",
-                        "values": ["normal", "brief", "extend"],
-                        "level": 1,
+                        "default": "HDHR5-4US",
+                        "level": 4,
                         "help": null
                     },
-                    "genre":{
-                        "label": "genre",
-                        "type": "list",
-                        "default": "tvheadend",
-                        "values": ["normal", "tvheadend"],
-                        "level": 1,
-                        "help": "TVHeadend uses specific genre to get colors on tv guide"
+                    "reporting_friendly_name":{
+                        "label": "reporting_friendly_name",
+                        "type": "string",
+                        "default": "Locast Rocky4546",
+                        "level": 4,
+                        "help": null
+                    },
+                    "reporting_firmware_name":{
+                        "label": "reporting_firmware_name",
+                        "type": "string",
+                        "default": "hdhomerun5_atsc",
+                        "level": 4,
+                        "help": null
+                    },
+                    "tuner_type":{
+                        "label": "tuner_type",
+                        "type": "string",
+                        "default": "Antenna",
+                        "level": 4,
+                        "writable": false,
+                        "help": null
                     }
                 }
             }
