@@ -1,6 +1,20 @@
-# Licensed under the MIT license
-# http://opensource.org/licenses/mit-license.php
-#
+"""
+MIT License
+
+Copyright (C) 2021 ROCKY4546
+https://github.com/rocky4546
+
+This file is part of Cabernet
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import logging
 import random
@@ -68,13 +82,13 @@ def hdhr_process(config, _tuner_queue):
 
     hdhr = HDHRServer(config, _tuner_queue)
     # startup the multicast thread first which will exit when this function exits
-    p_multi = Process(target=hdhr.run_multicast, args=(config["main"]["bind_ip"],))
+    p_multi = Process(target=hdhr.run_multicast, args=(config["web"]["bind_ip"],))
     p_multi.daemon = True
     p_multi.start()
 
     # startup the standard tcp listener, but have this hang the process
     # the socket listener will terminate from main.py when the process is stopped
-    hdhr.run_listener(config["main"]["bind_ip"])
+    hdhr.run_listener(config["web"]["bind_ip"])
     logger.info('hdhr_processing terminated')
 
 
@@ -126,7 +140,7 @@ def hdhr_get_valid_device_id(_device_id):
 
 
 def hdhr_gen_device_id():
-    baseid = '105' + ''.join(random.choice('0123456789ABCDEF') for i in range(4)) + '0'
+    baseid = '105' + ''.join(random.choice('0123456789ABCDEF') for _ in range(4)) + '0'
     return hdhr_get_valid_device_id(baseid)
 
 
@@ -142,9 +156,9 @@ class HDHRServer:
         self.tuner_queue = _tuner_queue
         self.sock_multicast = None
         self.sock_listener = None
-        self.tuners = dict.fromkeys(range(self.config["main"]["tuner_count"]))
+        self.tuners = dict.fromkeys(range(self.config["locast"]["player-tuner_count"]))
         self._t = None
-        for i in range(self.config['main']['tuner_count']):
+        for i in range(self.config["locast"]["player-tuner_count"]):
             self.tuners[i] = {
                 'channel': None,
                 'status': 'Idle'
@@ -181,7 +195,7 @@ class HDHRServer:
                     self.logger.debug('TCP: Client terminated connection {}'.format(_address))
                     break
                 self.logger.debug('TCP: data rcvd={}'.format(msg))
-                frame_type = self.get_frame_type(msg)
+                frame_type = HDHRServer.get_frame_type(msg)
                 if frame_type == HDHOMERUN_TYPE_GETSET_REQ:
                     req_dict = self.parse_getset_request(msg)
                     response = self.create_getset_response(req_dict, _address)
@@ -203,13 +217,19 @@ class HDHRServer:
                 'status': queue_item['status']
             }
 
-    # get the type of message requested
-    def get_frame_type(self, _msg):
+    @staticmethod
+    def get_frame_type(_msg):
+        """
+        Get the type of message requested
+        :param _msg:
+        :return:
+        """
         # msg is in the first 2 bytes of the string
         (frame_type,) = struct.unpack('>H', _msg[:2])
         return frame_type
 
-    def gen_err_response(self, _frame_type, _tag, _text):
+    @staticmethod
+    def gen_err_response(_frame_type, _tag, _text):
         # This is a tag type of HDHOMERUN_ERROR_MESSAGE
         # does not include the crc
         msg = msgs[_tag].format(*_text).encode()
@@ -224,10 +244,10 @@ class HDHRServer:
         frame_type = utils.set_u16(HDHOMERUN_TYPE_GETSET_RSP)
         name = _req_dict[HDHOMERUN_GETSET_NAME]
         name_str = name.decode('utf-8')
-        if HDHOMERUN_GETSET_VALUE in _req_dict.keys():
-            value = _req_dict[HDHOMERUN_GETSET_VALUE]
-        else:
-            value = None
+        # if HDHOMERUN_GETSET_VALUE in _req_dict.keys():
+        #     value = _req_dict[HDHOMERUN_GETSET_VALUE]
+        # else:
+        #     value = None
 
         if name == b'/sys/model':
             # required to id the device
@@ -244,7 +264,7 @@ class HDHRServer:
             tuner_index = int(name_str[6])
             if name_str.endswith('/lockkey'):
                 self.logger.error('TCP: NOT IMPLEMENTED GETSET LOCKKEY MSG REQUEST: {} '.format(_req_dict))
-                response = self.gen_err_response(frame_type, 'lockedErrMsg', [host])
+                response = HDHRServer.gen_err_response(frame_type, 'lockedErrMsg', [host])
                 x = zlib.crc32(response)
                 crc = struct.pack('<I', x)
                 response += crc
@@ -252,7 +272,7 @@ class HDHRServer:
             elif name_str.endswith('/status'):
                 tuner_status = self.tuners[tuner_index]['status']
                 if tuner_status == 'Scan':
-                    response = self.gen_err_response(frame_type, 'scanErrMsg', [host])
+                    response = HDHRServer.gen_err_response(frame_type, 'scanErrMsg', [host])
                 else:
                     value_resp = utils.set_u8(HDHOMERUN_GETSET_VALUE) \
                                  + utils.set_str(tuner_status_msg[tuner_status], True)
@@ -295,7 +315,7 @@ class HDHRServer:
             offset = 4
             request_info = {}
             while True:
-                (msg_type, value, offset) = self.get_id_value(_msg, offset)
+                (msg_type, value, offset) = HDHRServer.get_id_value(_msg, offset)
                 if msg_type is None:
                     break
                 request_info[msg_type] = value
@@ -305,8 +325,15 @@ class HDHRServer:
 
         return request_info
 
-    # obtains the next type/value in the message and moves the offset to the next spot
-    def get_id_value(self, _msg, _offset):
+    @staticmethod
+    def get_id_value(_msg, _offset):
+        """
+        Obtains the next type/value in the message and moves the offset to the next spot
+
+        :param _msg:
+        :param _offset:
+        :return:
+        """
         if _offset >= len(_msg) - 4:
             return None, None, None
         (msg_type, length) = struct.unpack('BB', _msg[_offset:_offset + 2])
@@ -349,7 +376,7 @@ class HDHRServer:
             try:
                 (frame_type, msg_len, device_type, sub_dt_len, sub_dt, device_id, sub_did_len, sub_did) = \
                     struct.unpack('>HHBBIBBI', _data[0:-4])
-                (crc,) = struct.unpack('<I', _data[-4:])
+                # (crc,) = struct.unpack('<I', _data[-4:])
             except ValueError as err:
                 self.logger.error('UDP: {}'.format(err))
                 return
@@ -361,10 +388,10 @@ class HDHRServer:
                 header = bytes.fromhex('010400000001')
                 device_id = bytes.fromhex('0204' + self.config['hdhomerun']['hdhr_id'])
                 base_url = 'http://' + \
-                           self.config['main']['plex_accessible_ip'] + \
-                           ':' + str(self.config['main']['web_admin_port'])
+                           self.config['web']['plex_accessible_ip'] + \
+                           ':' + str(self.config['web']['web_admin_port'])
                 base_url_msg = b'\x2a' + utils.set_str(base_url.encode(), False)
-                tuner_count = b'\x10\x01' + utils.set_u8(self.config['main']['tuner_count'])
+                tuner_count = b'\x10\x01' + utils.set_u8(self.config['locast']['player-tuner_count'])
 
                 lineup_url = base_url + '/lineup.json'
                 lineup_url = b'\x27' + utils.set_str(lineup_url.encode(), False)

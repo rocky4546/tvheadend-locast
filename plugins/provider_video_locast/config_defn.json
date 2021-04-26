@@ -10,91 +10,29 @@
                 "icon": "cast_connected",
                 "description": "Settings for Locast",
                 "settings":{
-                    "epg_channel_icon":{
-                        "label": "EPG Channel Icon",
+                    "is_free_account":{
+                        "label": "is_free_account",
                         "type": "boolean",
                         "default": true,
-                        "level": 2,
-                        "help": "When true will include the icon for each channel inside the xmltv.xml file"
-                    },
-                    "epg_program_icon":{
-                        "label": "EPG Program Icon",
-                        "type": "boolean",
-                        "default": true,
-                        "level": 2,
-                        "help": "When true will include the icon for each program inside the xmltv.xml file"
-                    },
-                    "fcc_timeout":{
-                        "label": "FCC Timeout",
-                        "type": "integer",
-                        "default": 15,
-                        "level": 3,
-                        "help": "Default pulls from fcc website every 15 days.  Does not change often. Removing files will force auto-pull"
+                        "level": 1,
+                        "writable": false,
+                        "help": "Auto-filled based on the locast account"
                     },
                     "channel_update_timeout":{
                         "label": "Channel Update Timeout",
                         "type": "integer",
                         "default": 7,
                         "level": 3,
-                        "help": "Default pulls from channel data from locast every 7 days"
+                        "help": "Default pulls channel data from locast every 7 days"
                     },
-                    "epg_days":{
-                        "label": "EPG Days to Pull",
-                        "type": "integer",
-                        "default": 10,
-                        "level": 3,
-                        "help": "Locast max is 11 days"
-                    },
-                    "epg_days_start_refresh": {
-                        "label": "EPG Days from Start to Refresh",
-                        "type": "integer",
-                        "default": 1,
-                        "level": 2,
-                        "help": "Number of days including today to force refresh. Must be greater than zero."
-                    },
-                    "epg_days_aging_refresh": {
-                        "label": "EPG Aging Days before Refresh",
-                        "type": "integer",
-                        "default": 2,
-                        "level": 2,
-                        "help": "Days old each EPG day is before it will be refreshed. -1 will refresh all days"
-                    },
-                    "epg_min_refresh_rate":{
-                        "label": "EPG Min Refresh Rate",
-                        "type": "integer",
-                        "default": 400,
-                        "level": 2,
-                        "help": "Default=4 hours. When a HTTP request for epg data is received, will refresh the data if older than this value."
-                    },
-                    "m3u_group_hdtv":{
-                        "label": "HDTV Group Name",
-                        "type": "string",
-                        "default": null,
-                        "level": 1,
-                        "help": "Default=not used.  When set, will add the group for any HD channels in the m3u file."
-                    },
-                    "m3u_group_sdtv":{
-                        "label": "SDTV Group Name",
-                        "type": "string",
-                        "default": null,
-                        "level": 1,
-                        "help": "Default=not used.  When set, will add the group for any non-HD channels in the m3u file."
-                    }
-                }
-            },
-            "main":{
-                "label": "Main",
-                "icon": "cast_connected",
-                "description": "Settings for Locast",
-                "settings":{
-                    "locast_username":{
+                    "login-username":{
                         "label": "username",
                         "type": "string",
                         "default": null,
                         "level": 0,
                         "help": "Username used to log into the Locast website"
                     },
-                    "locast_password":{
+                    "login-password":{
                         "label": "password",
                         "type": "password",
                         "default": null,
@@ -103,51 +41,30 @@
                         "onInit": "lib.config.config_callbacks.load_encrypted_setting",
                         "help": "Server never provides current password to page.  Add to change password"
                     },
-                    "override_latitude":{
-                        "label": "override_latitude",
-                        "type": "float",
+                    "login-invalid":{
+                        "label": "login_invalid",
+                        "type": "integer",
                         "default": null,
+                        "level": 2,
+                        "help": "Normally empty, but if locast login locks out, it will be set. Lockouts are normally 60 minutes. Manually clearing entry will allow a re-login attempt on restart"
+                    },
+                    "login-timeout":{
+                        "label": "login_timeout",
+                        "type": "integer",
+                        "default": 4000,
                         "level": 4,
                         "help": null
                     },
-                    "override_longitude":{
-                        "label": "override_longitude",
-                        "type": "float",
-                        "default": null,
-                        "level": 4,
-                        "onInit": ".provider_video_locast.lib.config_callbacks.set_override_long",
-                        "help": null
+                    "player-tuner_count":{
+                        "label": "tuner_count",
+                        "type": "integer",
+                        "default": 4,
+                        "level": 2,
+                        "onInit": "lib.config.config_callbacks.check_value_4",
+                        "onChange": "lib.config.config_callbacks.check_value_4",
+                        "help": "Number of streams active at one time. Between 1 and 4"
                     },
-                    "override_zipcode":{
-                        "label": "override_zipcode",
-                        "type": "string",
-                        "default": null,
-                        "level": 4,
-                        "help": null
-                    }
-                }
-            },
-            "freeaccount":{
-                "label": "FreeAccount",
-                "icon": "account_circle",
-                "description": "Setting that pertain to the locast user free account",
-                "settings":{
-                    "is_free_account":{
-                        "label": "is_free_account",
-                        "type": "boolean",
-                        "default": true,
-                        "level": 1,
-                        "writable": false,
-                        "help": "Auto-filled based on the locast account"
-                    }
-                }
-            },
-            "player":{
-                "label": "Player",
-                "icon": "local_movies",
-                "description": "Settings related to the stream to the client",
-                "settings":{
-                    "stream_type":{
+                    "player-stream_type":{
                         "label": "stream_type",
                         "type": "list",
                         "default": "internalproxy",
@@ -155,28 +72,133 @@
                         "level": 1,
                         "help": "M3U8 only used with subscriptions.  TVHeadend has bugs with the M3U8 file from Locast. ffmpeg uses ffmpeg and ffprobe.  Internal is the most efficient and cleanest solution."
                     },
-                    "ffmpeg_path":{
-                        "label": "ffmpeg_path",
-                        "type": "path",
-                        "default": null,
-                        "level": 2,
-                        "onInit": "lib.config.config_callbacks.set_ffmpeg_path",
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "ffprobe_path":{
-                        "label": "ffprobe_path",
-                        "type": "path",
-                        "default": null,
-                        "level": 2,
-                        "onInit": "lib.config.config_callbacks.set_ffprobe_path",
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "stream_filter":{
+                    "player-stream_filter":{
                         "label": "stream_filter",
                         "type": "string",
                         "default": "^.*//cdn.*$",
                         "level": 3,
                         "help": "Only used with stream_type=internalproxy"
+                    },
+                    "player-refresh_rate":{
+                        "label": "refresh_rate",
+                        "type": "integer",
+                        "default": 800,
+                        "level": 3,
+                        "help": "Must be less than 15 minute Locast timeout for free accounts"
+                    },
+                    "player-bytes_per_read":{
+                        "label": "bytes_per_read",
+                        "type": "integer",
+                        "default": 255304,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "player-min_pkt_rcvd":{
+                        "label": "min_pkt_rcvd",
+                        "type": "integer",
+                        "default": 10,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                    },
+                    "player-max_pkt_rcvd":{
+                        "label": "max_pkt_rcvd",
+                        "type": "integer",
+                        "default": 100,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                    },
+                    "player-pts_minimum":{
+                        "label": "pts_minimum",
+                        "type": "integer",
+                        "default": 10000000,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                    },
+                    "player-pts_max_delta":{
+                        "label": "pts_max_delta",
+                        "type": "integer",
+                        "default": 10000000,
+                        "level": 3,
+                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                    },                    
+                    "epg-prefix":{
+                        "label": "EPG Channel Prefix",
+                        "type": "string",
+                        "default": null,
+                        "level": 1,
+                        "help": "Used with channel number to order channel list"
+                    },
+                    "epg-suffix":{
+                        "label": "EPG Channel Suffix",
+                        "type": "string",
+                        "default": "L",
+                        "level": 1,
+                        "help": "Used with channel number to order channel list"
+                    },
+                    "epg-days":{
+                        "label": "EPG Days to Pull",
+                        "type": "integer",
+                        "default": 10,
+                        "level": 3,
+                        "help": "Locast max is 11 days"
+                    },
+                    "epg-days_start_refresh": {
+                        "label": "EPG Days from Start to Refresh",
+                        "type": "integer",
+                        "default": 1,
+                        "level": 2,
+                        "help": "Number of days including today to force refresh. Must be greater than zero."
+                    },
+                    "epg-days_aging_refresh": {
+                        "label": "EPG Aging Days before Refresh",
+                        "type": "integer",
+                        "default": 2,
+                        "level": 2,
+                        "help": "Days old each EPG day is before it will be refreshed. -1 will refresh all days"
+                    },
+                    "epg-min_refresh_rate":{
+                        "label": "EPG Min Refresh Rate",
+                        "type": "integer",
+                        "default": 14400,
+                        "level": 2,
+                        "help": "Default=14400 seconds (4 hours). When a HTTP request for epg data is received, will refresh the data if older than this value."
+                    },
+                    "m3u-group_hdtv":{
+                        "label": "HDTV Group Name",
+                        "type": "string",
+                        "default": null,
+                        "level": 1,
+                        "onChange": ".provider_video_locast.lib.config_callbacks.force_channelsdb_refresh",
+                        "help": "Default=not used.  When set, will add the group name for any HD channels in the m3u file."
+                    },
+                    "m3u-group_sdtv":{
+                        "label": "SDTV Group Name",
+                        "type": "string",
+                        "default": null,
+                        "level": 1,
+                        "onChange": ".provider_video_locast.lib.config_callbacks.force_channelsdb_refresh",
+                        "help": "Default=not used.  When set, will add the group name for any non-HD channels in the m3u file."
+                    },
+                    "overrides-latitude":{
+                        "label": "override_latitude",
+                        "type": "float",
+                        "default": null,
+                        "level": 4,
+                        "help": null
+                    },
+                    "overrides-longitude":{
+                        "label": "override_longitude",
+                        "type": "float",
+                        "default": null,
+                        "level": 4,
+                        "help": null
+                    },
+                    "overrides-zipcode":{
+                        "label": "override_zipcode",
+                        "type": "string",
+                        "default": null,
+                        "level": 3,
+                        "help": null
                     }
                 }
             }

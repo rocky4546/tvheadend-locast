@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import datetime
 import json
@@ -18,20 +23,22 @@ import os
 import pathlib
 import ssl
 import urllib
+import urllib.request
 import zipfile
 
 from lib.tvheadend.filelock import FileLock
 
 import lib.tvheadend.utils as utils
 from lib.tvheadend.decorators import handle_url_except
-from lib.tvheadend.decorators import handle_json_except
 
 fcc_ssl_context = ssl.SSLContext()
 fcc_ssl_context.set_ciphers('HIGH:!DH:!aNULL')
 
-# NOTE THIS OBJECT IS CURRENTLY NOT USED AND IS DEPENEDNT ON DATEUTIL THAT IS NOT AVAILABLE ON WINDOWS
-class FCCData:
 
+class FCCData:
+    """
+    NOTE THIS OBJECT IS CURRENTLY NOT USED AND IS DEPENDENT ON DATEUTIL THAT IS NOT AVAILABLE ON WINDOWS
+    """
     logger = None
 
     def __init__(self, _locast):
@@ -42,18 +49,18 @@ class FCCData:
         fcc_cache_dir = pathlib.Path(self.locast.config['paths']['stations_dir'])
         fcc_zip_path = pathlib.Path(fcc_cache_dir).joinpath("facility.zip")
         if utils.is_file_expired(
-                fcc_zip_path, 
+                fcc_zip_path,
                 days=self.locast.config['locast']['fcc_timeout']):
             self.logger.debug('FCC file is expired, downloading FCC file')
             return self.download_fcc_stations()
         else:
             return False
 
-    @handle_url_except 
+    @handle_url_except
     def download_fcc_stations(self):
-        ''' Returning False/None means no update occurred
+        """ Returning False/None means no update occurred
             If successful, a new facility.json file is generated
-        '''
+        """
         fcc_url = 'https://transition.fcc.gov/ftp/Bureaus/MB/Databases/cdbs/facility.zip'
         fcc_cache_dir = pathlib.Path(self.locast.config['paths']['stations_dir'])
         fcc_zip_path = pathlib.Path(fcc_cache_dir).joinpath("facility.zip")
@@ -97,7 +104,7 @@ class FCCData:
                 lines = fac_file.readlines()
             facility_list = []
             for fac_line in lines:
-                formatteddict = self.fcc_dat_to_json(fac_line)
+                formatteddict = FCCData.fcc_dat_to_json(fac_line)
                 if formatteddict:
                     facility_list.append(formatteddict)
             self.logger.debug('Found ' + str(len(facility_list)) + ' stations.')
@@ -116,8 +123,8 @@ class FCCData:
         else:
             return False
 
-
-    def fcc_dat_to_json(self, _fac_line):
+    @staticmethod
+    def fcc_dat_to_json(_fac_line):
         current_date = datetime.datetime.utcnow()
 
         clean_line = _fac_line.strip()
@@ -183,5 +190,6 @@ class FCCData:
             return None
 
         return formatteddict
+
 
 FCCData.logger = logging.getLogger(__name__)

@@ -1,45 +1,31 @@
 {
-    "general":{
+    "logging":{
+        "id": null,
+        "icon": "article",
+        "label": "Logging",
+        "description": "Python Logging Settings",
         "sections":{
-            "freeaccount":{
-                "label": "FreeAccount",
-                "icon": "account_circle",
-                "description": "Setting that pertain to the locast user free account",
+            "logger_root":{
+                "label": "logger_root",
+                "icon": "description",
+                "description": "Python logging settings, including the log level",
                 "settings":{
-                    "min_pkt_rcvd":{
-                        "label": "min_pkt_rcvd",
-                        "type": "integer",
-                        "default": 10,
-                        "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
+                    "level":{
+                        "label": "level",
+                        "type": "list",
+                        "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        "default": "WARNING",
+                        "level": 0,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": "Default is WARNING"
                     },
-                    "max_pkt_rcvd":{
-                        "label": "max_pkt_rcvd",
-                        "type": "integer",
-                        "default": 100,
-                        "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "pts_minimum":{
-                        "label": "pts_minimum",
-                        "type": "integer",
-                        "default": 10000000,
-                        "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "pts_max_delta":{
-                        "label": "pts_max_delta",
-                        "type": "integer",
-                        "default": 10000000,
-                        "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
-                    },
-                    "refresh_rate":{
-                        "label": "refresh_rate",
-                        "type": "integer",
-                        "default": 800,
-                        "level": 3,
-                        "help": "Must be less than 15 minute Locast timeout for free accounts"
+                    "handlers":{
+                        "label": "handlers",
+                        "type": "string",
+                        "default": "loghandler",
+                        "level": 4,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": null
                     }
                 }
             },
@@ -52,30 +38,6 @@
                         "label": "keys",
                         "type": "string",
                         "default": "root",
-                        "level": 4,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": null
-                    }
-                }
-            },
-            "logger_root":{
-                "label": "logger_root",
-                "icon": "description",
-                "description": "Python logging settings, including the log level",
-                "settings":{
-                    "level":{
-                        "label": "level",
-                        "type": "list",
-                        "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                        "default": "WARNING",
-                        "level": 1,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": "Default is WARNING"
-                    },
-                    "handlers":{
-                        "label": "handlers",
-                        "type": "string",
-                        "default": "loghandler",
                         "level": 4,
                         "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null

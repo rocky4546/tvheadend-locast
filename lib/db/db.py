@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import logging
 import os
@@ -73,7 +78,6 @@ class DB:
 
     def commit(self):
         DB.conn[self.db_name][threading.get_ident()].commit()
-    
 
     def get(self, _table, _where=None):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_GET])]
@@ -90,11 +94,11 @@ class DB:
         return rows
 
     def get_init(self, _table, _where=None):
-        '''
+        """
             runs the query and returns the first row
-            while maintaining the cursor. 
+            while maintaining the cursor.
             Get_dict_next returns the next row
-        '''
+        """
         sqlcmd = self.sqlcmds[''.join([_table, SQL_GET])]
         self.cur = self.sql_exec(sqlcmd, _where)
 
@@ -137,5 +141,3 @@ class DB:
                 self.logger.debug('Reopening {} database for thread:{}'.format(self.db_name, threading.get_ident()))
                 db_conn_dbname[threading.get_ident()] = sqlite3.connect(
                     self.db_fullpath, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-
-

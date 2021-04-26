@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,14 +6,20 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import logging
 import json
 import importlib
+import importlib.resources
 
 import lib.tvheadend.exceptions as exceptions
 
@@ -25,9 +31,10 @@ PLUGIN_DEFN_FILE = 'plugin_defn.json'
 
 class PluginHandler:
 
+    plugins = {}
+
     def __init__(self, _config_obj):
         self.config_obj = _config_obj
-        self.plugins = {}
         self.logger = logging.getLogger(__name__)
         self.plugin_defn = self.load_plugin_defn()
         self.collect_plugins(self.config_obj.data['paths']['internal_plugins_pkg'])
@@ -42,9 +49,8 @@ class PluginHandler:
                 importlib.resources.read_text(_plugins_pkg, folder)
             except (IsADirectoryError, PermissionError):
                 plugin = Plugin(self.config_obj, self.plugin_defn, '.'.join([_plugins_pkg, folder]))
-                self.plugins[plugin.name] = plugin
+                PluginHandler.plugins[plugin.name] = plugin
         plugin_db.del_not_updated()
-        
 
     def load_plugin_defn(self):
         try:
@@ -58,15 +64,15 @@ class PluginHandler:
         return defn
 
     def initialize_plugins(self):
-        for name, plugin in self.plugins.items():
+        for name, plugin in PluginHandler.plugins.items():
             try:
-                plugin.plugin_obj = plugin.init_func(self.config_obj.data, plugin.namespace)
+                plugin.plugin_obj = plugin.init_func(self.config_obj, plugin.namespace)
             except exceptions.CabernetException:
                 self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
                 plugin.enabled = False
 
     def refresh_channels(self):
-        for name, plugin in self.plugins.items():
+        for name, plugin in PluginHandler.plugins.items():
             try:
                 if hasattr(plugin.plugin_obj, 'refresh_channels'):
                     plugin.plugin_obj.refresh_channels()
@@ -76,15 +82,13 @@ class PluginHandler:
 
     def refresh_epg(self, _namespace=None, _instance=None):
         if _namespace:
-            if _namespace in self.plugins:
-                self.plugins[_namespace].plugin_obj.refresh_epg(_instance)
+            if _namespace in PluginHandler.plugins:
+                PluginHandler.plugins[_namespace].plugin_obj.refresh_epg(_instance)
         else:
-            for name, plugin in self.plugins.items():
+            for name, plugin in PluginHandler.plugins.items():
                 try:
                     if hasattr(plugin.plugin_obj, 'refresh_epg'):
                         plugin.plugin_obj.refresh_epg()
                 except exceptions.CabernetException:
                     self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
                     plugin.enabled = False
-
-        

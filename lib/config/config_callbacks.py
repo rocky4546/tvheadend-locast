@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import importlib
 import logging
@@ -59,11 +64,11 @@ def noop(_config_obj, _section, _key):
 def logging_refresh(_config_obj, _section, _key):
     logging.config.fileConfig(fname=_config_obj.data['paths']['config_file'], disable_existing_loggers=False)
     _resp = requests.get('http://{}:{}/logreset'.format(
-        _config_obj.data['main']['plex_accessible_ip'], str(_config_obj.data['main']['plex_accessible_port'])))
+        _config_obj.data['web']['plex_accessible_ip'], str(_config_obj.data['web']['plex_accessible_port'])))
 
 
 def set_version(_config_obj, _section, _key):
-    _config_obj.data['main']['reporting_firmware_ver'] \
+    _config_obj.data[_section][_key] \
         = 'v' + utils.get_version_str()
 
 
@@ -106,36 +111,36 @@ def set_main_path(_config_obj, _section, _key):
 
 
 def set_ffmpeg_path(_config_obj, _section, _key):
-    if not _config_obj.data['player']['ffmpeg_path'] and \
-            _config_obj.data['player']['stream_type'] == "ffmpegproxy":
+    if not _config_obj.data[_section][_key]:
         if platform.system() in ['Windows']:
             base_ffmpeg_dir \
                 = pathlib.Path(_config_obj.script_dir).joinpath('ffmpeg/bin')
             if base_ffmpeg_dir.is_dir():
-                _config_obj.data['player']['ffmpeg_path'] \
+                _config_obj.data[_section][_key] \
                     = str(pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe'))
             else:
-                _config_obj.logger.warning('ffmpeg_path does not exist and is required based on stream_type')
+                _config_obj.logger \
+                    .warning('player-ffmpeg_path does not exist and may be required based on player-stream_type')
         else:
-            _config_obj.data['player']['ffmpeg_path'] = 'ffmpeg'
+            _config_obj.data[_section][_key] = 'ffmpeg'
 
 
 def set_ffprobe_path(_config_obj, _section, _key):
-    if not _config_obj.data['player']['ffprobe_path'] and \
-            _config_obj.data['player']['stream_type'] == "ffmpegproxy":
+    if not _config_obj.data[_section][_key]:
         if platform.system() in ['Windows']:
             base_ffprobe_dir \
                 = pathlib.Path(_config_obj.script_dir).joinpath('ffmpeg/bin')
-            _config_obj.data['player']['ffprobe_path'] \
+            _config_obj.data[_section][_key] \
                 = str(pathlib.Path(base_ffprobe_dir).joinpath('ffprobe.exe'))
-            _config_obj.logger.warning('ffprobe_path does not exist and is required based on stream_type')
+            _config_obj.logger.warning('ffprobe_path does not exist and may be required based on stream_type')
         else:
-            _config_obj.data['player']['ffprobe_path'] = 'ffprobe'
+            _config_obj.data[_section][_key] = 'ffprobe'
 
 
 def load_encrypted_setting(_config_obj, _section, _key):
     if CRYPTO_LOADED and _config_obj.data['main']['encrypt_key'] is None \
-            and _config_obj.data['main']['use_encryption']:
+            and _config_obj.data['main']['use_encryption'] \
+            and _config_obj.data[_section][_key] is not None:
         _config_obj.data['main']['encrypt_key'] = encryption.set_fernet_key().decode('utf-8')
         if _config_obj.data[_section][_key].startswith(ENCRYPT_STRING):
             # encrypted
@@ -159,13 +164,13 @@ def load_encrypted_setting(_config_obj, _section, _key):
 
 def set_ip(_config_obj, _section, _key):
     if _config_obj.data[_section][_key] == '0.0.0.0':
-        _config_obj.data['main']['bind_ip'] = '0.0.0.0'
-        _config_obj.data['main']['plex_accessible_ip'] \
+        _config_obj.data['web']['bind_ip'] = '0.0.0.0'
+        _config_obj.data['web']['plex_accessible_ip'] \
             = utils.get_ip()
     else:
-        _config_obj.data['main']['bind_ip'] \
+        _config_obj.data['web']['bind_ip'] \
             = _config_obj.data[_section][_key]
-        _config_obj.data['main']['plex_accessible_ip'] \
+        _config_obj.data['web']['plex_accessible_ip'] \
             = _config_obj.data[_section][_key]
 
 
@@ -196,4 +201,3 @@ def check_value_4(_config_obj, _section, _key):
     value = _config_obj.data[_section][_key]
     if not 1 <= value <= 4:
         _config_obj.data[_section][_key] = 4
-

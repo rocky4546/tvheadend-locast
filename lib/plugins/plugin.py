@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,15 +6,20 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import logging
 import json
 import importlib
-
+import importlib.resources
 import lib.tvheadend.utils as utils
 
 from lib.config.config_defn import ConfigDefn
@@ -24,10 +29,12 @@ from lib.db.db_plugins import DBPlugins
 PLUGIN_CONFIG_DEFN_FILE = 'config_defn.json'
 PLUGIN_MANIFEST_FILE = 'plugin.json'
 
+
 def register(func):
     """Decorator for registering a new plugin"""
     Plugin._plugin_func = func
     return func
+
 
 class Plugin:
 
@@ -71,7 +78,8 @@ class Plugin:
             for area, area_data in defn_obj.config_defn.items():
                 for section, section_data in area_data['sections'].items():
                     for setting in section_data['settings'].keys():
-                        new_value = self.config_obj.fix_value_type(section, setting, self.config_obj.data[section][setting])
+                        new_value = self.config_obj.fix_value_type(
+                            section, setting, self.config_obj.data[section][setting])
                         self.config_obj.data[section][setting] = new_value
             defn_obj.terminate()
         except FileNotFoundError:

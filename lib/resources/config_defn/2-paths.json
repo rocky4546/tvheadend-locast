@@ -20,7 +20,6 @@
                         "type": "path",
                         "default": null,
                         "level": 2,
-                        "writable": false,
                         "onInit": "lib.config.config_callbacks.set_data_path",
                         "help": "Cache and Data storage"
                     },
@@ -57,7 +56,7 @@
                         "level": 3,
                         "writable": false,
                         "onInit": "lib.config.config_callbacks.set_stations_path",
-                        "help": "Cache path for stations data"
+                        "help": "Cache path for stations data.  No longer used"
                     },
                     "resources_pkg":{
                         "label": "Internal Resources Path",
@@ -99,7 +98,24 @@
                         "level": 1,
                         "writable": false,
                         "help": "Package location of where the plugins are installed"
+                    },
+                    "ffmpeg_path":{
+                        "label": "ffmpeg_path",
+                        "type": "path",
+                        "default": null,
+                        "level": 2,
+                        "onInit": "lib.config.config_callbacks.set_ffmpeg_path",
+                        "help": "Only used with stream_type=ffmpegproxy"
+                    },
+                    "ffprobe_path":{
+                        "label": "ffprobe_path",
+                        "type": "path",
+                        "default": null,
+                        "level": 2,
+                        "onInit": "lib.config.config_callbacks.set_ffprobe_path",
+                        "help": "Only used with stream_type=ffmpegproxy"
                     }
+
                 }
             },
             "database":{

@@ -1,4 +1,4 @@
-'''
+"""
 MIT License
 
 Copyright (C) 2021 ROCKY4546
@@ -6,10 +6,15 @@ https://github.com/rocky4546
 
 This file is part of Cabernet
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-'''
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+"""
 
 import os
 import sys
@@ -18,9 +23,9 @@ import logging
 import logging.config
 import datetime
 import socket
+import lib.tvheadend.exceptions as exceptions
 
 VERSION = '0.8.0-alpha'
-
 
 
 def get_version_str():
@@ -36,8 +41,7 @@ def logging_setup(config_file):
 def clean_exit(exit_code=0):
     sys.stderr.flush()
     sys.stdout.flush()
-    os._exit(exit_code)
-
+    sys.exit(exit_code)
 
 
 def block_print():
@@ -66,7 +70,6 @@ def date_parse(date_secs, format_str):
     return dt_str
 
 
-
 def is_file_expired(filepath, days=0, hours=0):
     if not os.path.exists(filepath):
         return True
@@ -90,7 +93,7 @@ def merge_dict(d1, d2, override=False, ignore_conflicts=False):
             elif override:
                 d1[key] = d2[key]
             elif not ignore_conflicts:
-                raise Exception('Conflict when merging dictionaries {}'.format(str(key)))
+                raise exceptions.CabernetException('Conflict when merging dictionaries {}'.format(str(key)))
         else:
             d1[key] = d2[key]
     return d1
