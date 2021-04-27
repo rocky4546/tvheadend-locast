@@ -87,6 +87,7 @@ class Channels:
             str(self.locast.location.dma)))
 
         for locast_channel in ch_json:
+            hd = 0
             ch_id = str(locast_channel['id'])
             ch_callsign = locast_channel['name']
             if 'logoUrl' in locast_channel.keys():
