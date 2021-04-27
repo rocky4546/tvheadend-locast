@@ -27,7 +27,7 @@ from lib.db.db_channels import DBChannels
 
 
 class EPG:
-
+    # https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd
     def __init__(self, _plugins, _namespace, _instance):
         self.logger = logging.getLogger(__name__)
         self.config = _plugins.config_obj.data
@@ -85,9 +85,9 @@ class EPG:
                 stop=prog_data['stop'], 
                 channel=prog_data['channel'])
             if prog_data['title']:
-                EPG.sub_el(prog_out, 'title', text=prog_data['title'])
+                EPG.sub_el(prog_out, 'title', lang='en', text=prog_data['title'])
             if prog_data['subtitle']:
-                EPG.sub_el(prog_out, 'sub-title', text=prog_data['subtitle'])
+                EPG.sub_el(prog_out, 'sub-title', lang='en', text=prog_data['subtitle'])
             descr_add = ''
             if self.config['epg']['description'] == 'extend':
                 
@@ -105,14 +105,14 @@ class EPG:
             else:
                 self.logger.warning('Config value [epg][description] is invalid: '
                                     + self.config['epg']['description'])
-            EPG.sub_el(prog_out, 'desc', text=descr_add)
+            EPG.sub_el(prog_out, 'desc', lang='en', text=descr_add)
 
             if prog_data['video_quality']:
                 video_out = EPG.sub_el(prog_out, 'video')
                 EPG.sub_el(video_out, 'quality', prog_data['video_quality'])
 
             if prog_data['air_date']:
-                EPG.sub_el(prog_out, 'date', lang='en',
+                EPG.sub_el(prog_out, 'date',
                     text=prog_data['air_date'])
 
             EPG.sub_el(prog_out, 'length', units='minutes', text=str(prog_data['length']))
@@ -146,6 +146,8 @@ class EPG:
 
             if prog_data['is_new']:
                 EPG.sub_el(prog_out, 'new')
+            if prog_data['cc']:
+                EPG.sub_el(prog_out, 'subtitles', type='teletext')
 
     @staticmethod
     def gen_header_xml():
@@ -158,8 +160,8 @@ class EPG:
         return xml_out
 
     @staticmethod
-    def sub_el(_parent, _name, _text=None, **kwargs):
+    def sub_el(_parent, _name, text=None, **kwargs):
         el = ElementTree.SubElement(_parent, _name, **kwargs)
-        if _text:
-            el.text = _text
+        if text:
+            el.text = text
         return el
