@@ -25,6 +25,7 @@ import configparser
 import lib.tvheadend.utils as utils
 import lib.config.config_defn as config_defn
 from lib.tvheadend.utils import clean_exit
+from lib.db.db_config_defn import DBConfigDefn
 
 
 def get_config(script_dir, opersystem, args):
@@ -51,6 +52,11 @@ class TVHUserConfig:
         else:
             self.set_config(_config)
             self.defn_json.garbage_collect()
+        self.db = DBConfigDefn(self.data)
+        self.db.add_config(self.data)
+        
+    def refresh_config_data(self):
+        self.data = self.db.get_config()
 
     def set_config(self, _config):
         self.data = copy.deepcopy(_config)
@@ -189,6 +195,7 @@ class TVHUserConfig:
 
         # save the changes to config.ini and self.data
         results = '<hr><h3>Status Results</h3><ul>'
+
         config_defaults = self.defn_json.get_default_config_area(_area)
         for key in _updated_data.keys():
             results += self.save_config_section(key, _updated_data, config_defaults)
@@ -198,6 +205,8 @@ class TVHUserConfig:
         # need to inform things that changes occurred...
         restart = False
         results += self.defn_json.call_onchange(_area, _updated_data, self)
+        self.db.add_config(self.data)
+
 
         if restart:
             results += '</ul><b>Service may need to be restarted if not all changes were implemented</b><hr><br>'

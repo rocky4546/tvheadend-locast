@@ -28,13 +28,22 @@ import lib.m3u8 as m3u8
 from lib.tvheadend.atsc import ATSCMsg
 from lib.tvheadend.templates import tvh_templates
 from .stream import Stream
+from .pts_validation import PTSValidation
+from lib.db.db_config_defn import DBConfigDefn
 
 
 class InternalProxy(Stream):
 
     def __init__(self, _plugins, _hdhr_queue):
         self.last_refresh = None
+        self.channel_dict = None
+        self.write_buffer = None
+        self.file_filter = None
+        self.pts_validation = None
+        self.duration = 6
         super().__init__(_plugins, _hdhr_queue)
+        self.config = self.plugins.config_obj.data
+        self.db_configdefn = DBConfigDefn(self.config)
 
     def gen_response(self, _ch_num, _tuner):
         """
@@ -62,25 +71,32 @@ class InternalProxy(Stream):
         """
         Processes m3u8 interface without using ffmpeg
         """
+        self.config = self.db_configdefn.get_config()
+        self.channel_dict = _channel_dict
+        self.write_buffer = _write_buffer
         duration = 6
         play_queue = OrderedDict()
-        file_filter = None
         self.last_refresh = time.time()
         stream_uri = self.get_stream_uri(_channel_dict)
         if not stream_uri:
             self.logger.warning('Unknown Channel')
             return
         self.logger.debug('M3U8: {}'.format(stream_uri))
-        stream_filter = self.plugins.config_obj.data[_channel_dict['namespace'].lower()]['player-stream_filter']
-        if stream_filter is not None:
-            file_filter = re.compile(stream_filter)
+        self.file_filter = None
+        if self.config[_channel_dict['namespace'].lower()]['player-enable_url_filter']:
+            stream_filter = self.config[_channel_dict['namespace'].lower()]['player-url_filter']
+            if stream_filter is not None:
+                file_filter = re.compile(stream_filter)
+        if self.config[_channel_dict['namespace'].lower()]['player-enable_pts_filter']:
+            self.pts_validation = PTSValidation(self.config, self.channel_dict)
+
         while True:
             try:
                 added = 0
                 removed = 0
                 playlist = m3u8.load(stream_uri)
                 removed += self.remove_from_stream_queue(playlist, play_queue)
-                added += self.add_to_stream_queue(playlist, play_queue, file_filter)
+                added += self.add_to_stream_queue(playlist, play_queue)
                 if added == 0 and duration > 0:
                     time.sleep(duration * 0.3)
                 elif self.plugins.plugins[_channel_dict['namespace']].plugin_obj \
@@ -88,7 +104,7 @@ class InternalProxy(Stream):
                     stream_uri = self.get_stream_uri(_channel_dict)
                     self.logger.debug('M3U8: {}'.format(stream_uri))
                     self.last_refresh = time.time()
-                duration = self.play_queue(play_queue, _channel_dict, _write_buffer, duration)
+                self.play_queue(play_queue)
             except IOError as e:
                 # Check we hit a broken pipe when trying to write back to the client
                 if e.errno in [errno.EPIPE, errno.ECONNABORTED, errno.ECONNRESET, errno.ECONNREFUSED]:
@@ -100,14 +116,14 @@ class InternalProxy(Stream):
                         '3 UNEXPECTED EXCEPTION=', e))
                     raise
 
-    def add_to_stream_queue(self, _playlist, _play_queue, _file_filter):
+    def add_to_stream_queue(self, _playlist, _play_queue):
         total_added = 0
         for m3u8_segment in _playlist.segments:
             uri = m3u8_segment.absolute_uri
             if uri not in _play_queue:
                 played = False
-                if _file_filter is not None:
-                    m = _file_filter.match(uri)
+                if self.file_filter is not None:
+                    m = self.file_filter.match(uri)
                     if m:
                         played = True
                 _play_queue[uri] = {
@@ -117,6 +133,7 @@ class InternalProxy(Stream):
                 self.logger.debug(f"Added {uri} to play queue")
                 total_added += 1
         return total_added
+
 
     def remove_from_stream_queue(self, _playlist, _play_queue):
         total_removed = 0
@@ -136,7 +153,7 @@ class InternalProxy(Stream):
                 break
         return total_removed
 
-    def play_queue(self, _play_queue, _channel_dict, _write_buffer, _duration):
+    def play_queue(self, _play_queue):
         for uri, data in _play_queue.items():
             if not data["played"]:
                 start_download = datetime.datetime.utcnow()
@@ -145,16 +162,33 @@ class InternalProxy(Stream):
                 if not chunk:
                     self.logger.warning(f"Segment {uri} not available. Skipping..")
                     continue
+                if not self.is_pts_valid(chunk):
+                    continue
+                
                 atsc_msg = ATSCMsg()
-                chunk_updated = atsc_msg.update_sdt_names(chunk[:80], _channel_dict['namespace'].encode(),
-                    self.set_service_name(_channel_dict).encode())
+                chunk_updated = atsc_msg.update_sdt_names(chunk[:80], self.channel_dict['namespace'].encode(),
+                    self.set_service_name(self.channel_dict).encode())
                 chunk = chunk_updated + chunk[80:]
-                _duration = data['duration']
+                self.duration = data['duration']
                 runtime = (datetime.datetime.utcnow() - start_download).total_seconds()
-                target_diff = 0.3 * _duration
+                target_diff = 0.3 * self.duration
                 wait = target_diff - runtime
-                self.logger.info(f"Serving {uri} ({_duration}s)")
-                _write_buffer.write(chunk)
+                self.logger.info(f"Serving {uri} ({self.duration}s) ({len(chunk)}B)")
+                self.write_buffer.write(chunk)
                 if wait > 0:
                     time.sleep(wait)
-        return _duration
+
+
+
+    def is_pts_valid(self, video_data):
+        if not self.config[self.channel_dict['namespace'].lower()]['player-enable_pts_filter']:
+            return True
+        results = self.pts_validation.check_pts(video_data)
+        if results['byteoffset'] != 0:
+            return False
+        if results['refresh_stream']:
+            return False
+        if results['reread_buffer']:
+            return False
+        return True
+

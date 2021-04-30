@@ -31,11 +31,11 @@ PLUGIN_DEFN_FILE = 'plugin_defn.json'
 
 class PluginHandler:
 
+    logger = None
     plugins = {}
 
     def __init__(self, _config_obj):
         self.config_obj = _config_obj
-        self.logger = logging.getLogger(__name__)
         self.plugin_defn = self.load_plugin_defn()
         self.collect_plugins(self.config_obj.data['paths']['internal_plugins_pkg'])
 
@@ -92,3 +92,6 @@ class PluginHandler:
                 except exceptions.CabernetException:
                     self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
                     plugin.enabled = False
+
+
+PluginHandler.logger = logging.getLogger(__name__)

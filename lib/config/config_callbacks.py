@@ -174,6 +174,20 @@ def set_ip(_config_obj, _section, _key):
             = _config_obj.data[_section][_key]
 
 
+def enable_hdhr(_config_obj, _section, _key):
+    if not _config_obj.data[_section][_key]:
+        if _config_obj.data['hdhomerun']['udp_netmask'] is None:
+            _config_obj.data[_section][_key] = True
+            return 'ERROR:: [hdhomerun][udp_netmask] must be set when HDHomeRun is enabled, reverted save'
+
+
+def enable_ssdp(_config_obj, _section, _key):
+    if not _config_obj.data[_section][_key]:
+        if _config_obj.data['ssdp']['udp_netmask'] is None:
+            _config_obj.data[_section][_key] = True
+            return 'ERROR:: [ssdp][udp_netmask] must be set when HDHomeRun is enabled, reverted save'
+
+
 def set_hdhomerun_id(_config_obj, _section, _key):
     if _config_obj.data['hdhomerun']['hdhr_id'] is None:
         _config_obj.data['hdhomerun']['hdhr_id'] \

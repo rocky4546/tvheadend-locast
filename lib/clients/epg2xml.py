@@ -60,19 +60,19 @@ class EPG:
                 suffix = ""
         
             c_out = EPG.sub_el(_et_root, 'channel', id=sid)
-            EPG.sub_el(c_out, 'display-name', text='%s%s%s %s' %
+            EPG.sub_el(c_out, 'display-name', _text='%s%s%s %s' %
                 (prefix,
                 ch_data['display_number'],
                 suffix, 
                 ch_data['display_name']))
-            EPG.sub_el(c_out, 'display-name', text='%s%s%s %s' % 
+            EPG.sub_el(c_out, 'display-name', _text='%s%s%s %s' % 
                 (prefix,
                 ch_data['display_number'],
                 suffix, 
                 ch_data['json']['callsign']))
-            EPG.sub_el(c_out, 'display-name', text=ch_data['display_number'])
-            EPG.sub_el(c_out, 'display-name', text=ch_data['json']['callsign'])
-            EPG.sub_el(c_out, 'display-name', text=ch_data['display_name'])
+            EPG.sub_el(c_out, 'display-name', _text=ch_data['display_number'])
+            EPG.sub_el(c_out, 'display-name', _text=ch_data['json']['callsign'])
+            EPG.sub_el(c_out, 'display-name', _text=ch_data['display_name'])
 
             if self.config['epg']['epg_channel_icon']:
                 EPG.sub_el(c_out, 'icon', src=ch_data['thumbnail'])
@@ -85,9 +85,9 @@ class EPG:
                 stop=prog_data['stop'], 
                 channel=prog_data['channel'])
             if prog_data['title']:
-                EPG.sub_el(prog_out, 'title', lang='en', text=prog_data['title'])
+                EPG.sub_el(prog_out, 'title', lang='en', _text=prog_data['title'])
             if prog_data['subtitle']:
-                EPG.sub_el(prog_out, 'sub-title', lang='en', text=prog_data['subtitle'])
+                EPG.sub_el(prog_out, 'sub-title', lang='en', _text=prog_data['subtitle'])
             descr_add = ''
             if self.config['epg']['description'] == 'extend':
                 
@@ -105,7 +105,7 @@ class EPG:
             else:
                 self.logger.warning('Config value [epg][description] is invalid: '
                                     + self.config['epg']['description'])
-            EPG.sub_el(prog_out, 'desc', lang='en', text=descr_add)
+            EPG.sub_el(prog_out, 'desc', lang='en', _text=descr_add)
 
             if prog_data['video_quality']:
                 video_out = EPG.sub_el(prog_out, 'video')
@@ -113,9 +113,9 @@ class EPG:
 
             if prog_data['air_date']:
                 EPG.sub_el(prog_out, 'date',
-                    text=prog_data['air_date'])
+                    _text=prog_data['air_date'])
 
-            EPG.sub_el(prog_out, 'length', units='minutes', text=str(prog_data['length']))
+            EPG.sub_el(prog_out, 'length', units='minutes', _text=str(prog_data['length']))
             
             if prog_data['genres']:
                 for f in prog_data['genres']:
@@ -127,22 +127,22 @@ class EPG:
                     else:
                         self.logger.warning('Config value [epg][genre] is invalid: '
                             + self.config['epg']['genre'])
-                    EPG.sub_el(prog_out, 'category', lang='en', text=f.strip())
+                    EPG.sub_el(prog_out, 'category', lang='en', _text=f.strip())
 
             if prog_data['icon'] and self.config['epg']['epg_program_icon']:
                 EPG.sub_el(prog_out, 'icon', src=prog_data['icon'])
 
             if prog_data['rating']:
                 r = ElementTree.SubElement(prog_out, 'rating')
-                EPG.sub_el(r, 'value', text=prog_data['rating'])
+                EPG.sub_el(r, 'value', _text=prog_data['rating'])
 
             if prog_data['se_common']:
                 EPG.sub_el(prog_out, 'episode-num', system='common',
-                    text=prog_data['se_common'])
+                    _text=prog_data['se_common'])
                 EPG.sub_el(prog_out, 'episode-num', system='xmltv_ns',
-                    text=prog_data['se_xmltv_ns'])
+                    _text=prog_data['se_xmltv_ns'])
                 EPG.sub_el(prog_out, 'episode-num', system='SxxExx',
-                    text=prog_data['se_common'])
+                    _text=prog_data['se_common'])
 
             if prog_data['is_new']:
                 EPG.sub_el(prog_out, 'new')
@@ -160,8 +160,8 @@ class EPG:
         return xml_out
 
     @staticmethod
-    def sub_el(_parent, _name, text=None, **kwargs):
+    def sub_el(_parent, _name, _text=None, **kwargs):
         el = ElementTree.SubElement(_parent, _name, **kwargs)
-        if text:
-            el.text = text
+        if _text:
+            el.text = _text
         return el
