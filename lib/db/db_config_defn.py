@@ -20,6 +20,11 @@ import json
 
 from lib.db.db import DB
 
+DB_AREA_TABLE = 'area'
+DB_SECTION_TABLE = 'section'
+DB_CONFIG_TABLE = 'config'
+
+
 sqlcmds = {
     'ct': [
         """
@@ -42,7 +47,16 @@ sqlcmds = {
             FOREIGN KEY(area) REFERENCES area(name),
             UNIQUE(area, name)
             )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS config (
+            key VARCHAR(255) NOT NULL,
+            settings TEXT NOT NULL,
+            PRIMARY KEY(key)
+            )
+        """
+
+
     ],
 
     'dt': [
@@ -76,7 +90,19 @@ sqlcmds = {
     'area_keys_get':
         """
         SELECT name from area ORDER BY rowid
+        """,
+        
+    'config_add':
         """
+        INSERT OR REPLACE INTO config (
+            key, settings
+            ) VALUES ( 'main', ? )
+        """,
+    'config_get':
+        """
+        SELECT settings from config
+        """
+    
 }
 
 
@@ -88,16 +114,16 @@ class DBConfigDefn(DB):
     def get_area_dict(self, _where=None):
         if not _where:
             _where = '%'
-        return self.get_dict('area', (_where,))
+        return self.get_dict(DB_AREA_TABLE, (_where,))
 
     def get_area_json(self, _where=None):
         if not _where:
             _where = '%'
-        return json.dumps(self.get_dict('area', (_where,)))
+        return json.dumps(self.get_dict(DB_AREA_TABLE, (_where,)))
 
     def get_sections_dict(self, _where):
         rows_dict = {}
-        rows = self.get_dict('section', (_where,))
+        rows = self.get_dict(DB_SECTION_TABLE, (_where,))
         for row in rows:
             settings = json.loads(row['settings'])
             row['settings'] = settings
@@ -110,3 +136,30 @@ class DBConfigDefn(DB):
         area_tuple = self.get('area_keys')
         areas = [area[0] for area in area_tuple]
         return areas
+
+
+    def add_area(self, _area, _area_data):
+        self.add(DB_AREA_TABLE, (
+            _area,
+            _area_data['icon'],
+            _area_data['label'],
+            _area_data['description']
+        ))
+
+    def add_section(self, _area, _section, _section_data):
+        self.add(DB_SECTION_TABLE, (
+            _area,
+            _section,
+            _section_data['icon'],
+            _section_data['label'],
+            _section_data['description'],
+            json.dumps(_section_data['settings'])
+        ))
+
+    def add_config(self, _config):
+        self.add(DB_CONFIG_TABLE, (
+            json.dumps(_config),
+        ))
+    
+    def get_config(self):
+        return json.loads(self.get_dict(DB_CONFIG_TABLE)[0]['settings'])

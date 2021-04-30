@@ -27,8 +27,6 @@ from lib.config import config_callbacks
 from lib.db.db_config_defn import DBConfigDefn
 
 CONFIG_DEFN_PATH = 'lib.resources.config_defn'
-DB_AREA_TABLE = 'area'
-DB_SECTION_TABLE = 'section'
 
 
 def load_default_config_defns():
@@ -159,21 +157,9 @@ class ConfigDefn:
             delta_defn = self.config_defn
         for area, area_data in delta_defn.items():
             if 'icon' in area_data:
-                self.db.add(DB_AREA_TABLE, (
-                    area,
-                    area_data['icon'],
-                    area_data['label'],
-                    area_data['description']
-                ))
+                self.db.add_area(area, area_data)
             for section, section_data in area_data['sections'].items():
-                self.db.add(DB_SECTION_TABLE, (
-                    area,
-                    section,
-                    section_data['icon'],
-                    section_data['label'],
-                    section_data['description'],
-                    json.dumps(section_data['settings'])
-                ))
+                self.db.add_section(area, section, section_data)
 
     def get_type(self, _section, _key, _value):
         """ Returns the expected type of the setting

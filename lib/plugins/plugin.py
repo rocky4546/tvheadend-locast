@@ -24,6 +24,7 @@ import lib.tvheadend.utils as utils
 
 from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
+from lib.db.db_config_defn import DBConfigDefn
 
 
 PLUGIN_CONFIG_DEFN_FILE = 'config_defn.json'
@@ -40,12 +41,13 @@ class Plugin:
 
     # Temporarily used to register the plugin setup() function
     _plugin_func = None
+    logger = None
 
     def __init__(self, _config_obj, _plugin_defn, _plugin_path):
         self.enabled = True
         self.plugin_path = _plugin_path
         self.config_obj = _config_obj
-        self.logger = logging.getLogger(__name__)
+        self.db_configdefn = DBConfigDefn(_config_obj.data)
         self.load_config_defn()
 
         # plugin is registered after this call, so grab reg data
@@ -81,6 +83,7 @@ class Plugin:
                         new_value = self.config_obj.fix_value_type(
                             section, setting, self.config_obj.data[section][setting])
                         self.config_obj.data[section][setting] = new_value
+            self.db_configdefn.add_config(self.config_obj.data)
             defn_obj.terminate()
         except FileNotFoundError:
             self.logger.warning(
@@ -112,3 +115,5 @@ class Plugin:
     @property
     def name(self):
         return self.plugin_settings['name']
+
+Plugin.logger = logging.getLogger(__name__)
