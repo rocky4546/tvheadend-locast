@@ -16,11 +16,14 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import ipaddress
 import logging
 import random
 import socket
 import string
 import struct
+import sys
+import time
 import zlib
 from multiprocessing import Process
 from threading import Thread
@@ -74,12 +77,22 @@ tuner_status_msg = {
     'Stream': b'ch=8vsb:183000000 lock=8vsb ss=98 snq=80 seq=90 bps=12345678 pps=1234',
 }
 
-logger = logging.getLogger(__name__)
+logger = None
 
 
 def hdhr_process(config, _tuner_queue):
     utils.logging_setup(config['paths']['config_file'])
+    logger = logging.getLogger(__name__)
+    if config['hdhomerun']['udp_netmask'] is None:
+        logger.error('Config setting [hdhomerun][udp_netmask] required. Exiting hdhr service')
+        return
 
+    try:
+        net = IPv4Network(config['hdhomerun']['udp_netmask'])
+    except (ipaddress.AddressValueError, ValueError) as err:
+        logger.error('Illegal value in [hdhomerun][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+        return
+        
     hdhr = HDHRServer(config, _tuner_queue)
     # startup the multicast thread first which will exit when this function exits
     p_multi = Process(target=hdhr.run_multicast, args=(config["web"]["bind_ip"],))
@@ -368,39 +381,45 @@ class HDHRServer:
         if self.config['hdhomerun']['udp_netmask'] is None:
             is_allowed = True
         else:
-            net = IPv4Network(self.config['hdhomerun']['udp_netmask'])
+            try:
+                net = IPv4Network(self.config['hdhomerun']['udp_netmask'])
+            except (ipaddress.AddressValueError, ValueError) as err:
+                self.logger.error('Illegal value in [hdhomerun][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+                sys.exit(1)
             is_allowed = IPv4Address(host) in net
 
-        if is_allowed:
-            self.logger.debug('UDP: from {}:{}'.format(host, port))
-            try:
-                (frame_type, msg_len, device_type, sub_dt_len, sub_dt, device_id, sub_did_len, sub_did) = \
-                    struct.unpack('>HHBBIBBI', _data[0:-4])
-                # (crc,) = struct.unpack('<I', _data[-4:])
-            except ValueError as err:
-                self.logger.error('UDP: {}'.format(err))
-                return
+        if not is_allowed:
+            return
 
-            if frame_type != HDHOMERUN_TYPE_DISCOVER_REQ:
-                self.logger.error('UDP: Unknown from type = {}'.format(frame_type))
-            else:
-                msg_type = bytes.fromhex('0003')
-                header = bytes.fromhex('010400000001')
-                device_id = bytes.fromhex('0204' + self.config['hdhomerun']['hdhr_id'])
-                base_url = 'http://' + \
-                           self.config['web']['plex_accessible_ip'] + \
-                           ':' + str(self.config['web']['web_admin_port'])
-                base_url_msg = b'\x2a' + utils.set_str(base_url.encode(), False)
-                tuner_count = b'\x10\x01' + utils.set_u8(self.config['locast']['player-tuner_count'])
+        self.logger.debug('UDP: from {}:{}'.format(host, port))
+        try:
+            (frame_type, msg_len, device_type, sub_dt_len, sub_dt, device_id, sub_did_len, sub_did) = \
+                struct.unpack('>HHBBIBBI', _data[0:-4])
+            # (crc,) = struct.unpack('<I', _data[-4:])
+        except ValueError as err:
+            self.logger.error('UDP: {}'.format(err))
+            return
 
-                lineup_url = base_url + '/lineup.json'
-                lineup_url = b'\x27' + utils.set_str(lineup_url.encode(), False)
-                msg = header + device_id + base_url_msg + tuner_count + lineup_url
-                msg_len = utils.set_u16(len(msg))
-                response = msg_type + msg_len + msg
+        if frame_type != HDHOMERUN_TYPE_DISCOVER_REQ:
+            self.logger.error('UDP: Unknown from type = {}'.format(frame_type))
+        else:
+            msg_type = bytes.fromhex('0003')
+            header = bytes.fromhex('010400000001')
+            device_id = bytes.fromhex('0204' + self.config['hdhomerun']['hdhr_id'])
+            base_url = 'http://' + \
+                       self.config['web']['plex_accessible_ip'] + \
+                       ':' + str(self.config['web']['web_admin_port'])
+            base_url_msg = b'\x2a' + utils.set_str(base_url.encode(), False)
+            tuner_count = b'\x10\x01' + utils.set_u8(self.config['locast']['player-tuner_count'])
 
-                x = zlib.crc32(response)
-                crc = struct.pack('<I', x)
-                response += crc
-                self.logger.debug('UDP Response={} {}'.format(_host_port, response))
-                self.sock_multicast.sendto(response, _host_port)
+            lineup_url = base_url + '/lineup.json'
+            lineup_url = b'\x27' + utils.set_str(lineup_url.encode(), False)
+            msg = header + device_id + base_url_msg + tuner_count + lineup_url
+            msg_len = utils.set_u16(len(msg))
+            response = msg_type + msg_len + msg
+
+            x = zlib.crc32(response)
+            crc = struct.pack('<I', x)
+            response += crc
+            self.logger.debug('UDP Response={} {}'.format(_host_port, response))
+            self.sock_multicast.sendto(response, _host_port)

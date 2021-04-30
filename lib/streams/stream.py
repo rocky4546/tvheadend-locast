@@ -21,10 +21,14 @@ import logging
 
 class Stream:
 
+    logger = None
+
+
     def __init__(self, _plugins, _hdhr_queue):
-        self.logger = logging.getLogger(__name__)
         self.plugins = _plugins
         self.hdhr_queue = _hdhr_queue
+        if Stream.logger is None:
+            Stream.logger = logging.getLogger(__name__)
 
     def put_hdhr_queue(self, _index, _channel, _status):
         if not self.plugins.config_obj.data['hdhomerun']['disable_hdhr']:

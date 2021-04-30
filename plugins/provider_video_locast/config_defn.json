@@ -72,13 +72,6 @@
                         "level": 1,
                         "help": "M3U8 only used with subscriptions.  TVHeadend has bugs with the M3U8 file from Locast. ffmpeg uses ffmpeg and ffprobe.  Internal is the most efficient and cleanest solution."
                     },
-                    "player-stream_filter":{
-                        "label": "stream_filter",
-                        "type": "string",
-                        "default": "^.*//cdn.*$",
-                        "level": 3,
-                        "help": "Only used with stream_type=internalproxy"
-                    },
                     "player-refresh_rate":{
                         "label": "refresh_rate",
                         "type": "integer",
@@ -86,40 +79,40 @@
                         "level": 3,
                         "help": "Must be less than 15 minute Locast timeout for free accounts"
                     },
-                    "player-bytes_per_read":{
-                        "label": "bytes_per_read",
-                        "type": "integer",
-                        "default": 255304,
+                    "player-enable_url_filter":{
+                        "label": "Enable URL Filtering",
+                        "type": "boolean",
+                        "default": false,
                         "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy"
+                        "help": "Filters out streams from URL addresses based on regular expression"
                     },
-                    "player-min_pkt_rcvd":{
-                        "label": "min_pkt_rcvd",
-                        "type": "integer",
-                        "default": 10,
+                    "player-url_filter":{
+                        "label": "URL Filter",
+                        "type": "string",
+                        "default": "^.*//cdn.*$",
                         "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                        "help": "Only used with stream_type=internalproxy"
                     },
-                    "player-max_pkt_rcvd":{
-                        "label": "max_pkt_rcvd",
-                        "type": "integer",
-                        "default": 100,
+                    "player-enable_pts_filter":{
+                        "label": "Enable PTS Filtering",
+                        "type": "boolean",
+                        "default": false,
                         "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                        "help": "Filters out corrupted PTS packets.  Requires ffprobe.exe"
                     },
                     "player-pts_minimum":{
                         "label": "pts_minimum",
                         "type": "integer",
                         "default": 10000000,
                         "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                        "help": "Used for PTS Filtering"
                     },
                     "player-pts_max_delta":{
                         "label": "pts_max_delta",
                         "type": "integer",
-                        "default": 10000000,
+                        "default": 3000000,
                         "level": 3,
-                        "help": "Only used with stream_type=ffmpegproxy and free account"
+                        "help": "Used for PTS Filtering"
                     },                    
                     "epg-prefix":{
                         "label": "EPG Channel Prefix",

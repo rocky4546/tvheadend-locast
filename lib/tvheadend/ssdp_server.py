@@ -16,12 +16,15 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import ipaddress
 import random
 import socket
 import struct
 import logging
 from email.utils import formatdate
 from errno import ENOPROTOOPT
+from ipaddress import IPv4Network
+from ipaddress import IPv4Address
 
 import lib.tvheadend.utils as utils
 
@@ -54,6 +57,16 @@ class SSDPServer:
         self.logger = logging.getLogger(__name__)
 
     def run(self, _bind_ip=''):
+    
+        if self.config['ssdp']['udp_netmask'] is None:
+            self.logger.error('Config setting [ssdp][udp_netmask] required. Exiting ssdp service')
+            return
+        try:
+            net = IPv4Network(self.config['ssdp']['udp_netmask'])
+        except (ipaddress.AddressValueError, ValueError) as err:
+            self.logger.error('Illegal value in [ssdp][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+            return
+    
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if hasattr(socket, "SO_REUSEPORT"):
@@ -88,9 +101,22 @@ class SSDPServer:
 
     def datagram_received(self, data, host_port):
         """Handle a received multicast datagram."""
-        self.logger.debug("SSDP:: {}".format(host_port))
         (host, port) = host_port
 
+        if self.config['ssdp']['udp_netmask'] is None:
+            is_allowed = True
+        else:
+            try:
+                net = IPv4Network(self.config['ssdp']['udp_netmask'])
+            except (ipaddress.AddressValueError, ValueError) as err:
+                self.logger.error('Illegal value in [ssdp][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+                sys.exit(1)
+            is_allowed = IPv4Address(host) in net
+
+        if not is_allowed:
+            return
+
+        self.logger.debug("SSDP:: {}".format(host_port))
         try:
             header, payload = data.decode().split('\r\n\r\n')[:2]
         except ValueError as err:
