@@ -17,18 +17,13 @@ substantial portions of the Software.
 """
 
 import errno
-import json
 import subprocess
 import time
 
-from lib.tvheadend.templates import tvh_templates
 from .stream import Stream
 from .stream_queue import StreamQueue
 from .pts_validation import PTSValidation
 from lib.db.db_config_defn import DBConfigDefn
-
-
-MIN_TIME_BETWEEN_LOCAST = 0.9
 
 
 class FFMpegProxy(Stream):
@@ -52,29 +47,6 @@ class FFMpegProxy(Stream):
         self.config = self.plugins.config_obj.data
         self.db_configdefn = DBConfigDefn(self.config)
 
-
-    def gen_response(self, _ch_num, _tuner):
-        """
-        Returns dict where the dict is consistent with
-        the method do_dict_response requires as an argument
-        A code other than 200 means do not tune
-        dict also include a "tuner_index" that informs caller what tuner is allocated
-        """
-        index = self.find_tuner(_ch_num, _tuner)
-        if index >= 0:
-            return {
-                'tuner': index,
-                'code': 200,
-                'headers': {'Content-type': 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E'},
-                'text': None}
-        else:
-            self.logger.warning('All tuners already in use')
-            return {
-                'tuner': index,
-                'code': 400,
-                'headers': {'Content-type': 'text/html'},
-                'text': tvh_templates['htmlError'].format('400 - All tuners already in use.')}
-
     def stream_ffmpeg(self, _channel_dict, _write_buffer):
         self.channel_dict = _channel_dict
         self.write_buffer = _write_buffer
@@ -96,8 +68,7 @@ class FFMpegProxy(Stream):
                 self.ffmpeg_proc = self.refresh_stream()
             else:
                 try:
-                    if self.config['locast']['is_free_account']:
-                        video_data = self.validate_stream(video_data)
+                    video_data = self.validate_stream(video_data)
                     self.write_buffer.write(video_data)
                 except IOError as e:
                     if e.errno in [errno.EPIPE, errno.ECONNABORTED, errno.ECONNRESET, errno.ECONNREFUSED]:
@@ -173,8 +144,6 @@ class FFMpegProxy(Stream):
         except ValueError:
             pass
         except subprocess.TimeoutExpired:
-            # try one more time.  If the process does not terminate
-            # a socket error will occur with locast having 2 connections.
             self.ffmpeg_proc.terminate()
             time.sleep(0.01)
 

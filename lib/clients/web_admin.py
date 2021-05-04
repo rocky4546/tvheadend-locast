@@ -17,333 +17,71 @@ substantial portions of the Software.
 """
 
 import os
-import urllib
 import time
 import pathlib
-import logging
-from threading import Thread
-import socket
 import re
-import mimetypes
-import json
-import random
-import importlib
-import importlib.resources
-from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse
+from threading import Thread
+from http.server import HTTPServer
 
-import lib.tvheadend.utils as utils
-import lib.clients.channels as channels
-from lib.clients.epg2xml import EPG
-
-from lib.tvheadend.templates import tvh_templates
-from lib.web.pages.configform_html import ConfigFormHTML
-from lib.web.pages.index_js import IndexJS
-from lib.config.config_defn import ConfigDefn
-from lib.db.db_plugins import DBPlugins
-
-MIN_TIME_BETWEEN_LOCAST = 0.4
+from lib.common.decorators import getrequest
+from lib.common.decorators import postrequest
+from lib.web.pages.templates import web_templates
+from .web_handler import WebHTTPHandler
 
 
-class WebAdminHttpHandler(BaseHTTPRequestHandler):
+class WebAdminHttpHandler(WebHTTPHandler):
     # class variables
     hdhr_station_scan = -1
-    plugins = None
-    namespace_list = None
-    config = None
-    hdhr_queue = None
-    rmg_station_scans = []
-    logger = None
 
     def __init__(self, *args):
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         self.script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+        self.stream_url = self.config['web']['plex_accessible_ip'] + \
+            ':' + str(self.config['web']['plex_accessible_port'])
+        self.web_admin_url = self.config['web']['plex_accessible_ip'] + \
+            ':' + str(self.config['web']['web_admin_port'])
+        self.content_path = None
+        self.query_data = None
+
         try:
             super().__init__(*args)
         except ConnectionResetError:
-            self.logger.warning('########## ConnectionResetError occurred')
+            self.logger.warning('########## ConnectionResetError occurred, will try again')
             time.sleep(1)
             super().__init__(*args)
 
-    def log_message(self, _format, *args):
-        self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
-
     def do_GET(self):
-
-        stream_url = self.config['web']['plex_accessible_ip'] + ':' + str(self.config['web']['plex_accessible_port'])
-        web_admin_url = self.config['web']['plex_accessible_ip'] + ':' + str(self.config['web']['web_admin_port'])
         valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
-        content_path, query_data = self.get_query_data()
+        self.content_path, self.query_data = self.get_query_data()
 
-        if content_path == '/':
-            self.send_response(302)
-            self.send_header('Location', 'html/index.html')
-            self.end_headers()
-
-        elif content_path == '/favicon.ico':
-            self.send_response(302)
-            self.send_header('Location', 'images/favicon.png')
-            self.end_headers()
-
-        elif content_path == '/discover.json':
-            ns_inst_path = WebAdminHttpHandler.get_ns_inst_path(query_data)
-            self.do_response(200,
-                'application/json',
-                tvh_templates['jsonDiscover'].format(
-                    self.config['hdhomerun']['reporting_friendly_name'],
-                    self.config['hdhomerun']['reporting_model'],
-                    self.config['hdhomerun']['reporting_firmware_name'],
-                    self.config['main']['version'],
-                    self.config['hdhomerun']['hdhr_id'],
-                    self.config['locast']['player-tuner_count'],
-                    web_admin_url, ns_inst_path))
-
-        elif content_path == '/device.xml':
-            self.do_response(200,
-                'application/xml',
-                tvh_templates['xmlDevice'].format(self.config['hdhomerun']['reporting_friendly_name'],
-                    self.config['hdhomerun']['reporting_model'],
-                    self.config['hdhomerun']['hdhr_id'],
-                    self.config['main']['uuid']
-                ))
-
-        # TBD NEED TO WORK ON THIS TO FIX FOR PLEX SCAN
-        elif content_path == '/lineup_status.json':
-            if WebAdminHttpHandler.hdhr_station_scan < 0:
-                return_json = tvh_templates['jsonLineupStatusIdle'] \
-                    .replace("Antenna", self.config['hdhomerun']['tuner_type'])
-            else:
-                WebAdminHttpHandler.hdhr_station_scan += 20
-                if WebAdminHttpHandler.hdhr_station_scan > 100:
-                    WebAdminHttpHandler.hdhr_station_scan = 100
-                num_of_channels = len(WebAdminHttpHandler.station_obj.get_dma_stations_and_channels())
-                return_json = tvh_templates['jsonLineupStatusScanning'].format(
-                    WebAdminHttpHandler.hdhr_station_scan,
-                    int(num_of_channels * WebAdminHttpHandler.hdhr_station_scan / 100))
-                if WebAdminHttpHandler.hdhr_station_scan == 100:
-                    WebAdminHttpHandler.hdhr_station_scan = -1
-                    for index, scan_status in enumerate(WebAdminHttpHandler.rmg_station_scans):
-                        if scan_status == 'Scan':
-                            WebAdminHttpHandler.rmg_station_scans[index] = "Idle"
-                            self.put_hdhr_queue(index, None, 'Idle')
-            self.do_response(200, 'application/json', return_json)
-
-        elif content_path == '/config.json':
-            if self.config['web']['disable_web_config']:
-                self.do_response(501, 'text/html', tvh_templates['htmlError']
-                    .format('501 - Config pages disabled.'
-                            ' Set [web][disable_web_config] to False in the config file to enable'))
-            else:
-                self.do_response(200, 'application/json', json.dumps(self.plugins.config_obj.filter_config_data()))
-
-        elif content_path == '/channels.m3u':
-            self.do_response(200, 'audio/x-mpegurl',
-                channels.get_channels_m3u(self.config, stream_url, query_data['name'], query_data['instance']))
-
-        elif content_path == '/playlist':
-            self.send_response(302)
-            self.send_header('Location', self.path.replace('playlist', 'channels.m3u'))
-            self.end_headers()
-
-        elif content_path == '/lineup.json':
-            self.do_response(200, 'application/json', channels.get_channels_json(
-                self.config, stream_url, query_data['name'], query_data['instance']))
-
-        elif content_path == '/lineup.xml':  # must encode the strings
-            self.do_response(200, 'application/xml', channels.get_channels_xml(
-                self.config, stream_url, query_data['name'], query_data['instance']))
-
-        elif content_path == '/xmltv.xml':
-            epg = EPG(self.plugins, query_data['name'], query_data['instance'])
-            reply_str = epg.get_epg_xml()
-            self.do_response(200, 'application/xml', reply_str)
-
-        elif content_path == '/pages/configform.html' and 'area' in query_data:
-            configform = ConfigFormHTML()
-            form = configform.get(self.plugins.config_obj.defn_json.get_defn(query_data['area']), query_data['area'])
-            self.do_response(200, 'text/html', form)
-
-        elif content_path == '/pages/index.js':
-            indexjs = IndexJS()
-            self.do_response(200, 'text/javascript', indexjs.get(self.config))
-
-        elif content_path == '/background':
-            self.send_random_image()
-
+        if getrequest.call_url(self, self.content_path):
+            pass
         elif valid_check:
-            if valid_check:
-                file_path = valid_check.group(1)
-                htdocs_path = self.config["paths"]["www_pkg"]
-                path_list = file_path.split('/')
-                fullfile_path = htdocs_path + '.'.join(path_list[:-1])
-                self.do_file_response(200, fullfile_path, path_list[-1])
-            else:
-                self.logger.warning('Invalid content. ignoring {}'.format(content_path))
-                self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Badly formed URL'))
-
+            file_path = valid_check.group(1)
+            htdocs_path = self.config["paths"]["www_pkg"]
+            path_list = file_path.split('/')
+            fullfile_path = htdocs_path + '.'.join(path_list[:-1])
+            self.do_file_response(200, fullfile_path, path_list[-1])
         else:
-            self.logger.info('UNKNOWN HTTP Request {}'.format(content_path))
-            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
-            # super().do_GET()
+            self.logger.info('UNKNOWN HTTP Request {}'.format(self.content_path))
+            self.do_mime_response(501, 'text/html', 
+                web_templates['htmlError'].format('501 - Not Implemented'))
         return
 
     def do_POST(self):
-        content_path = self.path
-        query_data = {}
-        self.logger.debug('Receiving POST form {} {}'.format(content_path, query_data))
+        self.content_path = self.path
+        self.logger.debug('Receiving POST form {} {}'.format(self.content_path, self.query_data))
         # get POST data
-        if self.headers.get('Content-Length') != '0':
-            post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
-            # if an input is empty, then it will remove it from the list when the dict is gen
-            query_data = urllib.parse.parse_qs(post_data, keep_blank_values=True)
-            for key, value in query_data.items():
-                if value[0] == '':
-                    value[0] = None
-
-        # get QUERYSTRING
-        if self.path.find('?') != -1:
-            content_path = self.path[0:self.path.find('?')]
-            get_data = self.path[(self.path.find('?') + 1):]
-            get_data_elements = get_data.split('&')
-            for get_data_item in get_data_elements:
-                get_data_item_split = get_data_item.split('=')
-                if len(get_data_item_split) > 1:
-                    query_data[get_data_item_split[0]] = get_data_item_split[1]
-
-        if content_path == '/pages/configform.html':
-            if self.config['web']['disable_web_config']:
-                self.do_response(501, 'text/html', tvh_templates['htmlError']
-                    .format('501 - Config pages disabled. '
-                            'Set [web][disable_web_config] to False in the config file to enable'))
-            else:
-                # Take each key and make a [section][key] to store the value
-                config_changes = {}
-                area = query_data['area'][0]
-                del query_data['area']
-                for key in query_data:
-                    key_pair = key.split('-', 1)
-                    if key_pair[0] not in config_changes:
-                        config_changes[key_pair[0]] = {}
-                    config_changes[key_pair[0]][key_pair[1]] = query_data[key]
-                results = self.plugins.config_obj.update_config(area, config_changes)
-                self.do_response(200, 'text/html', results)
-
-        # TBD NEED TO WORK ON THIS TO FIX FOR PLEX SCAN
-        elif content_path == '/lineup.post':
-            if query_data['scan'] == 'start':
-                WebAdminHttpHandler.hdhr_station_scan = 0
-                for index, scan_status in enumerate(WebAdminHttpHandler.rmg_station_scans):
-                    if scan_status == 'Idle':
-                        WebAdminHttpHandler.rmg_station_scans[index] = "Scan"
-                        self.put_hdhr_queue(index, None, 'Scan')
-                self.do_response(200, 'text/html')
-
-                # putting this here after the response on purpose
-                WebAdminHttpHandler.station_obj.refresh_dma_stations_and_channels()
-
-            elif query_data['scan'] == 'abort':
-                self.do_response(200, 'text/html')
-                WebAdminHttpHandler.hdhr_station_scan = -1
-                for index, scan_status in enumerate(WebAdminHttpHandler.rmg_station_scans):
-                    if scan_status == 'Scan':
-                        WebAdminHttpHandler.rmg_station_scans[index] = "Idle"
-                        self.put_hdhr_queue(index, None, 'Idle')
-
-            else:
-                self.logger.warning("Unknown scan command " + query_data['scan'])
-                self.do_response(400, 'text/html',
-                    tvh_templates['htmlError'].format(
-                        query_data['scan'] + ' is not a valid scan command'))
+        self.content_path, self.query_data = self.get_query_data()
+        if postrequest.call_url(self, self.content_path):
+            pass
         else:
-            self.logger.info('UNKNOWN HTTP POST Request {}'.format(content_path))
-            self.do_response(501, 'text/html', tvh_templates['htmlError'].format('501 - Not Implemented'))
-
+            self.logger.info('UNKNOWN HTTP POST Request {}'.format(self.content_path))
+            self.do_mime_response(501, 'text/html', web_templates['htmlError'].format('501 - Not Implemented'))
         return
 
-    def get_query_data(self):
-        content_path = self.path
-        query_data = {}
-        if self.headers.get('Content-Length') is not None \
-                and self.headers.get('Content-Length') != '0':
-            post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
-            # if an input is empty, then it will remove it from the list when the dict is gen
-            query_data = urllib.parse.parse_qs(post_data)
-
-        if self.path.find('?') != -1:
-            content_path = self.path[0:self.path.find('?')]
-            get_data = self.path[(self.path.find('?') + 1):]
-            get_data_elements = get_data.split('&')
-            for get_data_item in get_data_elements:
-                get_data_item_split = get_data_item.split('=')
-                if len(get_data_item_split) > 1:
-                    query_data[get_data_item_split[0]] = get_data_item_split[1]
-        if 'name' not in query_data:
-            query_data['name'] = None
-        if 'instance' not in query_data:
-            query_data['instance'] = None
-        if query_data['instance'] or query_data['name']:
-            return content_path, query_data
-
-        path_list = content_path.split('/')
-        if len(path_list) > 2:
-            instance = None
-            for ns in WebAdminHttpHandler.namespace_list:
-                if path_list[1].lower() == ns.lower():
-                    namespace = ns
-                    del path_list[1]
-                    instance_list = WebAdminHttpHandler.namespace_list[namespace]
-                    if len(path_list) > 2:
-                        for inst in instance_list:
-                            if inst.lower() == path_list[1].lower():
-                                instance = inst
-                                del path_list[1]
-                    query_data['name'] = namespace
-                    query_data['instance'] = instance
-                    content_path = '/'.join(path_list)
-                    break
-        return content_path, query_data
-
-    def do_file_response(self, _code, _package, _reply_file):
-        if _reply_file:
-            try:
-                if _package:
-                    x = importlib.resources.read_binary(_package, _reply_file)
-                else:
-                    x_path = pathlib.Path(str(_reply_file))
-                    with open(x_path, 'br') as reader:
-                        x = reader.read()
-                mime_lookup = mimetypes.guess_type(_reply_file)
-                self.send_response(_code)
-                self.send_header('Content-type', mime_lookup[0])
-                self.end_headers()
-                self.wfile.write(x)
-            except IsADirectoryError as e:
-                self.logger.info(e)
-                self.do_response(401, 'text/html', tvh_templates['htmlError'].format('401 - Unauthorized'))
-            except FileNotFoundError as e:
-                self.logger.info(e)
-                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - File Not Found'))
-            except NotADirectoryError as e:
-                self.logger.info(e)
-                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Folder Not Found'))
-            except ConnectionAbortedError as e:
-                self.logger.info(e)
-            except ModuleNotFoundError as e:
-                self.logger.info(e)
-                self.do_response(404, 'text/html', tvh_templates['htmlError'].format('404 - Area Not Found'))
-
-    def do_response(self, _code, _mime, _reply_str=None):
-        self.send_response(_code)
-        self.send_header('Content-type', _mime)
-        self.end_headers()
-        if _reply_str:
-            try:
-                self.wfile.write(_reply_str.encode('utf-8'))
-            except BrokenPipeError:
-                self.logger.debug('Client dropped connection before results were sent, ignoring')
-
-    @staticmethod
-    def get_ns_inst_path(_query_data):
+    @classmethod
+    def get_ns_inst_path(cls, _query_data):
         if _query_data['name']:
             path = '/'+_query_data['name']
         else:
@@ -352,57 +90,44 @@ class WebAdminHttpHandler(BaseHTTPRequestHandler):
             path += '/'+_query_data['instance']
         return path
 
-    def send_random_image(self):
-        if not self.config['display']['backgrounds']:
-            background_dir = self.config['paths']['themes_pkg'] + '.' + \
-                             self.config['display']['theme']
-            image_list = list(importlib.resources.contents(background_dir))
-            image_found = False
-            count = 10
-            image = None
-            while not image_found and count > 0:
-                image = random.choice(image_list)
-                mime_lookup = mimetypes.guess_type(image)
-                if mime_lookup[0] is not None and \
-                        mime_lookup[0].startswith('image'):
-                    image_found = True
-                count -= 1
-            if image_found:
-                self.do_file_response(200, background_dir, image)
-            else:
-                self.logger.warning('No Background Image found: ' + background_dir)
-                self.do_response(404, 'text/html', tvh_templates['htmlError']
-                    .format('404 - Background Image Not Found'))
-        else:
-            background = self.config['display']['backgrounds']
-            try:
-                image_found = False
-                count = 10
-                full_image_path = None
-                while not image_found and count > 0:
-                    image = random.choice(list(pathlib.Path(background).rglob('*.*')))
-                    full_image_path = pathlib.Path(background).joinpath(image)
-                    mime_lookup = mimetypes.guess_type(str(full_image_path))
-                    if mime_lookup[0].startswith('image'):
-                        image_found = True
-                    count -= 1
-                if image_found:
-                    self.do_file_response(200, None, full_image_path)
-                else:
-                    self.logger.debug('Image not found at {}'.format(background))
-                    self.do_response(404, 'text/html',
-                        tvh_templates['htmlError'].format('404 - Background Image Not Found'))
-
-            except (FileNotFoundError, IndexError):
-                self.logger.warning('Background Theme Folder not found: ' + background)
-                self.do_response(404, 'text/html', tvh_templates['htmlError']
-                    .format('404 - Background Folder Not Found'))
-
-    def put_hdhr_queue(self, _index, _channel, _status):
+    def put_hdhr_queue(self, _namespace, _index, _channel, _status):
         if not self.config['hdhomerun']['disable_hdhr']:
             WebAdminHttpHandler.hdhr_queue.put(
-                {'tuner': _index, 'channel': _channel, 'status': _status})
+                {'namespace': _namespace, 'tuner': _index, 'channel': _channel, 'status': _status})
 
+    def update_scan_status(self, _namespace, _new_status):
+        if _new_status == 'Scan':
+            old_status = 'Idle'
+        else:
+            old_status = 'Scan'
+            
+        if _namespace is None:
+            for namespace, status_list in WebAdminHttpHandler.rmg_station_scans.items():
+                for i, status in enumerate(status_list):
+                    if status == old_status:
+                        WebAdminHttpHandler.rmg_station_scans[namespace][i] = _new_status
+                        self.put_hdhr_queue(namespace, i, None, _new_status)
+        else:
+            status_list = WebAdminHttpHandler.rmg_station_scans[_namespace]
+            for i, status in enumerate(status_list):
+                if status == old_status:
+                    WebAdminHttpHandler.rmg_station_scans[_namespace][i] = _new_status
+                    self.put_hdhr_queue(_namespace, i, None, _new_status)
+
+    @property
+    def scan_state(self):
+        return WebAdminHttpHandler.hdhr_station_scan
+
+    @scan_state.setter
+    def scan_state(self, new_value):
+        WebAdminHttpHandler.hdhr_station_scan = new_value
+
+    @classmethod
+    def init_class_var(cls, _plugins, _hdhr_queue):
+        super(WebAdminHttpHandler, cls).init_class_var(_plugins, _hdhr_queue)
+        getrequest.log_urls()
+        postrequest.log_urls()
+        
 
 class WebAdminHttpServer(Thread):
 
@@ -429,42 +154,8 @@ def FactoryWebAdminHttpHandler():
     return CustomWebAdminHttpHandler
 
 
-def init_class_var(_plugins, _hdhr_queue):
-    WebAdminHttpHandler.logger = logging.getLogger(__name__)
-    WebAdminHttpHandler.plugins = _plugins
-    WebAdminHttpHandler.config = _plugins.config_obj.data
-    WebAdminHttpHandler.hdhr_queue = _hdhr_queue
-    if not _plugins.config_obj.defn_json:
-        _plugins.config_obj.defn_json = ConfigDefn(_config=_plugins.config_obj.data)
-
-    plugins_db = DBPlugins(_plugins.config_obj.data)
-    WebAdminHttpHandler.namespace_list = plugins_db.get_instances()
-
-    tmp_rmg_scans = []
-    for x in range(int(_plugins.config_obj.data['locast']['player-tuner_count'])):
-        tmp_rmg_scans.append('Idle')
-    WebAdminHttpHandler.rmg_station_scans = tmp_rmg_scans
-
-
 def start(_plugins, _hdhr_queue):
-    """
-    main starting point for all classes and services in this file.  
-    Called from main.
-    """
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((_plugins.config_obj.data['web']['bind_ip'], _plugins.config_obj.data['web']['web_admin_port']))
-    server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
-    utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
-    logger = logging.getLogger(__name__)
-    logger.debug(
-        'Now listening for requests. Number of listeners={}'
-            .format(_plugins.config_obj.data['web']['concurrent_listeners']))
-    init_class_var(_plugins, _hdhr_queue)
-    for i in range(int(_plugins.config_obj.data['web']['concurrent_listeners'])):
-        WebAdminHttpServer(server_socket, _plugins)
-    try:
-        while True:
-            time.sleep(3600)
-    except KeyboardInterrupt:
-        pass
+    WebAdminHttpHandler.start_httpserver(
+        _plugins, _hdhr_queue,
+        _plugins.config_obj.data['web']['web_admin_port'],
+        WebAdminHttpServer)

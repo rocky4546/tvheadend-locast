@@ -82,7 +82,7 @@
                     "player-enable_url_filter":{
                         "label": "Enable URL Filtering",
                         "type": "boolean",
-                        "default": false,
+                        "default": true,
                         "level": 3,
                         "help": "Filters out streams from URL addresses based on regular expression"
                     },

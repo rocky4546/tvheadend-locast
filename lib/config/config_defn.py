@@ -22,7 +22,7 @@ import logging
 import threading
 from importlib import resources
 
-import lib.tvheadend.utils as utils
+import lib.common.utils as utils
 from lib.config import config_callbacks
 from lib.db.db_config_defn import DBConfigDefn
 

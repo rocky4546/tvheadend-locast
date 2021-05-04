@@ -16,22 +16,22 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import sys
-import time
-import platform
 import argparse
 import logging
+import platform
+import sys
+import time
 from multiprocessing import Queue, Process
 
-
-from lib.tvheadend.utils import clean_exit
-
-import lib.tvheadend.ssdp_server as ssdp_server
-import lib.tvheadend.utils as utils
-import lib.tvheadend.hdhr_server as hdhr_server
+import lib.clients.hdhr.hdhr_server as hdhr_server
 import lib.clients.web_tuner as web_tuner
 import lib.clients.web_admin as web_admin
+import lib.common.utils as utils
 import lib.plugins.plugin_handler as plugin_handler
+import lib.clients.ssdp.ssdp_server as ssdp_server
+from lib.common.utils import clean_exit
+from lib.common.pickling import Pickling
+
 
 try:
     import pip
@@ -52,7 +52,7 @@ if sys.version_info.major == 2 or sys.version_info < (3, 7):
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Fetch TV from locast.', epilog='')
+    parser = argparse.ArgumentParser(description='Fetch online streams', epilog='')
     parser.add_argument('--config_file', dest='cfg', type=str, default=None, help='')
     return parser.parse_args()
 
@@ -76,13 +76,17 @@ def main(script_dir):
     logger = logging.getLogger(__name__)
 
     logger.warning('MIT License, Copyright (C) 2021 ROCKY4546')
-    logger.info('Initiating TVHeadend-Locast v' + utils.get_version_str())
+    logger.info('Initiating Cabernet v' + utils.get_version_str())
 
     logger.info('Getting Plugins...')
     plugins = plugin_handler.PluginHandler(config_obj)
     plugins.initialize_plugins()
     config_obj.defn_json = None
     plugins.refresh_channels()
+
+    if opersystem in ['Windows']:
+        pickle_it = Pickling(config)
+        pickle_it.to_pickle(plugins)
 
     try:
         hdhr_queue = Queue()
@@ -117,7 +121,10 @@ def main(script_dir):
         # Let the other process and threads take turns to run
         time.sleep(0.1)
 
-        logger.info('TVHeadend_Locast is now online.')
+        if opersystem in ['Windows']:
+            time.sleep(2)
+            pickle_it.delete_pickle(plugins.__class__.__name__)
+        logger.info('Cabernet is now online.')
 
         # wait forever
         while True:

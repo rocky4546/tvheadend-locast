@@ -17,16 +17,17 @@ substantial portions of the Software.
 """
 
 import ipaddress
+import logging
 import random
 import socket
 import struct
-import logging
+import sys
 from email.utils import formatdate
 from errno import ENOPROTOOPT
 from ipaddress import IPv4Network
 from ipaddress import IPv4Address
 
-import lib.tvheadend.utils as utils
+import lib.common.utils as utils
 
 SSDP_PORT = 1900
 SSDP_ADDR = '239.255.255.250'
@@ -109,7 +110,9 @@ class SSDPServer:
             try:
                 net = IPv4Network(self.config['ssdp']['udp_netmask'])
             except (ipaddress.AddressValueError, ValueError) as err:
-                self.logger.error('Illegal value in [ssdp][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+                self.logger.error(
+                    'Illegal value in [ssdp][udp_netmask].  '
+                    'Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
                 sys.exit(1)
             is_allowed = IPv4Address(host) in net
 

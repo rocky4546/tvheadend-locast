@@ -16,6 +16,45 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+from lib.web.pages.templates import web_templates
+from lib.common.decorators import getrequest
+from lib.common.decorators import postrequest
+
+
+@getrequest.route('/pages/configform.html')
+def get_configform_html(_tuner):
+    if 'area' in _tuner.query_data:
+        configform = ConfigFormHTML()
+        form = configform.get(_tuner.plugins.config_obj.defn_json.get_defn(
+            _tuner.query_data['area']), _tuner.query_data['area'])
+        _tuner.do_mime_response(200, 'text/html', form)
+    else:
+        _tuner.do_mime_response(404, 'text/html', web_templates['htmlError'].format('404 - Area Not Found'))
+
+
+@postrequest.route('/pages/configform.html')
+def post_configform_html(_tuner):
+    if _tuner.config['web']['disable_web_config']:
+        _tuner.do_mime_response(501, 'text/html', web_templates['htmlError']
+            .format('501 - Config pages disabled. '
+                    'Set [web][disable_web_config] to False in the config file to enable'))
+    else:
+        # Take each key and make a [section][key] to store the value
+        config_changes = {}
+        area = _tuner.query_data['area'][0]
+        del _tuner.query_data['area']
+        namespace = _tuner.query_data['name']
+        del _tuner.query_data['name']
+        instance = _tuner.query_data['instance']
+        del _tuner.query_data['instance']
+        for key in _tuner.query_data:
+            key_pair = key.split('-', 1)
+            if key_pair[0] not in config_changes:
+                config_changes[key_pair[0]] = {}
+            config_changes[key_pair[0]][key_pair[1]] = _tuner.query_data[key]
+        results = _tuner.plugins.config_obj.update_config(area, config_changes)
+        _tuner.do_mime_response(200, 'text/html', results)
+
 
 class ConfigFormHTML:
 
@@ -33,7 +72,7 @@ class ConfigFormHTML:
         return ''.join([
             '<!DOCTYPE html><html><head>',
             '<meta charset="utf-8"/><meta name="author" content="rocky4546">',
-            '<meta name="description" content="config editor for tvheadend-locast">',
+            '<meta name="description" content="config editor for Cabernet">',
             '<title>Settings Editor</title>',
             '<meta name="viewport" content="width=device-width, ',
             'minimum-scale=1.0, maximum-scale=1.0">',

@@ -153,33 +153,15 @@ Function AddFiles
     File "${SOURCEPATH}\requirements.txt"
     Rename "$INSTDIR\TVHEADEND.md" "$INSTDIR\README.txt"
 
-    SetOutPath "$INSTDIR\lib"
-    File "${SOURCEPATH}\lib\*.py"
+    SetOutPath "$INSTDIR"
+    File /r /x __pycache__ /x development "${SOURCEPATH}\lib"
 
-    SetOutPath "$INSTDIR\lib\m3u8"
-    File "${SOURCEPATH}\lib\m3u8\*.*"
-    File "${SOURCEPATH}\lib\m3u8\LICENSE"
+    SetOutPath "$INSTDIR"
+    File /r /x __pycache__ "${SOURCEPATH}\plugins"
 
-    SetOutPath "$INSTDIR\lib\m3u8\iso8601"
-    File "${SOURCEPATH}\lib\m3u8\iso8601\*.*"
-    File "${SOURCEPATH}\lib\m3u8\iso8601\LICENSE"
-
-    SetOutPath "$INSTDIR\lib\tvheadend"
-    File "${SOURCEPATH}\lib\tvheadend\config_example.ini"
-    File "${SOURCEPATH}\lib\tvheadend\*.py"
-    File /r /x __pycache__ "${SOURCEPATH}\lib\tvheadend\pages"
-    File /r "${SOURCEPATH}\lib\tvheadend\service"
-    File /r "${SOURCEPATH}\lib\tvheadend\htdocs"
-
-    SetOutPath "$INSTDIR\cache\stations"
-    File "${SOURCEPATH}\cache\stations\README.txt"
 
     SetOutPath "$INSTDIR\build\WINDOWS"
     File "${SOURCEPATH}\build\WINDOWS\UpdateConfig.pyw"
-
-    SetOutPath "$INSTDIR\data\config_defn"
-    File "${SOURCEPATH}\data\config_defn\*.*"
-
 
 FunctionEnd
 
