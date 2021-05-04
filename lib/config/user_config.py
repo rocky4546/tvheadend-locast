@@ -16,20 +16,33 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import os
-import pathlib
-import logging
 import copy
 import configparser
+import json
+import logging
+import pathlib
+import os
 
-import lib.tvheadend.utils as utils
+import lib.common.utils as utils
 import lib.config.config_defn as config_defn
-from lib.tvheadend.utils import clean_exit
+from lib.common.utils import clean_exit
+from lib.common.decorators import getrequest
 from lib.db.db_config_defn import DBConfigDefn
+from lib.web.pages.templates import web_templates
 
 
 def get_config(script_dir, opersystem, args):
     return TVHUserConfig(script_dir, opersystem, args)
+
+
+@getrequest.route('/config.json')
+def config_json(_tuner):
+    if _tuner.config['web']['disable_web_config']:
+        _tuner.do_mime_response(501, 'text/html', web_templates['htmlError']
+            .format('501 - Config pages disabled.'
+                    ' Set [web][disable_web_config] to False in the config file to enable'))
+    else:
+        _tuner.do_mime_response(200, 'application/json', json.dumps(_tuner.plugins.config_obj.filter_config_data()))
 
 
 class TVHUserConfig:
@@ -206,7 +219,6 @@ class TVHUserConfig:
         restart = False
         results += self.defn_json.call_onchange(_area, _updated_data, self)
         self.db.add_config(self.data)
-
 
         if restart:
             results += '</ul><b>Service may need to be restarted if not all changes were implemented</b><hr><br>'

@@ -16,9 +16,9 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import logging
 import platform
 import os
-import logging
 
 try:
     import cryptography
@@ -41,9 +41,9 @@ def set_fernet_key():
     opersystem = platform.system()
     # is there a key already generated
     if opersystem in ['Windows']:
-        key_file = os.getenv('LOCALAPPDATA') + '/.locast/key.txt'
+        key_file = os.getenv('LOCALAPPDATA') + '/.cabernet/key.txt'
     else:  # linux
-        key_file = os.getenv('HOME') + '/.locast/key.txt'
+        key_file = os.getenv('HOME') + '/.cabernet/key.txt'
     try:
         with open(key_file, 'rb') as f:
             key = f.read()

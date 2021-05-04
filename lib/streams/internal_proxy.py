@@ -25,8 +25,7 @@ import time
 from collections import OrderedDict
 
 import lib.m3u8 as m3u8
-from lib.tvheadend.atsc import ATSCMsg
-from lib.tvheadend.templates import tvh_templates
+from lib.common.atsc import ATSCMsg
 from .stream import Stream
 from .pts_validation import PTSValidation
 from lib.db.db_config_defn import DBConfigDefn
@@ -44,28 +43,6 @@ class InternalProxy(Stream):
         super().__init__(_plugins, _hdhr_queue)
         self.config = self.plugins.config_obj.data
         self.db_configdefn = DBConfigDefn(self.config)
-
-    def gen_response(self, _ch_num, _tuner):
-        """
-        Returns dict where the dict is consistent with
-        the method do_dict_response requires as an argument
-        A code other than 200 means do not tune
-        dict also include a "tuner_index" that informs caller what tuner is allocated
-        """
-        index = self.find_tuner(_ch_num, _tuner)
-        if index >= 0:
-            return {
-                'tuner': index,
-                'code': 200,
-                'headers': {'Content-type': 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E'},
-                'text': None}
-        else:
-            self.logger.warning('All tuners already in use')
-            return {
-                'tuner': index,
-                'code': 400,
-                'headers': {'Content-type': 'text/html'},
-                'text': tvh_templates['htmlError'].format('400 - All tuners already in use.')}
 
     def stream_direct(self, _channel_dict, _write_buffer):
         """
@@ -86,7 +63,11 @@ class InternalProxy(Stream):
         if self.config[_channel_dict['namespace'].lower()]['player-enable_url_filter']:
             stream_filter = self.config[_channel_dict['namespace'].lower()]['player-url_filter']
             if stream_filter is not None:
-                file_filter = re.compile(stream_filter)
+                self.file_filter = re.compile(stream_filter)
+            else:
+                self.logger.warning('[{}]][player-enable_url_filter]'
+                    ' enabled but [player-url_filter] not set'
+                    .format(_channel_dict['namespace'].lower()))
         if self.config[_channel_dict['namespace'].lower()]['player-enable_pts_filter']:
             self.pts_validation = PTSValidation(self.config, self.channel_dict)
 
@@ -134,7 +115,6 @@ class InternalProxy(Stream):
                 total_added += 1
         return total_added
 
-
     def remove_from_stream_queue(self, _playlist, _play_queue):
         total_removed = 0
         for segment_key in list(_play_queue.keys()):
@@ -178,8 +158,6 @@ class InternalProxy(Stream):
                 if wait > 0:
                     time.sleep(wait)
 
-
-
     def is_pts_valid(self, video_data):
         if not self.config[self.channel_dict['namespace'].lower()]['player-enable_pts_filter']:
             return True
@@ -191,4 +169,3 @@ class InternalProxy(Stream):
         if results['reread_buffer']:
             return False
         return True
-

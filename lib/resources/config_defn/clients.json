@@ -60,7 +60,7 @@
                         "type": "integer",
                         "default": 5,
                         "level": 2,
-                        "help": "Number of simultaneous HTTP requests.  Should be at least twice the counts"
+                        "help": "Number of simultaneous HTTP requests.  Should be at least the number of tuners"
                     }
                 }
             },
@@ -104,14 +104,14 @@
             "ssdp":{
                 "label": "SSDP",
                 "icon": "vignette",
-                "description": "SSDP protocol on port 1900 (partially implemented)",
+                "description": "SSDP protocol on port 1900 (partially implemented).  Not required for most manual setups with media servers.",
                 "settings":{
                     "disable_ssdp":{
                         "label": "disable_ssdp",
                         "type": "boolean",
                         "default": true,
                         "level": 2,
-                        "help": "Not required for TVHeadend.  Needed for Emby, Plex, etc"
+                        "help": "Enables HDHR protocol on port 65001. Recommend keeping this disabled and use manual setup"
                     },
                     "udp_netmask":{
                         "label": "udp_netmask",
@@ -125,14 +125,14 @@
             "hdhomerun":{
                 "label": "HDHomeRun",
                 "icon": "vignette",
-                "description": "HDHomeRun protocol on port 65001 (partially implemented)",
+                "description": "HDHomeRun protocol on port 65001 (partially implemented).  Not required for most manual setups with media servers.",
                 "settings":{
                     "disable_hdhr":{
                         "label": "disable_hdhr",
                         "type": "boolean",
                         "default": true,
                         "level": 2,
-                        "help": "Enables HDHR protocol on port 65001. Not required for TVHeadend"
+                        "help": "Enables HDHR protocol on port 65001. Recommend keeping this disabled and use manual setup"
                     },
                     "hdhr_id":{
                         "label": "hdhr_id",
@@ -160,7 +160,7 @@
                     "reporting_friendly_name":{
                         "label": "reporting_friendly_name",
                         "type": "string",
-                        "default": "Locast Rocky4546",
+                        "default": "Rocky4546",
                         "level": 4,
                         "help": null
                     },

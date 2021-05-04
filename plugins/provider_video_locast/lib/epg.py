@@ -21,9 +21,9 @@ import datetime
 import logging
 import requests
 
-import lib.tvheadend.utils as utils
-from lib.tvheadend.decorators import handle_url_except
-from lib.tvheadend.decorators import handle_json_except
+import lib.common.utils as utils
+from lib.common.decorators import handle_url_except
+from lib.common.decorators import handle_json_except
 from lib.db.db_epg import DBepg
 
 from . import constants

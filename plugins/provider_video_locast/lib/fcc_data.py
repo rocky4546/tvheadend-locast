@@ -26,10 +26,10 @@ import urllib
 import urllib.request
 import zipfile
 
-from lib.tvheadend.filelock import FileLock
+from lib.common.filelock import FileLock
 
-import lib.tvheadend.utils as utils
-from lib.tvheadend.decorators import handle_url_except
+import lib.common.utils as utils
+from lib.common.decorators import handle_url_except
 
 fcc_ssl_context = ssl.SSLContext()
 fcc_ssl_context.set_ciphers('HIGH:!DH:!aNULL')

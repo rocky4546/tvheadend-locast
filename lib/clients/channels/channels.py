@@ -19,8 +19,25 @@ substantial portions of the Software.
 from io import StringIO
 from xml.sax.saxutils import escape
 
-from lib.tvheadend.templates import tvh_templates
+from lib.clients.channels.templates import ch_templates
+from lib.common.decorators import getrequest
 from lib.db.db_channels import DBChannels
+
+
+@getrequest.route('/playlist')
+def playlist(_tuner):
+    _tuner.send_response(302)
+    _tuner.send_header('Location', _tuner.path.replace('playlist', 'channels.m3u'))
+    _tuner.end_headers()
+
+
+@getrequest.route('/channels.m3u')
+def channels_m3u(_tuner):
+    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
+    _tuner.do_mime_response(200, 'audio/x-mpegurl', get_channels_m3u(
+        _tuner.config, _tuner.stream_url, 
+        _tuner.query_data['name'], 
+        _tuner.query_data['instance']))
 
 
 def get_channels_m3u(_config, _base_url, _namespace, _instance):
@@ -72,6 +89,13 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
         )
     return fakefile.getvalue()
     
+
+@getrequest.route('/lineup.json')
+def lineup_json(_tuner):
+    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
+    _tuner.do_mime_response(200, 'application/json', get_channels_json(
+        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], _tuner.query_data['instance']))
+
     
 def get_channels_json(_config, _base_url, _namespace, _instance):
     db = DBChannels(_config)
@@ -79,7 +103,7 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
     return_json = ''
     for sid, sid_data in ch_data.items():
         return_json = return_json + \
-            tvh_templates['jsonLineup'].format(
+            ch_templates['jsonLineup'].format(
                 sid_data['number'],
                 sid_data['display_name'],
                 _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,
@@ -88,13 +112,21 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
     return "[" + return_json[:-1] + "]"
 
 
+@getrequest.route('/lineup.xml')
+def lineup_xml(_tuner):
+    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
+    _tuner.do_mime_response(200, 'application/xml', get_channels_xml(
+        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], 
+        _tuner.query_data['instance']))
+
+
 def get_channels_xml(_config, _base_url, _namespace, _instance):
     db = DBChannels(_config)
     ch_data = db.get_channels(_namespace, _instance)
     return_xml = ''
     for sid, sid_data in ch_data.items():
         return_xml = return_xml + \
-            tvh_templates['xmlLineup'].format(
+            ch_templates['xmlLineup'].format(
                 sid_data['number'],
                 escape(sid_data['display_name']),
                 _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,

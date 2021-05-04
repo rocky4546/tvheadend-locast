@@ -2,7 +2,7 @@
 """ calls the main rountine running in the tvheadend folder """
 import os
 import pathlib
-from lib.tvheadend import main
+from lib import main
 
 # Startup Logic
 if __name__ == '__main__':

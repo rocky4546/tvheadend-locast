@@ -21,9 +21,9 @@ import requests
 import time
 from datetime import datetime
 
-from lib.tvheadend.decorators import handle_url_except
-from lib.tvheadend.decorators import handle_json_except
-import lib.tvheadend.exceptions as exceptions
+from lib.common.decorators import handle_url_except
+from lib.common.decorators import handle_json_except
+import lib.common.exceptions as exceptions
 
 from . import constants
 
