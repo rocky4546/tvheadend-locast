@@ -20,9 +20,9 @@ import re
 import logging
 import requests
 
-import lib.tvheadend.exceptions as exceptions
-from lib.tvheadend.decorators import handle_url_except
-from lib.tvheadend.decorators import handle_json_except
+import lib.common.exceptions as exceptions
+from lib.common.decorators import handle_url_except
+from lib.common.decorators import handle_json_except
 from . import constants
 
 

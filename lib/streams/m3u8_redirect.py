@@ -16,7 +16,7 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-from lib.tvheadend.templates import tvh_templates
+from lib.web.pages.templates import web_templates
 from .stream import Stream
 
 
@@ -26,7 +26,7 @@ class M3U8Redirect(Stream):
     # They can stop anytime without notification, so tuner tracking is
     # disabled
 
-    def gen_response(self, _channel_dict):
+    def gen_m3u8_response(self, _channel_dict):
         """
         Returns dict  where the dict is consistent with
         the method do_dict_response requires as an argument
@@ -37,7 +37,7 @@ class M3U8Redirect(Stream):
             return {
                 'code': 501,
                 'headers': {'Content-type': 'text/html'},
-                'text': tvh_templates['htmlError'].format('501 - Unknown channel')}
+                'text': web_templates['htmlError'].format('501 - Unknown channel')}
 
         self.logger.info('Sending M3U8 file directly to client')
         return {

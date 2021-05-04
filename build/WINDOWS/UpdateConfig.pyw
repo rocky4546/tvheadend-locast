@@ -27,6 +27,9 @@ import base64
 import binascii
 import logging
 
+
+# 
+
 try:
     import cryptography
 except ImportError:
@@ -81,7 +84,7 @@ if __name__ == '__main__':
 
     configObj = get_config(install_dir, opersystem, args)
 
-    if configObj.data['locast']['password'] == 'UNKNOWN':
+    if configObj.data['locast']['login-password'] == 'UNKNOWN':
         #  two different users trying to decrypt the encrypted password
         #  ignore the error and update with password passed in
         logging.info('ignoring password error and '
@@ -101,10 +104,10 @@ if __name__ == '__main__':
         "pwd=", pwd)
 
     # update config object
-    configObj.data["locast"]["username"] = args.user
-    configObj.config_handler.set("locast", "username", args.user)
-    configObj.data["locast"]["password"] = pwd
-    configObj.config_handler.set("locast", "password", pwd)
+    configObj.data["locast"]["login-username"] = args.user
+    configObj.config_handler.set("locast", "login-username", args.user)
+    configObj.data["locast"]["login-password"] = pwd
+    configObj.config_handler.set("locast", "login-password", pwd)
 
     with open(config_file, 'w') as config_fileptr:
         configObj.config_handler.write(config_fileptr)

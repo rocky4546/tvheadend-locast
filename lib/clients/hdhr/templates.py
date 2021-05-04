@@ -16,15 +16,7 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-tvh_templates = {
-
-    'htmlError': 
-    """<html>
-        <head></head>
-        <body>
-            <h2>{}</h2>
-        </body>
-    </html>""",
+hdhr_templates = {
 
     'jsonDiscover':
         """{{
@@ -53,22 +45,6 @@ tvh_templates = {
             "SourceList":["Antenna"]
         }""",
 
-    'jsonLineup':
-        """{{
-            "GuideNumber": "{}",
-            "GuideName": "{}",
-            "URL": "http://{}",
-            "HD": "{}"
-        }}""",
-
-    'xmlLineup':
-        """<Program>
-            <GuideNumber>{}</GuideNumber>
-            <GuideName>{}</GuideName>
-            <URL>http://{}</URL>
-            <HD>{}</HD>
-        </Program>""",
-
     'xmlDevice':
         """<?xml version="1.0" encoding="utf-8"?>
         <root xmlns="urn:schemas-upnp-org:device-1-0" xmlns:dlna="urn:schemas-dlna-org:device-1-0">
@@ -82,43 +58,13 @@ tvh_templates = {
                 <friendlyName>{0} HDHomeRun</friendlyName>
                 <presentationURL>/</presentationURL>
                 <manufacturer>Silicondust</manufacturer>
-                <manufacturerURL>https://github.com/rocky4546/tvheadend-locast</manufacturerURL>
+                <manufacturerURL>{4}</manufacturerURL>
                 <modelDescription>{0}</modelDescription>
                 <modelName>{0}</modelName>
                 <modelNumber>{1}</modelNumber>
-                <modelURL>https://github.com/rocky4546/tvheadend-locast</modelURL>
+                <modelURL>{4}</modelURL>
                 <serialNumber>{2}</serialNumber>
                 <UDN>uuid:{3}</UDN>
-                <iconList>
-                    <icon>
-                        <mimetype>image/jpeg</mimetype>
-                        <width>48</width>
-                        <height>48</height>
-                        <depth>24</depth>
-                        <url>/images/locast_small.jpg</url>
-                    </icon>
-                    <icon>
-                        <mimetype>image/jpeg</mimetype>
-                        <width>120</width>
-                        <height>120</height>
-                        <depth>24</depth>
-                        <url>/images/locast_large.jpg</url>
-                    </icon>
-                    <icon>
-                        <mimetype>image/png</mimetype>
-                        <width>48</width>
-                        <height>48</height>
-                        <depth>24</depth>
-                        <url>/images/locast_small.png</url>
-                    </icon>
-                    <icon>
-                        <mimetype>image/png</mimetype>
-                        <width>120</width>
-                        <height>120</height>
-                        <depth>24</depth>
-                        <url>/images/locast_large.png</url>
-                    </icon>
-                </iconList>
             </device>
         </root>""",
 

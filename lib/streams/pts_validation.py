@@ -16,21 +16,12 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import datetime
-import errno
 import json
 import logging
 import subprocess
-import time
 
-from lib.tvheadend.templates import tvh_templates
-from .stream import Stream
-from .stream_queue import StreamQueue
-
-MIN_TIME_BETWEEN_LOCAST = 0.9
 
 class PTSValidation:
-
     logger = None
 
     def __init__(self, _config, _channel_dict):
@@ -46,11 +37,10 @@ class PTSValidation:
         self.channel_dict = _channel_dict
         self.write_buffer = None
         self.stream_queue = None
-        self.config =  _config
+        self.config = _config
         self.pts_json = None
         if PTSValidation.logger is None:
             PTSValidation.logger = logging.getLogger(__name__)
-
 
     def check_pts(self, _video_data):
         """
@@ -185,8 +175,8 @@ class PTSValidation:
             'PTS SIZE=', pts_size,
             'DELTA PTS=', delta_from_prev,
             'Pkts Rcvd=', len(_pts_json['packets'])))
-        return { 'first_pts': first_pts, 'last_pts': last_pts, 
-            'pts_size': pts_size, 'delta_from_prev': delta_from_prev }
+        return {'first_pts': first_pts, 'last_pts': last_pts,
+            'pts_size': pts_size, 'delta_from_prev': delta_from_prev}
 
     def find_bad_pkt_offset(self, from_front):
         """
@@ -199,7 +189,7 @@ class PTSValidation:
         size = 0
         while i < num_of_pkts:
             next_pkt_pts = self.pts_json['packets'][i]['pts']
-            
+
             if size == 0 and 'size' in self.pts_json['packets'][i]:
                 size = int(self.pts_json['packets'][i]['size'])
             if abs(next_pkt_pts - prev_pkt_pts) \
@@ -208,7 +198,7 @@ class PTSValidation:
                 # only video codecs have byte position info
                 if from_front:
                     pts = prev_pkt_pts
-                    byte_offset = int((int(self.pts_json['packets'][i-1]['pos']) + size) / 188) * 188
+                    byte_offset = int((int(self.pts_json['packets'][i - 1]['pos']) + size) / 188) * 188
                     self.prev_last_pts = pts
                 else:
                     pts = next_pkt_pts
@@ -239,4 +229,3 @@ class PTSValidation:
                 break
             i += 1
         return byte_offset
-

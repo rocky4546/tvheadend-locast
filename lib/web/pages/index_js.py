@@ -16,7 +16,15 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-        
+from lib.common.decorators import getrequest
+
+
+@getrequest.route('/pages/index.js')
+def pages_index_js(_tuner):
+    indexjs = IndexJS()
+    _tuner.do_mime_response(200, 'text/javascript', indexjs.get(_tuner.config))
+
+
 class IndexJS:
 
     @staticmethod

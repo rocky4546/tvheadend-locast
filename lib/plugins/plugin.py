@@ -20,7 +20,7 @@ import logging
 import json
 import importlib
 import importlib.resources
-import lib.tvheadend.utils as utils
+import lib.common.utils as utils
 
 from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
@@ -115,5 +115,6 @@ class Plugin:
     @property
     def name(self):
         return self.plugin_settings['name']
+
 
 Plugin.logger = logging.getLogger(__name__)

@@ -16,16 +16,19 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import os
-import sys
-import struct
+import datetime
 import logging
 import logging.config
-import datetime
+import os
 import socket
-import lib.tvheadend.exceptions as exceptions
+import struct
+import sys
 
-VERSION = '0.8.0-alpha'
+import lib.common.exceptions as exceptions
+
+VERSION = '0.8.0-RC1'
+CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
+CABERNET_NAME = 'cabernet'
 
 
 def get_version_str():

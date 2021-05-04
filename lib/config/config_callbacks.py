@@ -24,9 +24,9 @@ import requests
 import pathlib
 import os
 import uuid
-import lib.tvheadend.utils as utils
-import lib.tvheadend.encryption as encryption
-import lib.tvheadend.hdhr_server as hdhr_server
+import lib.common.utils as utils
+import lib.common.encryption as encryption
+import lib.clients.hdhr.hdhr_server as hdhr_server
 
 try:
     import cryptography
@@ -120,7 +120,7 @@ def set_ffmpeg_path(_config_obj, _section, _key):
                     = str(pathlib.Path(base_ffmpeg_dir).joinpath('ffmpeg.exe'))
             else:
                 _config_obj.logger \
-                    .warning('player-ffmpeg_path does not exist and may be required based on player-stream_type')
+                    .info('ffmpeg_path does not exist and may be needed based on stream_type')
         else:
             _config_obj.data[_section][_key] = 'ffmpeg'
 
@@ -132,7 +132,7 @@ def set_ffprobe_path(_config_obj, _section, _key):
                 = pathlib.Path(_config_obj.script_dir).joinpath('ffmpeg/bin')
             _config_obj.data[_section][_key] \
                 = str(pathlib.Path(base_ffprobe_dir).joinpath('ffprobe.exe'))
-            _config_obj.logger.warning('ffprobe_path does not exist and may be required based on stream_type')
+            _config_obj.logger.info('ffprobe_path does not exist and may be needed based on stream_type')
         else:
             _config_obj.data[_section][_key] = 'ffprobe'
 

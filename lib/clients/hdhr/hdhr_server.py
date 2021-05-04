@@ -23,14 +23,13 @@ import socket
 import string
 import struct
 import sys
-import time
 import zlib
-from multiprocessing import Process
-from threading import Thread
 from ipaddress import IPv4Network
 from ipaddress import IPv4Address
+from multiprocessing import Process
+from threading import Thread
 
-import lib.tvheadend.utils as utils
+import lib.common.utils as utils
 
 # Windows does not have requests module installed by default
 try:
@@ -38,7 +37,6 @@ try:
 except ImportError:
     try:
         import pip
-
         print('Installing python requests module')
         pip.main(['install', 'requests'])
     except ModuleNotFoundError:
@@ -81,6 +79,7 @@ logger = None
 
 
 def hdhr_process(config, _tuner_queue):
+    global logger
     utils.logging_setup(config['paths']['config_file'])
     logger = logging.getLogger(__name__)
     if config['hdhomerun']['udp_netmask'] is None:
@@ -90,7 +89,9 @@ def hdhr_process(config, _tuner_queue):
     try:
         net = IPv4Network(config['hdhomerun']['udp_netmask'])
     except (ipaddress.AddressValueError, ValueError) as err:
-        logger.error('Illegal value in [hdhomerun][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+        logger.error(
+            'Illegal value in [hdhomerun][udp_netmask].  '
+            'Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
         return
         
     hdhr = HDHRServer(config, _tuner_queue)
@@ -169,13 +170,16 @@ class HDHRServer:
         self.tuner_queue = _tuner_queue
         self.sock_multicast = None
         self.sock_listener = None
-        self.tuners = dict.fromkeys(range(self.config["locast"]["player-tuner_count"]))
         self._t = None
-        for i in range(self.config["locast"]["player-tuner_count"]):
-            self.tuners[i] = {
-                'channel': None,
-                'status': 'Idle'
-            }
+        self.tuners = {}
+        for area, area_data in self.config.items():
+            if 'player-tuner_count' in area_data.keys():
+                self.tuners[area] = dict.fromkeys(range(self.config[area]['player-tuner_count']))
+                for i in range(self.config[area]["player-tuner_count"]):
+                    self.tuners[area][i] = {
+                        'channel': None,
+                        'status': 'Idle'
+                    }
 
     def run_listener(self, _bind_ip=''):
         self.logger.info('TCP: Starting HDHR TCP listener server')
@@ -223,9 +227,7 @@ class HDHRServer:
     def process_queue(self, _queue):
         while True:
             queue_item = _queue.get()
-            self.logger.debug('######### QUEUE {}'.format(queue_item))
-            self.logger.debug('######### QUEUE STATUS {}'.format(queue_item['status']))
-            self.tuners[queue_item['tuner']] = {
+            self.tuners[queue_item['namespace'].lower()][queue_item['tuner']] = {
                 'channel': queue_item['channel'],
                 'status': queue_item['status']
             }
@@ -283,10 +285,15 @@ class HDHRServer:
                 response += crc
                 return response
             elif name_str.endswith('/status'):
-                tuner_status = self.tuners[tuner_index]['status']
-                if tuner_status == 'Scan':
-                    response = HDHRServer.gen_err_response(frame_type, 'scanErrMsg', [host])
-                else:
+                response = None
+                tuner_status = None
+                for area, area_data in self.tuners.items():
+                    if area_data[tuner_index]['status'] == 'Scan':
+                        response = HDHRServer.gen_err_response(frame_type, 'scanErrMsg', [host])
+                        break
+                    else:
+                        tuner_status = area_data[tuner_index]['status']
+                if response is None:
                     value_resp = utils.set_u8(HDHOMERUN_GETSET_VALUE) \
                                  + utils.set_str(tuner_status_msg[tuner_status], True)
                     name_resp = utils.set_u8(HDHOMERUN_GETSET_NAME) + utils.set_str(name, True)
@@ -384,7 +391,9 @@ class HDHRServer:
             try:
                 net = IPv4Network(self.config['hdhomerun']['udp_netmask'])
             except (ipaddress.AddressValueError, ValueError) as err:
-                self.logger.error('Illegal value in [hdhomerun][udp_netmask].  Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
+                self.logger.error(
+                    'Illegal value in [hdhomerun][udp_netmask].  '
+                    'Format must be #.#.#.#/#. Exiting hdhr service. ERROR: {}'.format(err))
                 sys.exit(1)
             is_allowed = IPv4Address(host) in net
 
@@ -410,7 +419,13 @@ class HDHRServer:
                        self.config['web']['plex_accessible_ip'] + \
                        ':' + str(self.config['web']['web_admin_port'])
             base_url_msg = b'\x2a' + utils.set_str(base_url.encode(), False)
-            tuner_count = b'\x10\x01' + utils.set_u8(self.config['locast']['player-tuner_count'])
+            
+            namespace = None
+            for area, area_data in self.config.items():
+                if 'player-tuner_count' in area_data.keys():
+                    namespace = area
+            tuner_count = b'\x10\x01' + utils.set_u8(
+                self.config[namespace]['player-tuner_count'])
 
             lineup_url = base_url + '/lineup.json'
             lineup_url = b'\x27' + utils.set_str(lineup_url.encode(), False)

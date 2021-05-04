@@ -18,11 +18,13 @@ substantial portions of the Software.
 
 import logging
 
+from lib.web.pages.templates import web_templates
+from lib.clients.web_handler import WebHTTPHandler
+
 
 class Stream:
 
     logger = None
-
 
     def __init__(self, _plugins, _hdhr_queue):
         self.plugins = _plugins
@@ -30,19 +32,20 @@ class Stream:
         if Stream.logger is None:
             Stream.logger = logging.getLogger(__name__)
 
-    def put_hdhr_queue(self, _index, _channel, _status):
+    def put_hdhr_queue(self, _namespace, _index, _channel, _status):
         if not self.plugins.config_obj.data['hdhomerun']['disable_hdhr']:
             self.hdhr_queue.put(
-                {'tuner': _index, 'channel': _channel, 'status': _status})
+                {'namespace': _namespace, 'tuner': _index, 
+                'channel': _channel, 'status': _status})
 
-    def find_tuner(self, _ch_num, _tuner):
+    def find_tuner(self, _namespace, _ch_num, _tuner):
         # keep track of how many tuners we can use at a time
         index = -1
-        for index, scan_status in enumerate(_tuner.rmg_station_scans):
+        for index, scan_status in enumerate(WebHTTPHandler.rmg_station_scans):
             # the first idle tuner gets it
             if scan_status == 'Idle':
-                _tuner.rmg_station_scans[index] = _ch_num
-                self.put_hdhr_queue(index, _ch_num, 'Stream')
+                WebHTTPHandler.rmg_station_scans[_namespace][index] = _ch_num
+                self.put_hdhr_queue(_namespace, index, _ch_num, 'Stream')
                 break
         return index
 
@@ -62,3 +65,25 @@ class Stream:
     def get_stream_uri(self, _channel_dict):
         return self.plugins.plugins[_channel_dict['namespace']] \
             .plugin_obj.get_channel_uri(_channel_dict['uid'], _channel_dict['instance'])
+
+    def gen_response(self, _namespace, _ch_num, _tuner):
+        """
+        Returns dict where the dict is consistent with
+        the method do_dict_response requires as an argument
+        A code other than 200 means do not tune
+        dict also include a "tuner_index" that informs caller what tuner is allocated
+        """
+        index = self.find_tuner(_namespace, _ch_num, _tuner)
+        if index >= 0:
+            return {
+                'tuner': index,
+                'code': 200,
+                'headers': {'Content-type': 'video/mp2t; Transfer-Encoding: chunked codecs="avc1.4D401E'},
+                'text': None}
+        else:
+            self.logger.warning('All tuners already in use')
+            return {
+                'tuner': index,
+                'code': 400,
+                'headers': {'Content-type': 'text/html'},
+                'text': web_templates['htmlError'].format('400 - All tuners already in use.')}

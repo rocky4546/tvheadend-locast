@@ -21,9 +21,18 @@ import logging
 import xml.dom.minidom as minidom
 from xml.etree import ElementTree
 
+import lib.common.utils as utils
 import lib.tvheadend.epg_category as epg_category
-from lib.db.db_epg import DBepg
+from lib.common.decorators import getrequest
 from lib.db.db_channels import DBChannels
+from lib.db.db_epg import DBepg
+
+
+@getrequest.route('/xmltv.xml')
+def xmltv_xml(_tuner):
+    epg = EPG(_tuner.plugins, _tuner.query_data['name'], _tuner.query_data['instance'])
+    reply_str = epg.get_epg_xml()
+    _tuner.do_mime_response(200, 'application/xml', reply_str)
 
 
 class EPG:
@@ -39,7 +48,7 @@ class EPG:
 
     def get_epg_xml(self):
         self.plugins.refresh_epg(self.namespace, self.instance)
-        xml_out = EPG.gen_header_xml()
+        xml_out = self.gen_header_xml()
         channel_list = self.channels_db.get_channels(self.namespace, self.instance)
         self.gen_channel_xml(xml_out, channel_list)
         self.epg_db.init_get_query(self.namespace, self.instance)
@@ -146,16 +155,25 @@ class EPG:
 
             if prog_data['is_new']:
                 EPG.sub_el(prog_out, 'new')
+            else:
+                EPG.sub_el(prog_out, 'previously-shown')
+            
             if prog_data['cc']:
                 EPG.sub_el(prog_out, 'subtitles', type='teletext')
 
-    @staticmethod
-    def gen_header_xml():
+    def gen_header_xml(self):
+        if self.namespace is None:
+            website = utils.CABERNET_URL
+            name = utils.CABERNET_NAME
+        else:
+            website = self.plugins.plugins[self.namespace].plugin_settings['website']
+            name = self.plugins.plugins[self.namespace].plugin_settings['name']
+        
         xml_out = ElementTree.Element('tv')
-        xml_out.set('source-info-url', 'https://www.locast.org')
-        xml_out.set('source-info-name', 'locast.org')
-        xml_out.set('generator-info-name', 'locastepg')
-        xml_out.set('generator-info-url', 'github.com/rocky4546/tvheadend-locast')
+        xml_out.set('source-info-url', website)
+        xml_out.set('source-info-name', name)
+        xml_out.set('generator-info-name', utils.CABERNET_NAME)
+        xml_out.set('generator-info-url', utils.CABERNET_URL)
         xml_out.set('generator-special-thanks', 'locast2plex')
         return xml_out
 
