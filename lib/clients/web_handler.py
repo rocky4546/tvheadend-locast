@@ -56,8 +56,10 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
                 and self.headers.get('Content-Length') != '0':
             post_data = self.rfile.read(int(self.headers.get('Content-Length'))).decode('utf-8')
             # if an input is empty, then it will remove it from the list when the dict is gen
-            query_data = urllib.parse.parse_qs(post_data)
-
+            query_data = urllib.parse.parse_qs(post_data, keep_blank_values=True)
+            for key, value in query_data.items():
+                if value[0] == '':
+                    query_data[key] = [None]
         if self.path.find('?') != -1:
             content_path = self.path[0:self.path.find('?')]
             get_data = self.path[(self.path.find('?') + 1):]
@@ -66,14 +68,12 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
                 get_data_item_split = get_data_item.split('=')
                 if len(get_data_item_split) > 1:
                     query_data[get_data_item_split[0]] = get_data_item_split[1]
-
         if 'name' not in query_data:
             query_data['name'] = None
         if 'instance' not in query_data:
             query_data['instance'] = None
         if query_data['instance'] or query_data['name']:
             return content_path, query_data
-
         path_list = content_path.split('/')
         if len(path_list) > 2:
             instance = None

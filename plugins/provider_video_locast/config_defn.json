@@ -126,7 +126,7 @@
                         "type": "string",
                         "default": "L",
                         "level": 1,
-                        "help": "Used with channel number to order channel list"
+                        "help": "If a number will ADD to the display channel number; otherwise, will prepend to the channel number as a string"
                     },
                     "epg-days":{
                         "label": "EPG Days to Pull",

@@ -19,6 +19,7 @@ substantial portions of the Software.
 from io import StringIO
 from xml.sax.saxutils import escape
 
+import lib.common.utils as utils
 from lib.clients.channels.templates import ch_templates
 from lib.common.decorators import getrequest
 from lib.db.db_channels import DBChannels
@@ -136,14 +137,8 @@ def get_channels_xml(_config, _base_url, _namespace, _instance):
 
 # returns the service name used to sync with the EPG channel name
 def set_service_name(_config, _sid_data):
-    prefix = _config[_sid_data['namespace'].lower()]['epg-prefix']
-    suffix = _config[_sid_data['namespace'].lower()]['epg-suffix']
-    if prefix is None:
-        prefix = ""
-    if suffix is None:
-        suffix = ""
-    service_name = prefix + \
-        str(_sid_data['number']) + \
-        suffix + \
+    updated_chnum = utils.wrap_chnum(
+        str(_sid_data['number']), _sid_data['namespace'], _config)
+    service_name = updated_chnum + \
         ' ' + _sid_data['display_name']
     return service_name
