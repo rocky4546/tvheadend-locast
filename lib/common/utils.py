@@ -26,7 +26,7 @@ import sys
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.0-RC1'
+VERSION = '0.8.0-RC2'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -113,6 +113,31 @@ def get_ip():
     finally:
         s.close()
     return ip
+
+
+def wrap_chnum(_chnum, _namespace, _config):
+    """
+    Adds prefix and suffix to chnum.  If prefix is a integer, then
+    will add the prefix to the chnum instead of using it like a string.
+    """
+    prefix = _config[_namespace.lower()]['epg-prefix']
+    suffix = _config[_namespace.lower()]['epg-suffix']
+    if prefix is None:
+        prefix = ""
+    if suffix is None:
+        suffix = ""
+    try:
+        ch_int = int(prefix)
+        ch_split = _chnum.split('.', 1)
+        ch_int += int(ch_split[0])
+        if len(ch_split) == 2:
+            ch_str = str(ch_int) + '.' + ch_split[1]
+        else:
+            ch_str = str(ch_int)
+    except ValueError:
+        ch_str = prefix + _chnum
+    ch_str += suffix
+    return ch_str
 
 
 # BYTE METHODS
