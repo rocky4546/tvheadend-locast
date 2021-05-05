@@ -61,24 +61,13 @@ class EPG:
 
     def gen_channel_xml(self, _et_root, _channel_list):
         for sid, ch_data in _channel_list.items():
-            prefix = self.config[ch_data['namespace'].lower()]['epg-prefix']
-            suffix = self.config[ch_data['namespace'].lower()]['epg-suffix']
-            if prefix is None:
-                prefix = ""
-            if suffix is None:
-                suffix = ""
-        
+            updated_chnum = utils.wrap_chnum(
+                ch_data['display_number'], ch_data['namespace'], self.config)
             c_out = EPG.sub_el(_et_root, 'channel', id=sid)
-            EPG.sub_el(c_out, 'display-name', _text='%s%s%s %s' %
-                (prefix,
-                ch_data['display_number'],
-                suffix, 
-                ch_data['display_name']))
-            EPG.sub_el(c_out, 'display-name', _text='%s%s%s %s' % 
-                (prefix,
-                ch_data['display_number'],
-                suffix, 
-                ch_data['json']['callsign']))
+            EPG.sub_el(c_out, 'display-name', _text='%s %s' %
+                (updated_chnum, ch_data['display_name']))
+            EPG.sub_el(c_out, 'display-name', _text='%s %s' % 
+                (updated_chnum, ch_data['json']['callsign']))
             EPG.sub_el(c_out, 'display-name', _text=ch_data['display_number'])
             EPG.sub_el(c_out, 'display-name', _text=ch_data['json']['callsign'])
             EPG.sub_el(c_out, 'display-name', _text=ch_data['display_name'])

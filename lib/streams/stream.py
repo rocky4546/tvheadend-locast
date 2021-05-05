@@ -20,7 +20,7 @@ import logging
 
 from lib.web.pages.templates import web_templates
 from lib.clients.web_handler import WebHTTPHandler
-
+import lib.common.utils as utils
 
 class Stream:
 
@@ -50,15 +50,10 @@ class Stream:
         return index
 
     def set_service_name(self, _channel_dict):
-        prefix = self.plugins.config_obj.data[_channel_dict['namespace'].lower()]['epg-prefix']
-        suffix = self.plugins.config_obj.data[_channel_dict['namespace'].lower()]['epg-suffix']
-        if prefix is None:
-            prefix = ""
-        if suffix is None:
-            suffix = ""
-        service_name = prefix + \
-            str(_channel_dict['number']) + \
-            suffix + \
+        updated_chnum = utils.wrap_chnum(
+            str(_channel_dict['number']), _channel_dict['namespace'], 
+            self.plugins.config_obj.data)
+        service_name = updated_chnum + \
             ' ' + _channel_dict['display_name']
         return service_name
 
