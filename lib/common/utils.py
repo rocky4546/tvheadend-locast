@@ -26,7 +26,7 @@ import sys
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.0-RC5'
+VERSION = '0.8.0'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
