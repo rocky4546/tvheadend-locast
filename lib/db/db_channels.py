@@ -36,6 +36,7 @@ sqlcmds = {
             number    VARCHAR(255) NOT NULL,
             display_number VARCHAR(255) NOT NULL,
             display_name VARCHAR(255) NOT NULL,
+            group_tag     VARCHAR(255),
             updated   BOOLEAN NOT NULL,
             thumbnail VARCHAR(255),
             json TEXT NOT NULL,
@@ -85,6 +86,7 @@ sqlcmds = {
     'channels_del':
         """
         DELETE FROM channels WHERE updated = ?
+        AND namespace = ? AND instance = ?
         """,
 
     'status_get':
@@ -142,7 +144,7 @@ class DBChannels(DB):
 
             self.add(DB_STATUS_TABLE, (
                 _namespace, _instance, datetime.datetime.now()))
-        self.delete(DB_CHANNELS_TABLE, (False,))
+        self.delete(DB_CHANNELS_TABLE, (False, _namespace, _instance,))
 
     def get_status(self, _namespace, _instance):
         result = self.get(DB_STATUS_TABLE,

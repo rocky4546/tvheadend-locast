@@ -29,7 +29,6 @@ try:
 
     CRYPTO_LOADED = True
 except ImportError:
-    print('Unable to load cryptography module, will not encrypt passwords')
     CRYPTO_LOADED = False
 
 ENCRYPT_STRING = 'ENC::'

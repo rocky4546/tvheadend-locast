@@ -43,11 +43,12 @@ def load_default_config_defns():
 
 class ConfigDefn:
 
-    def __init__(self, _defn_path=None, _defn_file=None, _config=None):
+    def __init__(self, _defn_path=None, _defn_file=None, _config=None, _is_instance=False):
         self.logger = None
         self.config_defn = {}
         self.config = None
         self.db = None
+        self.is_instance_defn = _is_instance
         self.restricted_items = []
         if _config:
             self.set_config(_config)
@@ -159,7 +160,23 @@ class ConfigDefn:
             if 'icon' in area_data:
                 self.db.add_area(area, area_data)
             for section, section_data in area_data['sections'].items():
-                self.db.add_section(area, section, section_data)
+                if self.is_instance_defn:
+                    self.db.add_instance(area, section, section_data)
+                else:
+                    self.db.add_section(area, section, section_data)
+
+    def save_instance_defn_to_db(self, _delta_defn=None):
+        if _delta_defn:
+            delta_defn = _delta_defn
+        else:
+            delta_defn = self.config_defn
+        for area, area_data in delta_defn.items():
+            if 'icon' in area_data:
+                self.db.add_area(area, area_data)
+            for section, section_data in area_data['sections'].items():
+                self.db.add_instance(area, section, section_data)
+
+
 
     def get_type(self, _section, _key, _value):
         """ Returns the expected type of the setting

@@ -10,6 +10,13 @@
                 "icon": "cast_connected",
                 "description": "Settings for Locast",
                 "settings":{
+                    "enabled":{
+                        "label": "Enabled",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 1,
+                        "help": "Will disable if an error occurs; otherwise set to disable to disable plugin"
+                    },
                     "is_free_account":{
                         "label": "is_free_account",
                         "type": "boolean",
@@ -113,20 +120,6 @@
                         "default": 3000000,
                         "level": 3,
                         "help": "Used for PTS Filtering"
-                    },                    
-                    "epg-prefix":{
-                        "label": "EPG Channel Prefix",
-                        "type": "string",
-                        "default": null,
-                        "level": 1,
-                        "help": "Used with channel number to order channel list"
-                    },
-                    "epg-suffix":{
-                        "label": "EPG Channel Suffix",
-                        "type": "string",
-                        "default": "L",
-                        "level": 1,
-                        "help": "If a number will ADD to the display channel number; otherwise, will prepend to the channel number as a string"
                     },
                     "epg-days":{
                         "label": "EPG Days to Pull",
@@ -155,43 +148,6 @@
                         "default": 14400,
                         "level": 2,
                         "help": "Default=14400 seconds (4 hours). When a HTTP request for epg data is received, will refresh the data if older than this value."
-                    },
-                    "m3u-group_hdtv":{
-                        "label": "HDTV Group Name",
-                        "type": "string",
-                        "default": null,
-                        "level": 1,
-                        "onChange": ".provider_video_locast.lib.config_callbacks.force_channelsdb_refresh",
-                        "help": "Default=not used.  When set, will add the group name for any HD channels in the m3u file."
-                    },
-                    "m3u-group_sdtv":{
-                        "label": "SDTV Group Name",
-                        "type": "string",
-                        "default": null,
-                        "level": 1,
-                        "onChange": ".provider_video_locast.lib.config_callbacks.force_channelsdb_refresh",
-                        "help": "Default=not used.  When set, will add the group name for any non-HD channels in the m3u file."
-                    },
-                    "overrides-latitude":{
-                        "label": "override_latitude",
-                        "type": "float",
-                        "default": null,
-                        "level": 4,
-                        "help": null
-                    },
-                    "overrides-longitude":{
-                        "label": "override_longitude",
-                        "type": "float",
-                        "default": null,
-                        "level": 4,
-                        "help": null
-                    },
-                    "overrides-zipcode":{
-                        "label": "override_zipcode",
-                        "type": "string",
-                        "default": null,
-                        "level": 3,
-                        "help": null
                     }
                 }
             }

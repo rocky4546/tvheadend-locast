@@ -22,12 +22,14 @@ import importlib
 import importlib.resources
 import lib.common.utils as utils
 
+import lib.common.exceptions as exceptions
 from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
 from lib.db.db_config_defn import DBConfigDefn
 
 
 PLUGIN_CONFIG_DEFN_FILE = 'config_defn.json'
+PLUGIN_INSTANCE_DEFN_FILE = 'instance_defn.json'
 PLUGIN_MANIFEST_FILE = 'plugin.json'
 
 
@@ -57,22 +59,16 @@ class Plugin:
         self.namespace = None
         self.instances = []
         self.load_plugin_manifest(_plugin_defn)
+        self.load_instances()
         self.logger.info('Plugin created for {}'.format(self.name))
         self.plugin_obj = None
-
-        # describing instances????
-        # first they will need configuration info from the config file for each instance
-        # then they will also need to have some idea in the plugin that they exist
-        # without a lot of issues
-        # for now, we will assume all plugins are singletons with the instance name = 'Default'
-        # config file can use an array format '_#' to id the different instances within
-        # a namespace
 
     def load_config_defn(self):
         try:
             self.logger.debug(
                 'Plugin Config Defn file loaded at {}'.format(self.plugin_path))
             defn_obj = ConfigDefn(self.plugin_path, PLUGIN_CONFIG_DEFN_FILE, self.config_obj.data)
+            
             default_config = defn_obj.get_default_config()
             self.config_obj.merge_config(default_config)
             defn_obj.call_oninit(self.config_obj)
@@ -89,6 +85,45 @@ class Plugin:
             self.logger.warning(
                 'PLUGIN CONFIG DEFN FILE NOT FOUND AT {}'.format(self.plugin_path))
 
+    def load_instances(self):
+        inst_defn_obj = ConfigDefn(self.plugin_path, PLUGIN_INSTANCE_DEFN_FILE, self.config_obj.data, True)
+        # determine in the config data whether the instance of this name exists.  It would have a section name = 'name-instance'
+        self.instances = self.find_instances()
+        for inst in self.instances:
+            self.plugin_db.save_instance(self.namespace, inst, '')
+            # create a defn with the instance name as the section name. then process it.
+            inst_defn_obj.is_instance_defn = False
+            for area, area_data in inst_defn_obj.config_defn.items():
+                if len(area_data['sections']) != 1:
+                    self.logger.error('INSTANCE MUST HAVE ONE AND ONLY ONE SECTION')
+                    raise exceptions.CabernetException('plugin defn must have one and only one instance section')
+                section = list(area_data['sections'].keys())[0]
+                base_section = section.split('_', 1)[0]
+                area_data['sections'][base_section + '_' + inst] = area_data['sections'].pop(section)
+                if 'label' in self.config_obj.data[base_section + '_' + inst] \
+                    and self.config_obj.data[base_section + '_' + inst]['label'] is not None:
+                    area_data['sections'][base_section + '_' + inst]['label'] = self.config_obj.data[base_section + '_' + inst]['label']
+                inst_defn_obj.save_defn_to_db()
+        default_config = inst_defn_obj.get_default_config()
+        self.config_obj.merge_config(default_config)
+        inst_defn_obj.call_oninit(self.config_obj)
+        self.config_obj.defn_json.merge_defn_obj(inst_defn_obj)
+        for area, area_data in inst_defn_obj.config_defn.items():
+            for section, section_data in area_data['sections'].items():
+                for setting in section_data['settings'].keys():
+                    new_value = self.config_obj.fix_value_type(
+                        section, setting, self.config_obj.data[section][setting])
+                    self.config_obj.data[section][setting] = new_value
+        self.db_configdefn.add_config(self.config_obj.data)
+
+    def find_instances(self):
+        instances = []
+        inst_sec = self.namespace.lower() + '_'
+        for section in self.config_obj.data.keys():
+            if section.startswith(inst_sec):
+                instances.append(section.split(inst_sec, 1)[1])
+        return instances
+
     def load_plugin_manifest(self, _plugin_defn):
         self.load_default_settings(_plugin_defn)
         self.import_manifest()
@@ -102,9 +137,7 @@ class Plugin:
             json_settings = importlib.resources.read_text(self.plugin_path, PLUGIN_MANIFEST_FILE)
             settings = json.loads(json_settings)
             self.namespace = settings['name']
-            self.instances = ['Default']
             self.plugin_db.save_plugin(settings)
-            self.plugin_db.save_instance(self.namespace, self.instances[0], '')
             self.logger.debug(
                 'Plugin Manifest file loaded at {}'.format(self.plugin_path))
             self.plugin_settings = utils.merge_dict(self.plugin_settings, settings, True)

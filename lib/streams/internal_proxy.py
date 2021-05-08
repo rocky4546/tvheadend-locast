@@ -19,7 +19,7 @@ substantial portions of the Software.
 import datetime
 import errno
 import re
-import requests
+import urllib.request
 import time
 
 from collections import OrderedDict
@@ -137,7 +137,9 @@ class InternalProxy(Stream):
         for uri, data in _play_queue.items():
             if not data["played"]:
                 start_download = datetime.datetime.utcnow()
-                chunk = requests.get(uri).content
+                req = urllib.request.Request(uri)
+                with urllib.request.urlopen(req) as resp:
+                    chunk = resp.read()
                 data['played'] = True
                 if not chunk:
                     self.logger.warning(f"Segment {uri} not available. Skipping..")
