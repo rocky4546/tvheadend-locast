@@ -7,6 +7,7 @@
         "sections":{
             "logger_root":{
                 "label": "logger_root",
+                "sort": "1",
                 "icon": "description",
                 "description": "Python logging settings, including the log level",
                 "settings":{
@@ -31,6 +32,7 @@
             },
             "loggers":{
                 "label": "loggers",
+                "sort": "2",
                 "icon": "comment",
                 "description": "Python logging settings",
                 "settings":{
@@ -46,6 +48,7 @@
             },
             "handlers":{
                 "label": "handlers",
+                "sort": "3",
                 "icon": "comment",
                 "description": "Python logging settings",
                 "settings":{
@@ -61,6 +64,7 @@
             },
             "formatters":{
                 "label": "formatters",
+                "sort": "4",
                 "icon": "comment",
                 "description": "Python logging formats",
                 "settings":{
@@ -76,6 +80,7 @@
             },
             "handler_loghandler":{
                 "label": "handler_loghandler",
+                "sort": "5",
                 "icon": "comment",
                 "description": "Python logging settings",
                 "settings":{
@@ -108,6 +113,7 @@
             },
             "formatter_extend":{
                 "label": "formatter_extend",
+                "sort": "6",
                 "icon": "comment",
                 "description": "Python logging setting for standard output",
                 "settings":{
@@ -123,6 +129,7 @@
             },
             "formatter_simple":{
                 "label": "formatter_simple",
+                "sort": "7",
                 "icon": "comment",
                 "description": "Python logging settings for outputs to event log or syslog",
                 "settings":{

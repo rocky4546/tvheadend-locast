@@ -125,7 +125,7 @@ Section "MainSection" SEC02
     SetOutPath "$INSTDIR"
     CreateShortCut "$SMPROGRAMS\$ICONS_GROUP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
     SetOutPath "$INSTDIR"
-    CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
+    ; CreateShortCut "$DESKTOP\tvheadend-locast.lnk" "$INSTDIR\tvh_main.py"
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 

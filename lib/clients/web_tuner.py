@@ -105,7 +105,10 @@ class TunerHttpHandler(WebHTTPHandler):
         return
 
     def do_tuning(self, sid, _namespace, _instance):
+
         # refresh the config data in case it changed in the web_admin process
+        self.plugins.config_obj.refresh_config_data()
+        self.config = self.plugins.config_obj.data
         self.config = self.db_configdefn.get_config()
         self.plugins.config_obj.data = self.config
         try:
