@@ -41,6 +41,7 @@ sqlcmds = {
         CREATE TABLE IF NOT EXISTS section (
             area VARCHAR(255) NOT NULL,
             name VARCHAR(255) NOT NULL,
+            sort VARCHAR(255) NOT NULL,
             icon VARCHAR(255) NOT NULL,
             label VARCHAR(255) NOT NULL,
             description TEXT NOT NULL,
@@ -103,20 +104,20 @@ sqlcmds = {
     'section_add':
         """
         INSERT OR REPLACE INTO section (
-            area, name, icon, label, description, settings
-            ) VALUES ( ?, ?, ?, ?, ?, ? )
+            area, name, sort, icon, label, description, settings
+            ) VALUES ( ?, ?, ?, ?, ?, ?, ? )
         """,
     'section_get':
         """
-        SELECT * from section WHERE area = ? ORDER BY rowid
+        SELECT * from section WHERE area = ? ORDER BY sort
         """,
     'section_one_get':
         """
-        SELECT * from section WHERE area = ? AND name = ? ORDER BY rowid
+        SELECT * from section WHERE area = ? AND name = ? ORDER BY sort
         """,    
     'section_name_get':
         """
-        SELECT area from section WHERE name = ?
+        SELECT area from section WHERE name = ? ORDER BY sort
         """,
 
     'instance_add':
@@ -203,6 +204,7 @@ class DBConfigDefn(DB):
         self.add(DB_SECTION_TABLE, (
             _area,
             _section,
+            _section_data['sort'],
             _section_data['icon'],
             _section_data['label'],
             _section_data['description'],

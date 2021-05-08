@@ -22,6 +22,7 @@ import json
 import logging
 import pathlib
 import os
+import urllib
 
 import lib.common.utils as utils
 import lib.config.config_defn as config_defn
@@ -140,6 +141,9 @@ class TVHUserConfig:
                 return int(_value)
             elif val_type == 'float':
                 return float(_value)
+            elif val_type is None:
+                logging.warning('DEFN None for section:{} key:{} value:{}'.format(_section, _key, _value))
+                return _value
             else:
                 return _value
         except (configparser.NoOptionError, configparser.NoSectionError, TypeError):
@@ -218,7 +222,6 @@ class TVHUserConfig:
         restart = False
         results += self.defn_json.call_onchange(_area, _updated_data, self)
         self.db.add_config(self.data)
-
         if restart:
             results += '</ul><b>Service may need to be restarted if not all changes were implemented</b><hr><br>'
         else:

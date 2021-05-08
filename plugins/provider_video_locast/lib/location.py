@@ -31,11 +31,11 @@ class Location:
     logger = None
 
     def __init__(self, _locast_inst):
-        self.config = _locast_inst.config
+        self.config_obj = _locast_inst.config_obj
         config_section = _locast_inst.config_section
-        self.zipcode = self.config[config_section]["overrides-zipcode"]
-        self.latitude = self.config[config_section]["overrides-latitude"]
-        self.longitude = self.config[config_section]["overrides-longitude"]
+        self.zipcode = self.config_obj.data[config_section]["overrides-zipcode"]
+        self.latitude = self.config_obj.data[config_section]["overrides-latitude"]
+        self.longitude = self.config_obj.data[config_section]["overrides-longitude"]
         self.dma = None
         self.city = None
         self.active = None

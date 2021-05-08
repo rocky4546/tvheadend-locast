@@ -31,7 +31,6 @@ class Locast:
 
     def __init__(self, _plugin):
         self.config_obj = _plugin.config_obj
-        self.config = _plugin.config_obj.data
         self.namespace = _plugin.namespace
         self.auth = Authenticate(_plugin.config_obj)
         self.locast_instances = {}
@@ -42,19 +41,19 @@ class Locast:
     def refresh_channels(self, _instance=None):
         if _instance is None:
             for key, instance in self.locast_instances.items():
-                instance.channels.refresh_channels()
+                instance.refresh_channels()
         else:
-            self.locast_instances[_instance].channels.refresh_channels()
+            self.locast_instances[_instance].refresh_channels()
 
     def refresh_epg(self, _instance=None):
         if _instance is None:
             for key, instance in self.locast_instances.items():
-                instance.epg.refresh_epg()
+                instance.refresh_epg()
         else:
-            self.locast_instances[_instance].epg.refresh_epg()
+            self.locast_instances[_instance].refresh_epg()
 
     def get_channel_uri(self, sid, _instance=None):
-        return self.locast_instances[_instance].channels.get_channel_uri(sid)
+        return self.locast_instances[_instance].get_channel_uri(sid)
 
     def is_time_to_refresh(self, _last_refresh):
         return self.stream.is_time_to_refresh(_last_refresh)

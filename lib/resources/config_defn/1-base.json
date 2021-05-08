@@ -7,6 +7,7 @@
         "sections":{
             "display":{
                 "label": "Display",
+                "sort": "1",
                 "icon": "tv",
                 "description": "Contains the general settings for the web GUI",
                 "settings":{
@@ -41,6 +42,7 @@
             },
             "main":{
                 "label": "Main",
+                "sort": "2",
                 "icon": "sensor_window",
                 "description": "Contains the general settings for the app",
                 "settings":{

@@ -31,21 +31,25 @@ class LocastInstance:
 
     def __init__(self, _locast, _instance):
         self.config_obj = _locast.config_obj
-        self.config = _locast.config
         self.instance = _instance
         self.locast = _locast
         self.location = Location(self)
         self.channels = Channels(self)
         self.epg = EPG(self)
-        
+
     def refresh_channels(self):
-        self.channels.refresh_channels()
+        if self.config_obj.data[self.config_section]['enabled']:
+            self.channels.refresh_channels()
 
     def refresh_epg(self):
-        self.epg.refresh_epg()
+        if self.config_obj.data[self.config_section]['enabled']:
+            self.epg.refresh_epg2()
 
     def get_channel_uri(self, sid):
-        return self.channels.get_channel_uri(sid)
+        if self.config_obj.data[self.config_section]['enabled']:
+            return self.channels.get_channel_uri(sid)
+        else:
+            return None
 
     @property
     def config_section(self):
