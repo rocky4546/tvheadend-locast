@@ -22,6 +22,7 @@ from lib.db.db import DB
 
 DB_AREA_TABLE = 'area'
 DB_SECTION_TABLE = 'section'
+DB_INSTANCE_TABLE = 'instance'
 DB_CONFIG_TABLE = 'config'
 
 
@@ -54,9 +55,19 @@ sqlcmds = {
             settings TEXT NOT NULL,
             PRIMARY KEY(key)
             )
+        """,
         """
-
-
+        CREATE TABLE IF NOT EXISTS instance (
+            area VARCHAR(255) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            icon VARCHAR(255) NOT NULL,
+            label VARCHAR(255) NOT NULL,
+            description TEXT NOT NULL,
+            settings TEXT NOT NULL,
+            FOREIGN KEY(area) REFERENCES area(name),
+            UNIQUE(area, name)
+            )
+        """
     ],
 
     'dt': [
@@ -65,7 +76,14 @@ sqlcmds = {
         """,
         """
         DROP TABLE IF EXISTS section
-        """],
+        """,
+        """
+        DROP TABLE IF EXISTS config
+        """,
+        """
+        DROP TABLE IF EXISTS instance
+        """
+        ],
 
     'area_add':
         """
@@ -73,25 +91,45 @@ sqlcmds = {
             name, icon, label, description
             ) VALUES ( ?, ?, ?, ? )
         """,
+    'area_get':
+        """
+        SELECT * from area WHERE name LIKE ? ORDER BY rowid
+        """,
+    'area_keys_get':
+        """
+        SELECT name from area ORDER BY rowid
+        """,
+
     'section_add':
         """
         INSERT OR REPLACE INTO section (
             area, name, icon, label, description, settings
             ) VALUES ( ?, ?, ?, ?, ?, ? )
         """,
-    'area_get':
-        """
-        SELECT * from area WHERE name LIKE ? ORDER BY rowid
-        """,
     'section_get':
         """
         SELECT * from section WHERE area = ? ORDER BY rowid
         """,
-    'area_keys_get':
+    'section_one_get':
         """
-        SELECT name from area ORDER BY rowid
+        SELECT * from section WHERE area = ? AND name = ? ORDER BY rowid
+        """,    
+    'section_name_get':
+        """
+        SELECT area from section WHERE name = ?
         """,
-        
+
+    'instance_add':
+        """
+        INSERT OR REPLACE INTO instance (
+            area, name, icon, label, description, settings
+            ) VALUES ( ?, ?, ?, ?, ?, ? )
+        """,
+    'instance_get':
+        """
+        SELECT * from instance WHERE area = ? ORDER BY rowid
+        """,
+
     'config_add':
         """
         INSERT OR REPLACE INTO config (
@@ -102,7 +140,7 @@ sqlcmds = {
         """
         SELECT settings from config
         """
-    
+
 }
 
 
@@ -121,22 +159,12 @@ class DBConfigDefn(DB):
             _where = '%'
         return json.dumps(self.get_dict(DB_AREA_TABLE, (_where,)))
 
-    def get_sections_dict(self, _where):
-        rows_dict = {}
-        rows = self.get_dict(DB_SECTION_TABLE, (_where,))
-        for row in rows:
-            settings = json.loads(row['settings'])
-            row['settings'] = settings
-            rows_dict[row['name']] = row
-        return rows_dict
-
     def get_areas(self):
         """ returns an array of the area names in id order
         """
         area_tuple = self.get('area_keys')
         areas = [area[0] for area in area_tuple]
         return areas
-
 
     def add_area(self, _area, _area_data):
         self.add(DB_AREA_TABLE, (
@@ -146,8 +174,52 @@ class DBConfigDefn(DB):
             _area_data['description']
         ))
 
+    def get_sections_dict(self, _where):
+        rows_dict = {}
+        rows = self.get_dict(DB_SECTION_TABLE, (_where,))
+        for row in rows:
+            settings = json.loads(row['settings'])
+            row['settings'] = settings
+            rows_dict[row['name']] = row
+        return rows_dict
+
+    def get_one_section_dict(self, _area, _section):
+        rows_dict = {}
+        rows = self.get_dict(DB_SECTION_TABLE+'_one', (_area, _section,))
+        for row in rows:
+            settings = json.loads(row['settings'])
+            row['settings'] = settings
+            rows_dict[row['name']] = row
+        return rows_dict
+        
+    def get_area_by_section(self, _where):
+        """ returns an array of the area names that match the section
+        """
+        area_tuple = self.get('section_name', (_where,))
+        areas = [area[0] for area in area_tuple]
+        return areas
+
     def add_section(self, _area, _section, _section_data):
         self.add(DB_SECTION_TABLE, (
+            _area,
+            _section,
+            _section_data['icon'],
+            _section_data['label'],
+            _section_data['description'],
+            json.dumps(_section_data['settings'])
+        ))
+
+    def get_instance_dict(self, _where):
+        rows_dict = {}
+        rows = self.get_dict(DB_INSTANCE_TABLE, (_where,))
+        for row in rows:
+            settings = json.loads(row['settings'])
+            row['settings'] = settings
+            rows_dict[row['name']] = row
+        return rows_dict
+
+    def add_instance(self, _area, _section, _section_data):
+        self.add(DB_INSTANCE_TABLE, (
             _area,
             _section,
             _section_data['icon'],

@@ -21,33 +21,40 @@ import logging
 
 from .channels import Channels
 from .epg import EPG
-from .location import Location
 from .authenticate import Authenticate
 from .stream import Stream
-
+from .locast_instance import LocastInstance
 
 class Locast:
 
     logger = None
 
-    def __init__(self, _config_obj, _namespace):
-        self.config_obj = _config_obj
-        self.config = _config_obj.data
-        self.namespace = _namespace
-        self.auth = Authenticate(self.config_obj)
-        self.location = Location(self.config)
-        self.channels = Channels(self)
-        self.epg = EPG(self)
+    def __init__(self, _plugin):
+        self.config_obj = _plugin.config_obj
+        self.config = _plugin.config_obj.data
+        self.namespace = _plugin.namespace
+        self.auth = Authenticate(_plugin.config_obj)
+        self.locast_instances = {}
+        for inst in _plugin.instances:
+            self.locast_instances[inst] = LocastInstance(self, inst)
         self.stream = Stream(self)
         
-    def refresh_channels(self):
-        self.channels.refresh_channels()
+    def refresh_channels(self, _instance=None):
+        if _instance is None:
+            for key, instance in self.locast_instances.items():
+                instance.channels.refresh_channels()
+        else:
+            self.locast_instances[_instance].channels.refresh_channels()
 
     def refresh_epg(self, _instance=None):
-        self.epg.refresh_epg(_instance)
+        if _instance is None:
+            for key, instance in self.locast_instances.items():
+                instance.epg.refresh_epg()
+        else:
+            self.locast_instances[_instance].epg.refresh_epg()
 
     def get_channel_uri(self, sid, _instance=None):
-        return self.channels.get_channel_uri(sid, _instance)
+        return self.locast_instances[_instance].channels.get_channel_uri(sid)
 
     def is_time_to_refresh(self, _last_refresh):
         return self.stream.is_time_to_refresh(_last_refresh)

@@ -62,7 +62,8 @@ class EPG:
     def gen_channel_xml(self, _et_root, _channel_list):
         for sid, ch_data in _channel_list.items():
             updated_chnum = utils.wrap_chnum(
-                ch_data['display_number'], ch_data['namespace'], self.config)
+                ch_data['display_number'], ch_data['namespace'], 
+                ch_data['instance'], self.config)
             c_out = EPG.sub_el(_et_root, 'channel', id=sid)
             EPG.sub_el(c_out, 'display-name', _text='%s %s' %
                 (updated_chnum, ch_data['display_name']))
@@ -146,9 +147,10 @@ class EPG:
                 EPG.sub_el(prog_out, 'new')
             else:
                 EPG.sub_el(prog_out, 'previously-shown')
-            
             if prog_data['cc']:
                 EPG.sub_el(prog_out, 'subtitles', type='teletext')
+            if prog_data['premiere']:
+                EPG.sub_el(prog_out, 'premiere')
 
     def gen_header_xml(self):
         if self.namespace is None:

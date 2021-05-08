@@ -22,5 +22,5 @@ from .lib.locast import Locast
 
 # register the init plugin function
 @plugin.register
-def start(config_obj, namespace):
-    return Locast(config_obj, namespace)
+def start(plugin):
+    return Locast(plugin)

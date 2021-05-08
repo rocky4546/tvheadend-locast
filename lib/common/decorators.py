@@ -20,7 +20,6 @@ import json
 import logging
 import urllib
 import urllib.error
-import requests
 from functools import update_wrapper
 
 
@@ -28,11 +27,7 @@ def handle_url_except(f):
     def wrapper_func(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)
-        except requests.exceptions.SSLError as sslError:
-            logger = logging.getLogger(f.__name__)
-            logger.error("SSLError in function {}(): {}".format(f.__name__, str(sslError)))
-            return None
-        except (urllib.error.HTTPError, requests.exceptions.HTTPError) as httpError:
+        except urllib.error.HTTPError as httpError:
             logger = logging.getLogger(f.__name__)
             logger.error("HTTPError in function {}(): {}".format(f.__name__, str(httpError)))
             return None
@@ -82,15 +77,16 @@ class Request:
 class GetRequest(Request):
 
     def __init__(self):
-        self.method = 'GET'
         super().__init__()
+        self.method = 'GET'
+
 
     
 class PostRequest(Request):
 
     def __init__(self):
-        self.method = 'POST'
         super().__init__()
+        self.method = 'POST'
 
 
 getrequest = GetRequest()

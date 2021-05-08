@@ -16,8 +16,9 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import json
 import logging
-import requests
+import urllib.request
 import time
 from datetime import datetime
 
@@ -35,7 +36,6 @@ class Authenticate:
     def __init__(self, _config_obj):
         self.config_obj = _config_obj
         self.config = _config_obj.data
-        self.location = None
         self.token = None
         if not self.login():
             raise exceptions.CabernetException("Locast Login Failed")
@@ -67,22 +67,22 @@ class Authenticate:
         login_url = "https://api.locastnet.org/api/user/login"
         login_headers = {'Content-Type': 'application/json', 'User-agent': constants.DEFAULT_USER_AGENT}
         login_json = ('{"username":"' + self.username + '","password":"' + self.password + '"}').encode("utf-8")
-        login_rsp = requests.post(login_url, data=login_json, headers=login_headers)
-        login_rsp.raise_for_status()
-        login_result = login_rsp.json()
+        login_req = urllib.request.Request(login_url, data=login_json, headers=login_headers)
+        with urllib.request.urlopen(login_req) as resp:
+            login_result = json.load(resp)
         return login_result["token"]
 
     @handle_json_except 
     @handle_url_except
     def validate_user(self):
         self.logger.debug('Validating User Info...')
-        user_rsp = requests.get(
-            'https://api.locastnet.org/api/user/me',
-            headers={'Content-Type': 'application/json',
+        url = 'https://api.locastnet.org/api/user/me'
+        header = {'Content-Type': 'application/json',
                 'authorization': 'Bearer ' + self.token,
-                'User-agent': constants.DEFAULT_USER_AGENT})
-        user_rsp.raise_for_status()
-        user_result = user_rsp.json()
+                'User-agent': constants.DEFAULT_USER_AGENT}
+        req = urllib.request.Request(url, headers=header)
+        with urllib.request.urlopen(req) as resp:
+            user_result = json.load(resp)
 
         if user_result['didDonate'] and user_result['donationExpire']:
             donate_exp = datetime.fromtimestamp(user_result['donationExpire'] / 1000)

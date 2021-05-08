@@ -20,13 +20,14 @@ import importlib
 import logging
 import logging.config
 import platform
-import requests
+import urllib.request
 import pathlib
 import os
 import uuid
 import lib.common.utils as utils
 import lib.common.encryption as encryption
 import lib.clients.hdhr.hdhr_server as hdhr_server
+from lib.db.db_config_defn import DBConfigDefn
 
 try:
     import cryptography
@@ -63,8 +64,10 @@ def noop(_config_obj, _section, _key):
 
 def logging_refresh(_config_obj, _section, _key):
     logging.config.fileConfig(fname=_config_obj.data['paths']['config_file'], disable_existing_loggers=False)
-    _resp = requests.get('http://{}:{}/logreset'.format(
+    req = urllib.request.Request('http://{}:{}/logreset'.format(
         _config_obj.data['web']['plex_accessible_ip'], str(_config_obj.data['web']['plex_accessible_port'])))
+    with urllib.request.urlopen(req) as resp:
+        content = resp.read()
 
 
 def set_version(_config_obj, _section, _key):
@@ -215,3 +218,18 @@ def check_value_4(_config_obj, _section, _key):
     value = _config_obj.data[_section][_key]
     if not 1 <= value <= 4:
         _config_obj.data[_section][_key] = 4
+
+def update_instance_label(_config_obj, _section, _key):
+    value = _config_obj.data[_section][_key]
+    db_confdefn = DBConfigDefn(_config_obj.data)
+    areas = db_confdefn.get_area_by_section(_section)
+    if len(areas) > 1:
+        results = 'WARNING: There is more than one section named {}'.format(_section)
+    elif len(areas) == 0:
+        return
+    else:
+        result = None
+    section_data = db_confdefn.get_one_section_dict(areas[0], _section)
+    section_data[_section]['label'] = value
+    db_confdefn.add_section(areas[0], _section, section_data[_section])
+
