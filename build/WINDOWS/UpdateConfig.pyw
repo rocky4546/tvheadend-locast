@@ -18,7 +18,6 @@ substantial portions of the Software.
 """
 
 import os
-import pip
 import sys
 import argparse
 import platform
@@ -26,14 +25,6 @@ import pathlib
 import base64
 import binascii
 import logging
-
-
-# 
-
-try:
-    import cryptography
-except ImportError:
-    pip.main(['install', 'cryptography'])
 
 from lib.config.user_config import get_config
 
