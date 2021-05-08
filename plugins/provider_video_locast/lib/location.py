@@ -16,9 +16,10 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import re
+import json
 import logging
-import requests
+import re
+import urllib.request
 
 import lib.common.exceptions as exceptions
 from lib.common.decorators import handle_url_except
@@ -29,12 +30,12 @@ from . import constants
 class Location:
     logger = None
 
-    def __init__(self, _config):
-        self.config = _config
-
-        self.zipcode = self.config["locast"]["overrides-zipcode"]
-        self.latitude = self.config["locast"]["overrides-latitude"]
-        self.longitude = self.config["locast"]["overrides-longitude"]
+    def __init__(self, _locast_inst):
+        self.config = _locast_inst.config
+        config_section = _locast_inst.config_section
+        self.zipcode = self.config[config_section]["overrides-zipcode"]
+        self.latitude = self.config[config_section]["overrides-latitude"]
+        self.longitude = self.config[config_section]["overrides-longitude"]
         self.dma = None
         self.city = None
         self.active = None
@@ -49,6 +50,12 @@ class Location:
         if not self.active:
             self.logger.error("Locast reports that this DMA/Market area is not currently active!")
             raise exceptions.CabernetException("Locast indicates DMA location not active")
+
+        # update config file with DMA and City
+        _locast_inst.config_obj.write(_locast_inst.config_section, 'dma', self.dma)
+        _locast_inst.config_obj.write(_locast_inst.config_section, 'city', self.city)
+
+
 
     def set_location(self, geoloc):
         self.latitude = str(geoloc['latitude'])
@@ -91,9 +98,10 @@ class Location:
     @handle_url_except
     def get_url_json(self, loc_url):
         loc_headers = {'Content-Type': 'application/json', 'User-agent': constants.DEFAULT_USER_AGENT}
-        loc_rsp = requests.get(loc_url, headers=loc_headers)
-        loc_rsp.raise_for_status()
-        return loc_rsp.json()
+        loc_req = urllib.request.Request(loc_url, headers=loc_headers)
+        with urllib.request.urlopen(loc_req) as resp:
+            loc_rsp = json.load(resp)
+        return loc_rsp
 
     def get_zip_location(self):
         self.logger.debug("Getting location via provided zipcode {}".format(self.zipcode))

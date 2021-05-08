@@ -138,7 +138,8 @@ def get_channels_xml(_config, _base_url, _namespace, _instance):
 # returns the service name used to sync with the EPG channel name
 def set_service_name(_config, _sid_data):
     updated_chnum = utils.wrap_chnum(
-        str(_sid_data['number']), _sid_data['namespace'], _config)
+        str(_sid_data['number']), _sid_data['namespace'], 
+        _sid_data['instance'], _config)
     service_name = updated_chnum + \
         ' ' + _sid_data['display_name']
     return service_name

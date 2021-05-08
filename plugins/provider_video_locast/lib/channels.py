@@ -16,9 +16,10 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
-import logging
-import requests
 import datetime
+import json
+import logging
+import urllib.request
 
 import lib.m3u8 as m3u8
 import lib.common.exceptions as exceptions
@@ -33,46 +34,49 @@ from . import constants
 class Channels:
     logger = None
 
-    def __init__(self, _locast):
-        self.locast = _locast
-        self.db = DBChannels(self.locast.config)
+    def __init__(self, _locast_instance):
+        self.locast_instance = _locast_instance
+        self.locast = _locast_instance.locast
+        self.instance = _locast_instance.instance
+        self.db = DBChannels(self.locast_instance.config)
+        self.config_section = self.locast_instance.config_section
 
-    def refresh_channels(self, required=False):
+    def refresh_channels(self, force=False):
         self.logger.debug('Checking Channel data for {}'.format(self.locast.name))
         # fcc_stations = FCCData(self.locast)
-        last_update = self.db.get_status(self.locast.name, constants.INSTANCE)
+        last_update = self.db.get_status(self.locast.name, self.instance)
         update_needed = False
         if not last_update:
             update_needed = True
         else:
             delta = datetime.datetime.now() - last_update
-            if delta.days >= self.locast.config['locast']['channel_update_timeout']:
+            if delta.days >= self.locast_instance.config[self.locast.name.lower()]['channel_update_timeout']:
                 update_needed = True
-        if update_needed or required:
+        if update_needed or force:
             ch_dict = self.get_locast_channels()
-            self.db.save_channel_list(self.locast.name, constants.INSTANCE, ch_dict)
+            self.db.save_channel_list(self.locast.name, self.instance, ch_dict)
 
     @handle_json_except
     @handle_url_except
     def get_locast_channels(self):
         channels_url = 'https://api.locastnet.org/api/watch/epg/{}' \
-            .format(self.locast.location.dma)
+            .format(self.locast_instance.location.dma)
         url_headers = {
             'Content-Type': 'application/json',
             'authorization': 'Bearer {}'.format(self.locast.auth.token),
             'User-agent': constants.DEFAULT_USER_AGENT}
-        ch_rsp = requests.get(channels_url, headers=url_headers)
-        ch_rsp.raise_for_status()
-        ch_json = ch_rsp.json()
-        ch_rsp.close()
+        req = urllib.request.Request(channels_url, headers=url_headers)
+        with urllib.request.urlopen(req) as resp:
+            ch_json = json.load(resp)
 
         ch_list = []
         if len(ch_json) == 0:
-            self.logger.warning('Locast HTTP Channel Request Failed')
+            self.logger.warning('Locast HTTP Channel Request Failed for instance {}'.format(self.instance))
             raise exceptions.CabernetException('Locast HTTP Channel Request Failed')
 
-        self.logger.info("{}: Found {} stations for DMA {}".format(self.locast.name, len(ch_json),
-            str(self.locast.location.dma)))
+        self.logger.info("{}: Found {} stations for DMA {} on instance {}"
+            .format(self.locast.name, len(ch_json),
+            str(self.locast_instance.location.dma), self.instance))
 
         for locast_channel in ch_json:
             hd = 0
@@ -99,8 +103,8 @@ class Channels:
                     'number': channel,
                     'name': friendly_name,
                     'HD': hd,
-                    'group_hdtv': self.locast.config['locast']['m3u-group_hdtv'],
-                    'group_sdtv': self.locast.config['locast']['m3u-group_sdtv'],
+                    'group_hdtv': self.locast_instance.config[self.config_section]['m3u-group_hdtv'],
+                    'group_sdtv': self.locast_instance.config[self.config_section]['m3u-group_sdtv'],
                     'groups_other': None,  # array list of groups/categories
                     'thumbnail': thumbnail
                 }
@@ -113,19 +117,19 @@ class Channels:
 
     @handle_json_except
     @handle_url_except
-    def get_channel_uri(self, _channel_id, _instance):
+    def get_channel_uri(self, _channel_id):
         self.logger.info(self.locast.name + ": Getting station info for " + _channel_id)
         stream_url = ''.join([
             'https://api.locastnet.org/api/watch/station/',
             str(_channel_id), '/',
-            self.locast.location.latitude, '/',
-            self.locast.location.longitude])
+            self.locast_instance.location.latitude, '/',
+            self.locast_instance.location.longitude])
         stream_headers = {'Content-Type': 'application/json',
             'authorization': 'Bearer ' + self.locast.auth.token,
             'User-agent': constants.DEFAULT_USER_AGENT}
-        stream_rsp = requests.get(stream_url, headers=stream_headers)
-        stream_rsp.raise_for_status()
-        stream_result = stream_rsp.json()
+        req = urllib.request.Request(stream_url, headers=stream_headers)
+        with urllib.request.urlopen(req) as resp:
+            stream_result = json.load(resp)
         self.logger.debug("Determining best video stream for " + _channel_id + "...")
         bestStream = None
 

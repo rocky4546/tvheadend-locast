@@ -18,8 +18,9 @@ substantial portions of the Software.
 """
 
 import datetime
+import json
 import logging
-import requests
+import urllib.request
 
 import lib.common.utils as utils
 from lib.common.decorators import handle_url_except
@@ -32,33 +33,35 @@ from . import constants
 class EPG:
     logger = None
 
-    def __init__(self, _locast):
-        self.locast = _locast
-        self.db = DBepg(self.locast.config)
+    def __init__(self, _locast_instance):
+        self.locast_instance = _locast_instance
+        self.instance = _locast_instance.instance
+        self.db = DBepg(self.locast_instance.config)
+        self.config_section = _locast_instance.config_section
 
-    def refresh_epg(self, _instance=None):
-        self.logger.debug('Checking EPG data for {}'.format(self.locast.name))
-        if not self.is_refresh_expired(_instance):
+    def refresh_epg(self):
+        self.logger.debug('Checking EPG data for {}'.format(self.locast_instance.locast.name))
+        if not self.is_refresh_expired():
             self.logger.debug('EPG still new, not refreshing')
             return
         forced_dates, aging_dates = self.dates_to_pull()
-        self.db.delete_old_programs(self.locast.name, _instance)
+        self.db.delete_old_programs(self.locast_instance.locast.name, self.instance)
         for epg_day in forced_dates:
-            self.refresh_programs(epg_day, _instance, False)
+            self.refresh_programs(epg_day, False)
         for epg_day in aging_dates:
-            self.refresh_programs(epg_day, _instance, True)
+            self.refresh_programs(epg_day, True)
 
-    def is_refresh_expired(self, _instance):
+    def is_refresh_expired(self):
         """
         Makes it so the minimum epg update rate
         can only occur based on epg_min_refresh_rate
         """
         todaydate = datetime.date.today()
-        last_update = self.db.get_last_update(self.locast.name, _instance, todaydate)
+        last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, todaydate)
         if not last_update:
             return True
         expired_date = datetime.datetime.now() - datetime.timedelta(
-            seconds=self.locast.config['locast']['epg-min_refresh_rate'])
+            seconds=self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
         if last_update < expired_date:
             return True
         return False
@@ -67,8 +70,8 @@ class EPG:
         todaydate = datetime.date.today()
         forced_days = []
         aging_days = []
-        for x in range(0, self.locast.config['locast']['epg-days']):
-            if x < self.locast.config['locast']['epg-days_start_refresh']:
+        for x in range(0, self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days']):
+            if x < self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days_start_refresh']:
                 forced_days.append(todaydate + datetime.timedelta(days=x))
             else:
                 aging_days.append(todaydate + datetime.timedelta(days=x))
@@ -78,24 +81,24 @@ class EPG:
     @handle_url_except
     def get_url_data(self, _day):
         url = ('https://api.locastnet.org/api/watch/epg/{}?startTime={}'
-               .format(self.locast.location.dma, _day.isoformat()))
+               .format(self.locast_instance.location.dma, _day.isoformat()))
         # pull if successful may not contain any listing data (len=0)
-        resp = requests.get(url)
-        resp.raise_for_status()
-        results = resp.json()
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as resp:
+            results = json.load(resp)
         if len(results[0]['listings']) == 0:
             self.logger.warning('EPG Days to collect is too high.  {} has no data'.format(_day.isoformat()))
             return None
         else:
             return results
 
-    def refresh_programs(self, _day, _instance, use_cache):
+    def refresh_programs(self, _day, use_cache):
         if use_cache:
-            last_update = self.db.get_last_update(self.locast.name, _instance, _day)
+            last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, _day)
             if last_update:
                 todaydate = datetime.datetime.now()
                 use_cache_after = todaydate + datetime.timedelta(
-                    days=self.locast.config['locast']['epg-days_aging_refresh'])
+                    days=self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days_aging_refresh'])
                 if last_update < use_cache_after:
                     return
 
@@ -107,9 +110,9 @@ class EPG:
                 program_list.append(program_json)
 
         # push the update to the database
-        self.db.save_program_list(self.locast.name, constants.INSTANCE, _day, program_list)
+        self.db.save_program_list(self.locast_instance.locast.name, self.instance, _day, program_list)
         self.logger.debug('Refreshing EPG data for {}:{} day:{}'
-            .format(self.locast.name, constants.INSTANCE, _day))
+            .format(self.locast_instance.locast.name, self.instance, _day))
 
     @staticmethod
     def get_program(_program_data):
@@ -161,6 +164,11 @@ class EPG:
         if 'videoProperties' in _program_data.keys():
             if 'Finale' in _program_data['videoProperties']:
                 finale = True
+
+        premiere = False
+        if 'videoProperties' in _program_data.keys():
+            if 'Premiere' in _program_data['videoProperties']:
+                premiere = True
 
         if _program_data['entityType'] == 'Movie' and 'releaseYear' in _program_data.keys():
             air_date = str(_program_data['releaseYear'])
@@ -232,6 +240,7 @@ class EPG:
             'length': dur_min, 'title': title, 'subtitle': subtitle, 'entity_type': entity_type,
             'desc': description, 'short_desc': short_desc,
             'video_quality': video_quality, 'cc': cc, 'live': live, 'finale': finale,
+            'premiere': premiere,
             'air_date': air_date, 'formatted_date': formatted_date, 'icon': icon,
             'rating': rating, 'is_new': is_new, 'genres': genres, 'directors': directors, 'actors': actors,
             'season': season, 'episode': episode, 'se_common': se_common, 'se_xmltv_ns': se_xmltv_ns}

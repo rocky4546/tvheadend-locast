@@ -52,7 +52,7 @@ class Stream:
     def set_service_name(self, _channel_dict):
         updated_chnum = utils.wrap_chnum(
             str(_channel_dict['number']), _channel_dict['namespace'], 
-            self.plugins.config_obj.data)
+            _channel_dict['instance'], self.plugins.config_obj.data)
         service_name = updated_chnum + \
             ' ' + _channel_dict['display_name']
         return service_name

@@ -51,8 +51,11 @@ class PluginHandler:
             try:
                 importlib.resources.read_text(_plugins_pkg, folder)
             except (IsADirectoryError, PermissionError):
-                plugin = Plugin(self.config_obj, self.plugin_defn, '.'.join([_plugins_pkg, folder]))
-                self.plugins[plugin.name] = plugin
+                try:
+                    plugin = Plugin(self.config_obj, self.plugin_defn, '.'.join([_plugins_pkg, folder]))
+                    self.plugins[plugin.name] = plugin
+                except exceptions.CabernetException:
+                    pass
         plugin_db.del_not_updated()
 
     def load_plugin_defn(self):
@@ -68,40 +71,39 @@ class PluginHandler:
 
     def initialize_plugins(self):
         for name, plugin in self.plugins.items():
-            try:
-                plugin.plugin_obj = plugin.init_func(self.config_obj, plugin.namespace)
-            except exceptions.CabernetException:
-                self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
+            if self.config_obj.data[plugin.name.lower()]['enabled']:
+                try:
+                    plugin.plugin_obj = plugin.init_func(plugin)
+                except exceptions.CabernetException:
+                    self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
+                    self.config_obj.data[plugin.name.lower()]['enabled'] = False
+                    plugin.enabled = False
+            else:
+                self.logger.info('Plugin {} is disabled in config.ini'.format(plugin.name))
                 plugin.enabled = False
 
     def refresh_channels(self, _namespace=None):
         if _namespace is not None:
-            plugin_obj = self.plugins[_namespace].plugin_obj
-            try:
-                if hasattr(plugin_obj, 'refresh_channels'):
-                    plugin_obj.refresh_channels()
-            except exceptions.CabernetException:
-                self.logger.debug('Setting plugin {} to disabled'.format(_namespace))
-                self.plugins[_namespace].enabled = False
+            self.call_function(self.plugins[_namespace], 'refresh_channels')
         else:
             for name, plugin in self.plugins.items():
-                try:
-                    if hasattr(plugin.plugin_obj, 'refresh_channels'):
-                        plugin.plugin_obj.refresh_channels()
-                except exceptions.CabernetException:
-                    self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
-                    plugin.enabled = False
+                self.call_function(plugin, 'refresh_channels')
 
     def refresh_epg(self, _namespace=None, _instance=None):
         if _namespace:
             if _namespace in self.plugins:
-                self.plugins[_namespace].plugin_obj.refresh_epg(_instance)
+                self.call_function(self.plugins[_namespace], 'refresh_epg', _instance)
         else:
             for name, plugin in self.plugins.items():
-                try:
-                    if hasattr(plugin.plugin_obj, 'refresh_epg'):
-                        plugin.plugin_obj.refresh_epg()
-                except exceptions.CabernetException:
-                    self.logger.debug('Setting plugin {} to disabled'.format(plugin.name))
-                    plugin.enabled = False
+                self.call_function(plugin, 'refresh_epg')
 
+    def call_function(self, _plugin, _f_name, *args):
+        try:
+            if hasattr(_plugin.plugin_obj, _f_name):
+                call_f = getattr(_plugin.plugin_obj, _f_name)
+                call_f(*args)
+        except exceptions.CabernetException:
+            self.logger.debug('Setting plugin {} to disabled'.format(_plugin.name))
+            self.config_obj.data[_plugin.name.lower()]['enabled'] = False
+            _plugin.enabled = False
+    

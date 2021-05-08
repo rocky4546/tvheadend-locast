@@ -31,16 +31,6 @@ from threading import Thread
 
 import lib.common.utils as utils
 
-# Windows does not have requests module installed by default
-try:
-    import requests
-except ImportError:
-    try:
-        import pip
-        print('Installing python requests module')
-        pip.main(['install', 'requests'])
-    except ModuleNotFoundError:
-        print('Unable to load pip module to install missing modules')
 
 HDHR_PORT = 65001
 HDHR_ADDR = '224.0.0.255'  # multicast to local addresses only

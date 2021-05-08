@@ -187,7 +187,6 @@ class TVHUserConfig:
         self.config_handler.read(self.data['paths']['config_file'])
 
         area_data = self.defn_json.get_defn(_area)
-        
         for section, section_data in area_data['sections'].items():
             if section in _updated_data:
                 for setting, setting_data in section_data['settings'].items():
@@ -205,13 +204,11 @@ class TVHUserConfig:
                                 _updated_data[section][setting].append(True)
                         else:
                             self.detect_change(section, setting, _updated_data)
-        print('UPDATED_DATA:', _updated_data)
 
         # save the changes to config.ini and self.data
         results = '<hr><h3>Status Results</h3><ul>'
 
         config_defaults = self.defn_json.get_default_config_area(_area)
-        print('CONFIG_DEFAULTS',config_defaults)
         for key in _updated_data.keys():
             results += self.save_config_section(key, _updated_data, config_defaults)
         with open(self.data['paths']['config_file'], 'w') as config_file:
