@@ -38,7 +38,7 @@ class Channels:
         self.locast_instance = _locast_instance
         self.locast = _locast_instance.locast
         self.instance = _locast_instance.instance
-        self.db = DBChannels(self.locast_instance.config)
+        self.db = DBChannels(self.locast_instance.config_obj.data)
         self.config_section = self.locast_instance.config_section
 
     def refresh_channels(self, force=False):
@@ -50,7 +50,7 @@ class Channels:
             update_needed = True
         else:
             delta = datetime.datetime.now() - last_update
-            if delta.days >= self.locast_instance.config[self.locast.name.lower()]['channel_update_timeout']:
+            if delta.days >= self.locast_instance.config_obj.data[self.locast.name.lower()]['channel_update_timeout']:
                 update_needed = True
         if update_needed or force:
             ch_dict = self.get_locast_channels()
@@ -103,8 +103,8 @@ class Channels:
                     'number': channel,
                     'name': friendly_name,
                     'HD': hd,
-                    'group_hdtv': self.locast_instance.config[self.config_section]['m3u-group_hdtv'],
-                    'group_sdtv': self.locast_instance.config[self.config_section]['m3u-group_sdtv'],
+                    'group_hdtv': self.locast_instance.config_obj.data[self.config_section]['m3u-group_hdtv'],
+                    'group_sdtv': self.locast_instance.config_obj.data[self.config_section]['m3u-group_sdtv'],
                     'groups_other': None,  # array list of groups/categories
                     'thumbnail': thumbnail
                 }

@@ -36,10 +36,10 @@ class EPG:
     def __init__(self, _locast_instance):
         self.locast_instance = _locast_instance
         self.instance = _locast_instance.instance
-        self.db = DBepg(self.locast_instance.config)
+        self.db = DBepg(self.locast_instance.config_obj.data)
         self.config_section = _locast_instance.config_section
 
-    def refresh_epg(self):
+    def refresh_epg2(self):
         self.logger.debug('Checking EPG data for {}'.format(self.locast_instance.locast.name))
         if not self.is_refresh_expired():
             self.logger.debug('EPG still new, not refreshing')
@@ -61,7 +61,7 @@ class EPG:
         if not last_update:
             return True
         expired_date = datetime.datetime.now() - datetime.timedelta(
-            seconds=self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
+            seconds=self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
         if last_update < expired_date:
             return True
         return False
@@ -70,8 +70,8 @@ class EPG:
         todaydate = datetime.date.today()
         forced_days = []
         aging_days = []
-        for x in range(0, self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days']):
-            if x < self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days_start_refresh']:
+        for x in range(0, self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days']):
+            if x < self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days_start_refresh']:
                 forced_days.append(todaydate + datetime.timedelta(days=x))
             else:
                 aging_days.append(todaydate + datetime.timedelta(days=x))
@@ -98,7 +98,7 @@ class EPG:
             if last_update:
                 todaydate = datetime.datetime.now()
                 use_cache_after = todaydate + datetime.timedelta(
-                    days=self.locast_instance.config[self.locast_instance.locast.name.lower()]['epg-days_aging_refresh'])
+                    days=self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days_aging_refresh'])
                 if last_update < use_cache_after:
                     return
 

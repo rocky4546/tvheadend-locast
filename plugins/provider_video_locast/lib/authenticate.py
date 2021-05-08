@@ -35,7 +35,6 @@ class Authenticate:
 
     def __init__(self, _config_obj):
         self.config_obj = _config_obj
-        self.config = _config_obj.data
         self.token = None
         if not self.login():
             raise exceptions.CabernetException("Locast Login Failed")
@@ -48,7 +47,7 @@ class Authenticate:
         if not self.password:
             self.logger.error("[locast][login-password] not specified in config.ini.  Exiting...")
             return None
-        if self.config['locast']['login-invalid'] is not None:
+        if self.config_obj.data['locast']['login-invalid'] is not None:
             self.logger.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
             return None
 
@@ -100,19 +99,19 @@ class Authenticate:
 
     @property
     def is_free_account(self):
-        return self.config['locast']['is_free_account']
+        return self.config_obj.data['locast']['is_free_account']
 
     @is_free_account.setter
     def is_free_account(self, state):
-        self.config['locast']['is_free_account'] = state
+        self.config_obj.data['locast']['is_free_account'] = state
 
     @property
     def username(self):
-        return self.config['locast']['login-username']
+        return self.config_obj.data['locast']['login-username']
 
     @property
     def password(self):
-        return self.config['locast']['login-password']        
+        return self.config_obj.data['locast']['login-password']        
 
 
 Authenticate.logger = logging.getLogger(__name__)

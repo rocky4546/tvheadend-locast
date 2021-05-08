@@ -3,6 +3,7 @@
         "sections":{
             "paths":{
                 "label": "Paths",
+                "sort": "3",
                 "icon": "perm_media",
                 "description": "Contains the general settings for the web GUI",
                 "settings":{                        
@@ -120,6 +121,7 @@
             },
             "database":{
                 "label": "Databases",
+                "sort": "4",
                 "icon": "inventory_2",
                 "description": "sqlite database names",
                 "settings":{                        

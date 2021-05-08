@@ -104,16 +104,17 @@ class Plugin:
                     and self.config_obj.data[base_section + '_' + inst]['label'] is not None:
                     area_data['sections'][base_section + '_' + inst]['label'] = self.config_obj.data[base_section + '_' + inst]['label']
                 inst_defn_obj.save_defn_to_db()
-        default_config = inst_defn_obj.get_default_config()
-        self.config_obj.merge_config(default_config)
-        inst_defn_obj.call_oninit(self.config_obj)
-        self.config_obj.defn_json.merge_defn_obj(inst_defn_obj)
-        for area, area_data in inst_defn_obj.config_defn.items():
-            for section, section_data in area_data['sections'].items():
-                for setting in section_data['settings'].keys():
-                    new_value = self.config_obj.fix_value_type(
-                        section, setting, self.config_obj.data[section][setting])
-                    self.config_obj.data[section][setting] = new_value
+                
+                default_config = inst_defn_obj.get_default_config()
+                self.config_obj.merge_config(default_config)
+                inst_defn_obj.call_oninit(self.config_obj)
+                self.config_obj.defn_json.merge_defn_obj(inst_defn_obj)
+                for area, area_data in inst_defn_obj.config_defn.items():
+                    for section, section_data in area_data['sections'].items():
+                        for setting in section_data['settings'].keys():
+                            new_value = self.config_obj.fix_value_type(
+                                section, setting, self.config_obj.data[section][setting])
+                            self.config_obj.data[section][setting] = new_value
         self.db_configdefn.add_config(self.config_obj.data)
 
     def find_instances(self):
