@@ -142,7 +142,6 @@ class TVHUserConfig:
             elif val_type == 'float':
                 return float(_value)
             elif val_type is None:
-                logging.warning('DEFN None for section:{} key:{} value:{}'.format(_section, _key, _value))
                 return _value
             else:
                 return _value
