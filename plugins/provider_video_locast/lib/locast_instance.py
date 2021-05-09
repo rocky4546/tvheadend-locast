@@ -24,6 +24,7 @@ from .authenticate import Authenticate
 from .location import Location
 from .channels import Channels
 from .epg import EPG
+from .stream import Stream
 
 
 class LocastInstance:
@@ -54,7 +55,9 @@ class LocastInstance:
             self.is_free_account = self.locast.auth.is_free_account
         self.location = Location(self)
         self.channels = Channels(self)
+        self.stream = Stream(self)
         self.epg = EPG(self)
+        
 
     def refresh_channels(self):
         if self.config_obj.data[self.config_section]['enabled']:

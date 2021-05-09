@@ -81,7 +81,7 @@ class InternalProxy(Stream):
                 if added == 0 and duration > 0:
                     time.sleep(duration * 0.3)
                 elif self.plugins.plugins[_channel_dict['namespace']].plugin_obj \
-                        .is_time_to_refresh(self.last_refresh):
+                        .is_time_to_refresh(self.last_refresh, _channel_dict['instance']):
                     stream_uri = self.get_stream_uri(_channel_dict)
                     self.logger.debug('M3U8: {}'.format(stream_uri))
                     self.last_refresh = time.time()
