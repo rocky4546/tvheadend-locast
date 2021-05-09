@@ -18,14 +18,6 @@
                         "level": 1,
                         "help": "Will disable if an error occurs; otherwise set to disable to disable plugin"
                     },
-                    "is_free_account":{
-                        "label": "is_free_account",
-                        "type": "boolean",
-                        "default": true,
-                        "level": 1,
-                        "writable": false,
-                        "help": "Auto-filled based on the locast account"
-                    },
                     "channel_update_timeout":{
                         "label": "Channel Update Timeout",
                         "type": "integer",
@@ -38,7 +30,7 @@
                         "type": "string",
                         "default": null,
                         "level": 0,
-                        "help": "Username used to log into the Locast website"
+                        "help": "Username used to log into the Locast website. Either at the plugin or instance level, but not both."
                     },
                     "login-password":{
                         "label": "password",

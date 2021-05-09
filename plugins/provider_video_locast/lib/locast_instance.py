@@ -19,10 +19,11 @@ substantial portions of the Software.
 import logging
 
 import lib.common.utils as utils
+import lib.common.exceptions as exceptions
+from .authenticate import Authenticate
 from .location import Location
 from .channels import Channels
 from .epg import EPG
-
 
 
 class LocastInstance:
@@ -33,6 +34,24 @@ class LocastInstance:
         self.config_obj = _locast.config_obj
         self.instance = _instance
         self.locast = _locast
+        if not self.config_obj.data[self.config_section]['enabled']:
+            return
+        
+        if self.locast.auth.token is None:
+            try:
+                self.auth = Authenticate(self.config_obj, self.config_section)
+                if self.auth.token is None:
+                    self.config_obj.data[self.config_section]['enabled'] = False
+                self.token = self.auth.token
+                self.is_free_account = self.auth.is_free_account
+            except exceptions.CabernetException:
+                self.config_obj.data[self.config_section]['enabled'] = False
+                self.token = None
+                self.is_free_account = False
+                return
+        else:
+            self.token = self.locast.auth.token
+            self.is_free_account = self.locast.auth.is_free_account
         self.location = Location(self)
         self.channels = Channels(self)
         self.epg = EPG(self)

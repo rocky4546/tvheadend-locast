@@ -33,31 +33,29 @@ class Authenticate:
 
     logger = None
 
-    def __init__(self, _config_obj):
+    def __init__(self, _config_obj, _section):
         self.config_obj = _config_obj
+        self.section = _section
         self.token = None
-        if not self.login():
-            raise exceptions.CabernetException("Locast Login Failed")
+        self.login()
 
     @handle_url_except 
     def login(self):
         if not self.username:
-            self.logger.error("[locast][login-username] not specified in config.ini.  Exiting...")
             return None
         if not self.password:
-            self.logger.error("[locast][login-password] not specified in config.ini.  Exiting...")
             return None
-        if self.config_obj.data['locast']['login-invalid'] is not None:
-            self.logger.error('Unable to login due to invalid logins.  Clear config entry login_invalid to try again')
-            return None
+        if self.config_obj.data[self.section]['login-invalid'] is not None:
+            self.logger.error('{} Unable to login due to invalid logins.  Clear config entry login_invalid to try again'.format(self.section))
+            raise exceptions.CabernetException('Locast Login Failed')
 
-        self.logger.info("Logging into Locast...")
+        self.logger.info('Logging into Locast [{}]'.format(self.section))
         self.token = self.get_token()
         if not self.token:
-            self.logger.error('Invalid Locast Login Credentials. Exiting...')
+            self.logger.error('Invalid Locast Login Credentials. Disabling instance')
             current_time = str(int(time.time()))
-            self.config_obj.write('locast', 'login-invalid', current_time)
-            return None
+            self.config_obj.write(self.section, 'login-invalid', current_time)
+            raise exceptions.CabernetException("Locast Login Failed")
         return self.validate_user()
 
     @handle_json_except 
@@ -99,19 +97,19 @@ class Authenticate:
 
     @property
     def is_free_account(self):
-        return self.config_obj.data['locast']['is_free_account']
+        return self.config_obj.data[self.section]['is_free_account']
 
     @is_free_account.setter
     def is_free_account(self, state):
-        self.config_obj.data['locast']['is_free_account'] = state
+        self.config_obj.data[self.section]['is_free_account'] = state
 
     @property
     def username(self):
-        return self.config_obj.data['locast']['login-username']
+        return self.config_obj.data[self.section]['login-username']
 
     @property
     def password(self):
-        return self.config_obj.data['locast']['login-password']        
+        return self.config_obj.data[self.section]['login-password']        
 
 
 Authenticate.logger = logging.getLogger(__name__)

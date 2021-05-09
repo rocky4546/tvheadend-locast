@@ -32,7 +32,7 @@ class Locast:
     def __init__(self, _plugin):
         self.config_obj = _plugin.config_obj
         self.namespace = _plugin.namespace
-        self.auth = Authenticate(_plugin.config_obj)
+        self.auth = Authenticate(_plugin.config_obj, self.namespace.lower())
         self.locast_instances = {}
         for inst in _plugin.instances:
             self.locast_instances[inst] = LocastInstance(self, inst)
