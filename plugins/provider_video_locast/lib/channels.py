@@ -63,7 +63,7 @@ class Channels:
             .format(self.locast_instance.location.dma)
         url_headers = {
             'Content-Type': 'application/json',
-            'authorization': 'Bearer {}'.format(self.locast.auth.token),
+            'authorization': 'Bearer {}'.format(self.locast_instance.token),
             'User-agent': constants.DEFAULT_USER_AGENT}
         req = urllib.request.Request(channels_url, headers=url_headers)
         with urllib.request.urlopen(req) as resp:
@@ -125,7 +125,7 @@ class Channels:
             self.locast_instance.location.latitude, '/',
             self.locast_instance.location.longitude])
         stream_headers = {'Content-Type': 'application/json',
-            'authorization': 'Bearer ' + self.locast.auth.token,
+            'authorization': 'Bearer ' + self.locast_instance.token,
             'User-agent': constants.DEFAULT_USER_AGENT}
         req = urllib.request.Request(stream_url, headers=stream_headers)
         with urllib.request.urlopen(req) as resp:
@@ -135,7 +135,7 @@ class Channels:
 
         # find the heighest stream url resolution and save it to the list
         videoUrlM3u = m3u8.load(stream_result['streamUrl'],
-            headers={'authorization': 'Bearer ' + self.locast.auth.token,
+            headers={'authorization': 'Bearer ' + self.locast_instance.token,
                 'User-agent': constants.DEFAULT_USER_AGENT})
         self.logger.debug("Found " + str(len(videoUrlM3u.playlists)) + " Playlists")
 

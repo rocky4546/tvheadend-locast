@@ -19,8 +19,6 @@ substantial portions of the Software.
 import logging
 
 
-from .channels import Channels
-from .epg import EPG
 from .authenticate import Authenticate
 from .stream import Stream
 from .locast_instance import LocastInstance
@@ -36,7 +34,6 @@ class Locast:
         self.locast_instances = {}
         for inst in _plugin.instances:
             self.locast_instances[inst] = LocastInstance(self, inst)
-        self.stream = Stream(self)
         
     def refresh_channels(self, _instance=None):
         if _instance is None:
@@ -55,8 +52,8 @@ class Locast:
     def get_channel_uri(self, sid, _instance=None):
         return self.locast_instances[_instance].get_channel_uri(sid)
 
-    def is_time_to_refresh(self, _last_refresh):
-        return self.stream.is_time_to_refresh(_last_refresh)
+    def is_time_to_refresh(self, _last_refresh, _instance):
+        return self.locast_instances[_instance].stream.is_time_to_refresh(_last_refresh)
 
     @property
     def name(self):
