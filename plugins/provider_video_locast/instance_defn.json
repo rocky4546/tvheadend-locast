@@ -42,6 +42,37 @@
                         "writable": false,
                         "help": "DMA City"
                     },
+                    "is_free_account":{
+                        "label": "is_free_account",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 1,
+                        "writable": false,
+                        "help": "Auto-filled based on the locast account"
+                    },
+                    "login-username":{
+                        "label": "username",
+                        "type": "string",
+                        "default": null,
+                        "level": 0,
+                        "help": "Username used to log into the Locast website. Either at the plugin or instance level, but not both."
+                    },
+                    "login-password":{
+                        "label": "password",
+                        "type": "password",
+                        "default": null,
+                        "level": 0,
+                        "hidden": true,
+                        "onInit": "lib.config.config_callbacks.load_encrypted_setting",
+                        "help": "Server never provides current password to page.  Add to change password"
+                    },
+                    "login-invalid":{
+                        "label": "login_invalid",
+                        "type": "integer",
+                        "default": null,
+                        "level": 2,
+                        "help": "Normally empty, but if locast login locks out, it will be set. Lockouts are normally 60 minutes. Manually clearing entry will allow a re-login attempt on restart"
+                    },
                     "epg-prefix":{
                         "label": "EPG Channel Prefix",
                         "type": "string",
