@@ -53,7 +53,7 @@ class Locast:
         return self.locast_instances[_instance].get_channel_uri(sid)
 
     def is_time_to_refresh(self, _last_refresh, _instance):
-        return self.locast_instances[_instance].stream.is_time_to_refresh(_last_refresh)
+        return self.locast_instances[_instance].is_time_to_refresh(_last_refresh)
 
     @property
     def name(self):
