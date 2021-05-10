@@ -124,7 +124,7 @@ class TVHUserConfig:
         if config_file and os.path.exists(config_file):
             return config_file
         else:
-            print("ERROR: Config file missing, Exiting...")
+            print('ERROR: Config file missing {}, Exiting...'.format(config_file))
             clean_exit(1)
 
     def fix_value_type(self, _section, _key, _value):

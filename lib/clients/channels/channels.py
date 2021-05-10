@@ -95,7 +95,8 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
 def lineup_json(_tuner):
     _tuner.plugins.refresh_channels(_tuner.query_data['name'])
     _tuner.do_mime_response(200, 'application/json', get_channels_json(
-        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], _tuner.query_data['instance']))
+        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], 
+        _tuner.query_data['instance']))
 
     
 def get_channels_json(_config, _base_url, _namespace, _instance):
