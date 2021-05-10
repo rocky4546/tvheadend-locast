@@ -47,7 +47,10 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
     namespace_list = None
 
     def log_message(self, _format, *args):
-        self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
+        if int(args[1]) > 399:
+            self.logger.warning('[%s] %s' % (self.address_string(), _format % args))
+        else:
+            self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
 
     def get_query_data(self):
         content_path = self.path
@@ -179,7 +182,6 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
                 for x in range(int(_plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'])):
                     tmp_rmg_scans[plugin_name].append('Idle')
         WebHTTPHandler.rmg_station_scans = tmp_rmg_scans
-        WebHTTPHandler.logger.debug('Initializing rmg_station_scans')
 
     @classmethod
     def start_httpserver(cls, _plugins, _hdhr_queue, _port, _http_server_class):
