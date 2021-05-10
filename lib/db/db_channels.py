@@ -85,13 +85,18 @@ sqlcmds = {
         """,
     'channels_del':
         """
-        DELETE FROM channels WHERE updated = ?
-        AND namespace = ? AND instance = ?
+        DELETE FROM channels WHERE updated LIKE ?
+        AND namespace=? AND instance=?
         """,
 
     'status_get':
         """
         SELECT last_update FROM status WHERE
+            namespace=? AND instance=?
+        """,
+    'status_del':
+        """
+        DELETE FROM status WHERE
             namespace=? AND instance=?
         """,
 
@@ -145,6 +150,13 @@ class DBChannels(DB):
             self.add(DB_STATUS_TABLE, (
                 _namespace, _instance, datetime.datetime.now()))
         self.delete(DB_CHANNELS_TABLE, (False, _namespace, _instance,))
+
+
+    def del_channels(self, _namespace, _instance):
+        self.delete(DB_CHANNELS_TABLE, ('%', _namespace, _instance,))
+    
+    def del_status(self, _namespace, _instance):
+        self.delete(DB_STATUS_TABLE, (_namespace, _instance,))
 
     def get_status(self, _namespace, _instance):
         result = self.get(DB_STATUS_TABLE,

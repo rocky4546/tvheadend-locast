@@ -22,6 +22,7 @@ import json
 import logging
 import urllib.request
 
+import lib.common.exceptions as exceptions
 import lib.common.utils as utils
 from lib.common.decorators import handle_url_except
 from lib.common.decorators import handle_json_except
@@ -38,14 +39,17 @@ class EPG:
         self.instance = _locast_instance.instance
         self.db = DBepg(self.locast_instance.config_obj.data)
         self.config_section = _locast_instance.config_section
+        if self.locast_instance.location.has_dma_changed:
+            self.db.del_instance(
+                self.locast_instance.locast.name, self.instance)
 
-    def refresh_epg2(self):
+    def refresh_epg(self):
         self.logger.debug('Checking EPG data for {}'.format(self.locast_instance.locast.name))
         if not self.is_refresh_expired():
             self.logger.debug('EPG still new, not refreshing')
             return
         forced_dates, aging_dates = self.dates_to_pull()
-        self.db.delete_old_programs(self.locast_instance.locast.name, self.instance)
+        self.db.del_old_programs(self.locast_instance.locast.name, self.instance)
         for epg_day in forced_dates:
             self.refresh_programs(epg_day, False)
         for epg_day in aging_dates:
