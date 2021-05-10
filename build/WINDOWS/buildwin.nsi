@@ -32,7 +32,6 @@
 !define MUI_ICON "${NSISDIR}\Contrib\Graphics\Icons\modern-install.ico"
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 
-
 ; Welcome page
 !insertmacro MUI_PAGE_WELCOME
 ;!define MUI_PAGE_CUSTOMFUNCTION_PRE LicenseFiles
@@ -44,8 +43,10 @@
 !insertmacro MUI_PAGE_LICENSE "../../LICENSE"
 ; Directory page
 !insertmacro MUI_PAGE_DIRECTORY
+; get data folder
+Page custom DataFolderPage DataFolderPageLeave
 ; get username and password
-Page custom ConfigPage ConfigPageLeave
+Page custom UserPassPage UserPassPageLeave
 ; Components page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE TestPython
 !insertmacro MUI_PAGE_COMPONENTS
@@ -71,14 +72,12 @@ var ICONS_GROUP
 
 ; MUI end ------
 
-
 Name "${PRODUCT_NAME}-${PRODUCT_VERSION}"
 OutFile "${PRODUCT_NAME}-${PRODUCT_VERSION}.exe"
 InstallDir "$PROGRAMFILES64\${PRODUCT_NAME}"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
-
 
 Section "Install Python3" SEC01
     SetOutPath "$INSTDIR"
@@ -104,7 +103,6 @@ Section "Install Python3" SEC01
 
     DELETE "$TEMP\python.exe"
 
-    Call RefreshProcessEnvironmentPath
     Call TestPythonSilent
     ${If} $pythonpath == ""
           MessageBox MB_OK "Please restart the installer to pick up the python installation, Aborting"
@@ -112,6 +110,10 @@ Section "Install Python3" SEC01
     ${EndIf}
 
 SectionEnd
+
+Function ClearPythonInstallFlag
+    SectionSetFlags ${SEC01} 0    # python install section
+FunctionEnd
 
 Section "MainSection" SEC02
     SetOutPath "$INSTDIR"
@@ -207,6 +209,7 @@ FunctionEnd
 
 
 Function .onInit
+    StrCpy $DataFolder "C:\Windows\system32\config\systemprofile\Documents\cabernet"
     !insertmacro MULTIUSER_INIT
     SectionSetFlags ${SEC02} 17    # main section
     SectionSetFlags ${SEC04} 0    # main section

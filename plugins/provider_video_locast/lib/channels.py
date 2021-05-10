@@ -42,7 +42,7 @@ class Channels:
         self.config_section = self.locast_instance.config_section
 
     def refresh_channels(self, force=False):
-        self.logger.debug('Checking Channel data for {}'.format(self.locast.name))
+        self.logger.debug('Checking Channel data for {} {}'.format(self.locast.name, self.instance))
         # fcc_stations = FCCData(self.locast)
         last_update = self.db.get_status(self.locast.name, self.instance)
         update_needed = False

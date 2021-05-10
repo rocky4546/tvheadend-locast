@@ -53,7 +53,7 @@ if sys.version_info.major == 2 or sys.version_info < (3, 7):
 
 def get_args():
     parser = argparse.ArgumentParser(description='Fetch online streams', epilog='')
-    parser.add_argument('--config_file', dest='cfg', type=str, default=None, help='')
+    parser.add_argument('-c', '--config_file', dest='cfg', type=str, default=None, help='config.ini location')
     return parser.parse_args()
 
 
