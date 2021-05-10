@@ -44,9 +44,13 @@ sqlcmds = {
             ) VALUES ( ?, ?, ?, ?, ? )
         """,
 
-    'epg_del':
+    'epg_by_day_del':
         """
         DELETE FROM epg WHERE namespace=? AND instance=? AND day < DATE('now','-1 day')
+        """,
+    'epg_del':
+        """
+        DELETE FROM epg WHERE namespace=? AND instance=?
         """,
 
     'epg_last_update_get':
@@ -77,11 +81,18 @@ class DBepg(DB):
             datetime.datetime.now(),
             json.dumps(_prog_list)))
 
-    def delete_old_programs(self, _namespace, _instance):
+    def del_old_programs(self, _namespace, _instance):
         """
         Removes all records for this namespace/instance that are over 1 day old
         """
+        self.delete(DB_EPG_TABLE +'_by_day', (_namespace, _instance,))
+
+    def del_instance(self, _namespace, _instance):
+        """
+        Removes all records for this namespace/instance
+        """
         self.delete(DB_EPG_TABLE, (_namespace, _instance,))
+
 
     def get_last_update(self, _namespace, _instance, _day):
         if not _instance:

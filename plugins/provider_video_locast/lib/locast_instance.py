@@ -63,15 +63,19 @@ class LocastInstance:
         if self.config_obj.data[self.config_section]['enabled']:
             self.channels.refresh_channels()
 
-    def refresh_epg(self):
-        if self.config_obj.data[self.config_section]['enabled']:
-            self.epg.refresh_epg2()
-
     def get_channel_uri(self, sid):
         if self.config_obj.data[self.config_section]['enabled']:
             return self.channels.get_channel_uri(sid)
         else:
             return None
+
+    def refresh_epg(self):
+        if self.config_obj.data[self.config_section]['enabled']:
+            self.epg.refresh_epg()
+
+    def is_time_to_refresh(self, _last_refresh):
+        return self.stream.is_time_to_refresh(_last_refresh)
+
 
     @property
     def config_section(self):

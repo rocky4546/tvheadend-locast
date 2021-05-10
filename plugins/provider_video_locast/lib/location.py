@@ -39,6 +39,7 @@ class Location:
         self.dma = None
         self.city = None
         self.active = None
+        self.has_dma_changed = False
 
         if self.find_location():
             self.logger.debug("Got location as {} - DMA {}"
@@ -50,12 +51,14 @@ class Location:
         if not self.active:
             self.logger.error("Locast reports that this DMA/Market area is not currently active!")
             raise exceptions.CabernetException("Locast indicates DMA location not active")
-
+        if 'dma' in self.config_obj.data[config_section] \
+                and self.config_obj.data[config_section]['dma'] \
+                != self.dma:
+            self.logger.debug('DMA has changed, purging old DMA data for this instance')
+            self.has_dma_changed = True
         # update config file with DMA and City
-        _locast_inst.config_obj.write(_locast_inst.config_section, 'dma', self.dma)
-        _locast_inst.config_obj.write(_locast_inst.config_section, 'city', self.city)
-
-
+        self.config_obj.write(config_section, 'dma', self.dma)
+        self.config_obj.write(config_section, 'city', self.city)
 
     def set_location(self, geoloc):
         self.latitude = str(geoloc['latitude'])

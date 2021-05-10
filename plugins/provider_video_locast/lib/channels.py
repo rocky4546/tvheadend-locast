@@ -40,6 +40,13 @@ class Channels:
         self.instance = _locast_instance.instance
         self.db = DBChannels(self.locast_instance.config_obj.data)
         self.config_section = self.locast_instance.config_section
+        if self.locast_instance.location.has_dma_changed:
+            self.db.del_channels( 
+                self.locast.name, self.instance)
+            self.db.del_status( 
+                self.locast.name, self.instance)
+
+
 
     def refresh_channels(self, force=False):
         self.logger.debug('Checking Channel data for {} {}'.format(self.locast.name, self.instance))
