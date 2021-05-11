@@ -50,38 +50,38 @@ sqlcmds = {
             id, namespace, updated, json
             ) VALUES ( ?, ?, ?, ? )
         """,
+    'plugins_updated_update':
+        """
+        UPDATE plugins SET updated = ?
+        """,
+    'plugins_del':
+        """
+        DELETE FROM plugins WHERE updated = ?
+        """,
+    'plugins_get':
+        """
+        SELECT * FROM plugins WHERE namespace=?
+        """,
+
+
     'instance_add':
         """
         INSERT OR REPLACE INTO instance (
             namespace, instance, updated, description
             ) VALUES ( ?, ?, ?, ? )
         """,
-    'plugins_updated_update':
-        """
-        UPDATE plugins SET updated = ?
-        """,
     'instance_updated_update':
         """
         UPDATE instance SET updated = ?
-        """,
-    'plugins_del':
-        """
-        DELETE FROM plugins WHERE updated = ?
         """,
     'instance_del':
         """
         DELETE FROM instance WHERE updated = ?
         """,
-
-    'plugins_get':
-        """
-        SELECT * FROM plugins WHERE namespace=?
-        """,
     'instance_get':
         """
         SELECT * FROM instance ORDER BY namespace, instance
         """
-
 }
 
 
