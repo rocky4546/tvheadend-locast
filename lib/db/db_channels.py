@@ -32,6 +32,7 @@ sqlcmds = {
         CREATE TABLE IF NOT EXISTS channels (
             namespace VARCHAR(255) NOT NULL,
             instance  VARCHAR(255) NOT NULL,
+            enabled   BOOLEAN NOT NULL,
             uid       VARCHAR(255) NOT NULL,
             number    VARCHAR(255) NOT NULL,
             display_number VARCHAR(255) NOT NULL,
@@ -63,21 +64,15 @@ sqlcmds = {
     'channels_add':
         """
         INSERT INTO channels (
-            namespace, instance, uid, number, display_number, display_name,
+            namespace, instance, enabled, uid, number, display_number, display_name,
             thumbnail, updated, json
-            ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )
+            ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
         """,
     'channels_update':
         """
         UPDATE channels SET 
-            number=?, thumbnail=?, updated=?, json=?
+            enabled=?, number=?, thumbnail=?, updated=?, json=?
             WHERE namespace=? AND instance=? AND uid=?
-        """,
-    'status_add':
-        """
-        INSERT OR REPLACE INTO status (
-            namespace, instance, last_update
-            ) VALUES ( ?, ?, ? )
         """,
     'channels_updated_update':
         """
@@ -88,7 +83,27 @@ sqlcmds = {
         DELETE FROM channels WHERE updated LIKE ?
         AND namespace=? AND instance=?
         """,
-
+    'channels_get':
+        """
+        SELECT * FROM channels WHERE namespace LIKE ?
+        AND instance LIKE ? ORDER BY CAST(number as FLOAT)
+        """,
+    'channels_one_get':
+        """
+        SELECT * FROM channels WHERE uid=? AND namespace LIKE ?
+        AND instance LIKE ?
+        """,
+    'channels_name_get':
+        """
+        SELECT DISTINCT namespace,instance FROM channels
+        """,
+    
+    'status_add':
+        """
+        INSERT OR REPLACE INTO status (
+            namespace, instance, last_update
+            ) VALUES ( ?, ?, ? )
+        """,
     'status_get':
         """
         SELECT last_update FROM status WHERE
@@ -98,18 +113,6 @@ sqlcmds = {
         """
         DELETE FROM status WHERE
             namespace=? AND instance=?
-        """,
-
-    'channels_get':
-        """
-        SELECT * FROM channels WHERE namespace LIKE ?
-        AND instance LIKE ? ORDER BY CAST(number as FLOAT)
-        """,
-
-    'channels_one_get':
-        """
-        SELECT * FROM channels WHERE uid=? AND namespace LIKE ?
-        AND instance LIKE ?
         """
 }
 
@@ -129,6 +132,7 @@ class DBChannels(DB):
                 self.add(DB_CHANNELS_TABLE, (
                     _namespace,
                     _instance,
+                    True,
                     ch['id'],
                     ch['number'],
                     ch['number'],
@@ -138,6 +142,7 @@ class DBChannels(DB):
                     json.dumps(ch)))
             except sqlite3.IntegrityError:
                 self.update(DB_CHANNELS_TABLE, (
+                    ch['enabled'],
                     ch['number'],
                     ch['thumbnail'],
                     True,
@@ -179,6 +184,9 @@ class DBChannels(DB):
             row['json'] = ch
             rows_dict[row['uid']] = row
         return rows_dict
+
+    def get_channel_names(self):
+        return self.get_dict(DB_CHANNELS_TABLE + '_name')
 
     def get_channel(self, _uid, _namespace, _instance):
         if not _namespace:
