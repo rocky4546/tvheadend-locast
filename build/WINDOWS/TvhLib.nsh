@@ -48,9 +48,7 @@ Function BrowseData
 FunctionEnd
 
 Function DataFolderPageLeave
-    MessageBox MB_OK "DATA: $DataFolder"
     ${NSD_GetText} $txtDataFolder $DataFolder
-    MessageBox MB_OK "DATA: $DataFolder"
 FunctionEnd
 
 Function UserPassPage
@@ -117,31 +115,32 @@ FunctionEnd
 Function TestPython
     !define SOURCEPATH "../.."
     SetOutPath "$INSTDIR"
-    File "${SOURCEPATH}\build\WINDOWS\findpython.bat"
-    nsExec::ExecToStack '"findpython.bat"'
+    File "${SOURCEPATH}\build\WINDOWS\findpython.pyw"
+    StrCpy $cmd 'python findpython.pyw'
+    nsExec::ExecToStack '$cmd'
     Pop $0 ;return value
-    Pop $1 ;return value
+    Pop $1 ; status text
     IntCmp $0 0 PythonFound
-        MessageBox MB_OK "Python 3.x not found, Make sure to install python$\r$\n\
+        MessageBox MB_OK "$0 $1 Python 3.x not found, Make sure to install python$\r$\n\
             for all users if a Windows Service is needed or single user$\r$\n\
             without admin access"
         StrCpy $pythonpath ""
         Goto PythonMissing
     PythonFound:
     MessageBox MB_OK "Using Python installation $1$\r$\n\
-        If this is not correct, please uninstall the unwanted versions"
+        If this is not correct, please uninstall the unwanted python versions"
     Push $1
     Call Trim
     Pop $pythonpath
     Call ClearPythonInstallFlag
     PythonMissing:
-    Delete $INSTDIR\findpython.bat
+    Delete $INSTDIR\findpython.pyw
 FunctionEnd
 
 Function TestPythonSilent
     SetOutPath "$INSTDIR"
-    File "${SOURCEPATH}\build\WINDOWS\findpython.bat"
-    nsExec::ExecToStack '"findpython.bat"'
+    File "${SOURCEPATH}\build\WINDOWS\findpython.pyw"
+    nsExec::ExecToStack 'python findpython.pyw'
     Pop $0 ;return value
     Pop $1 ;return value
     IntCmp $0 0 PythonFound
@@ -153,7 +152,7 @@ Function TestPythonSilent
     Pop $pythonpath
     ;StrCpy $pythonpath $1
     PythonMissing:
-    Delete $INSTDIR\findpython.bat
+    Delete $INSTDIR\findpython.pyw
 FunctionEnd
 
 Function UpdateConfig

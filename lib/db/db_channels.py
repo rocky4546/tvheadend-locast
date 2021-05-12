@@ -16,6 +16,7 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import ast
 import json
 import datetime
 import sqlite3
@@ -40,6 +41,7 @@ sqlcmds = {
             group_tag     VARCHAR(255),
             updated   BOOLEAN NOT NULL,
             thumbnail VARCHAR(255),
+            thumbnail_size VARCHAR(255),
             json TEXT NOT NULL,
             UNIQUE(namespace, instance, uid)
             )
@@ -65,13 +67,13 @@ sqlcmds = {
         """
         INSERT INTO channels (
             namespace, instance, enabled, uid, number, display_number, display_name,
-            thumbnail, updated, json
-            ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+            thumbnail, thumbnail_size, updated, json
+            ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
         """,
     'channels_update':
         """
         UPDATE channels SET 
-            enabled=?, number=?, thumbnail=?, updated=?, json=?
+            enabled=?, number=?, thumbnail=?, thumbnail_size=?, updated=?, json=?
             WHERE namespace=? AND instance=? AND uid=?
         """,
     'channels_updated_update':
@@ -138,6 +140,7 @@ class DBChannels(DB):
                     ch['number'],
                     ch['name'],
                     ch['thumbnail'],
+                    str(ch['thumbnail_size']),
                     True,
                     json.dumps(ch)))
             except sqlite3.IntegrityError:
@@ -145,6 +148,7 @@ class DBChannels(DB):
                     ch['enabled'],
                     ch['number'],
                     ch['thumbnail'],
+                    str(ch['thumbnail_size']),
                     True,
                     json.dumps(ch),
                     _namespace,
@@ -182,6 +186,7 @@ class DBChannels(DB):
         for row in rows:
             ch = json.loads(row['json'])
             row['json'] = ch
+            row['thumbnail_size'] = ast.literal_eval(row['thumbnail_size'])
             rows_dict[row['uid']] = row
         return rows_dict
 

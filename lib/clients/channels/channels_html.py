@@ -53,8 +53,11 @@ class ChannelsHTML:
             'minimum-scale=1.0, maximum-scale=1.0">',
             '<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>',
             '<link rel="stylesheet" type="text/css" href="/modules/tabs/tabs.css">',
+            '<link rel="stylesheet" type="text/css" href="/modules/table/table.css">',
             '<script src="/modules/tabs/tabs.js"></script>',
-            '<script src="/modules/pages/channels.js"></script></head>'])
+            '<script src="/modules/pages/channels.js"></script></head>',
+            '<script>load_form_url("/pages/channels_form.html?name=',
+            list(self.tab_names.keys())[0], '")</script>' ])
 
     @property
     def title(self):
@@ -79,7 +82,6 @@ class ChannelsHTML:
             ])
             active_tab = ''
             self.active_tab_name = name
-            print('active tab=',name)
         tabs_html = ''.join([tabs_html, '</ul>'])
         return tabs_html
 
@@ -88,13 +90,8 @@ class ChannelsHTML:
         return ''.join([
             self.title,
             self.tabs,
-            '<div id="formcontent">EMPTY DIV AREA WELL IS NOT THIS A SURPRISE!!!</div>'
-            '<button id="submit" STYLE="background-color: #E0E0E0; margin-top:1em" ',
-            'type="submit"><b>Save changes</b></button>',
-            '<section id="status"></section>',
-            '<footer><p>Not all configuration parameters are listed.  ',
-            'Edit the config file directly to change any parameters.</p>',
-            '</footer></div></body></html>'])
+            '<div id="tablecontent">EMPTY DIV AREA FOR TABLES</div>'
+            ])
 
     def get_channels_tabs(self):
         ch_list = self.db.get_channel_names()

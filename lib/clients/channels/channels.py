@@ -101,7 +101,6 @@ def lineup_json(_tuner):
     
 def get_channels_json(_config, _base_url, _namespace, _instance):
     db = DBChannels(_config)
-    print(db.get_channel_names())
     ch_data = db.get_channels(_namespace, _instance)
     return_json = ''
     for sid, sid_data in ch_data.items():
