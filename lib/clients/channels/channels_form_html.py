@@ -16,17 +16,22 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import urllib
+import io
+
+
 import json
 
 from lib.web.pages.templates import web_templates
 from lib.common.decorators import getrequest
 from lib.common.decorators import postrequest
 import lib.clients.channels.channels as channels
+import lib.image_size.get_image_size as get_image_size
 
 
 @getrequest.route('/pages/channels_form.html')
 def get_channels_form_html(_tuner):
-    channels_form = ChannelsFormHTML(_tuner.channels_db)
+    channels_form = ChannelsFormHTML(_tuner.channels_db, _tuner.config)
     form = channels_form.get(_tuner.query_data['name'])
     _tuner.do_mime_response(200, 'text/html', form)
 
@@ -52,10 +57,10 @@ def post_channels_html(_tuner):
 
 class ChannelsFormHTML:
 
-    def __init__(self, _channels_db):
+    def __init__(self, _channels_db, _config):
         self.db = _channels_db
         self.namespace = None
-        self.config = None
+        self.config = _config
         self.active_tab_name = None
 
     def get(self, _namespace):
@@ -65,121 +70,110 @@ class ChannelsFormHTML:
     @property
     def header(self):
         return ''.join([
-            '<table border=3><tr><td>cell1</td><td>cell2</td>',
-            '<td>cell3</td><td>cell4</td>',
-            '<td>cell5</td><td>', self.namespace, '</td>',
-            '</tr></table>'])
+            '<form id="channelform" ',
+            'action="/pages/channels_form.html" method="post">',
+            '<table><tr><td>Total Channels = 42</td></tr>',
+            '<tr><td>Total Enabled Channels = 25</td></tr></table>',
+            '<table class="sortable" ><thead><tr>',
+            '<th class="header"></th>',
+            '<th class="header">instance<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '<th class="header">num<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '<th class="header">name<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '<th class="header">group<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '<th class="header">thumbnail<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '<th class="header">metadata<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></th>',
+            '</tr></thead>'
+            ])
 
     @property
-    def forms(self):
-        forms_html = '<div id="formcontent">WELL IS NOT THIS A SURPRISE!!!</div>'
-        #for section in self.config_defn['sections'].keys():
-        #    area_html = ''.join([area_html, self.get_form(section)])
+    def form(self):
+        #forms_html = '</form>'
+        forms_html = self.table + '</form>'
         return forms_html
 
-    def get_form(self, _section):
-        input_html = "*** UNKNOWN INPUT TYPE ***"
-        section_data = self.config_defn['sections'][_section]
-        form_html = ''.join([
-            '<form id="form', section_data['name'], '" class="sectionForm" ',
-            'action="/pages/channels.html" method="post">',
-            section_data['description'],
-            '<table>'
-        ])
+    @property
+    def table(self):
+        ch_data = self.db.get_channels(self.namespace, None)
         section_html = '<tbody>'
-        subsection = None
-        is_section_new = False
-        for setting, setting_data in section_data['settings'].items():
-            if setting_data['level'] == 4:
-                continue
-            title = ''
-            readonly = ''
-
-            new_section = None
-            if '-' in setting:
-                new_section = setting.split('-', 1)[0]
-            if new_section != subsection and new_section is not None:
-                is_section_new = True
-                subsection = new_section
+        for sid, sid_data in ch_data.items():
+            if sid_data['enabled']:
+                enabled = 'checked'
+            else:
+                enabled = ''
+            if sid_data['group_tag'] is None:
+                group_cell = '<td></td>'
+            else:
+                group_cell = '<td>', sid_data['group_tag'], '</td>',
+            if sid_data['json']['HD']:
+                quality = 'HD'
+            else:
+                quality = 'SD'
+            max_image_size = self.lookup_config_size()
+            if sid_data['thumbnail_size'] is not None:
+                image_size = sid_data['thumbnail_size']
+                if max_image_size is not None:
+                    if image_size[0] < max_image_size:
+                        img_width = str(image_size[0])
+                    else:
+                        img_width = str(max_image_size)
+                    display_image = ''.join(['<img width="', img_width, '" border=1 src="', sid_data['thumbnail'], '">'])
+                else:
+                    display_image = ''.join(['<img border=1 src="', sid_data['thumbnail'], '">'])
+            else:
+                display_image = ''
+                image_size = 'UNK'
+                img_width = 0
                 
-            background_color = '#F0F0F0'
-            if setting_data['help'] is not None:
-                title = ''.join([' title="', setting_data['help'], '"'])
-
-            if 'writable' in setting_data and not setting_data['writable']:
-                readonly = ' readonly'
-                background_color = '#C0C0C0'
-
-            if setting_data['type'] == 'string' \
-                    or setting_data['type'] == 'path':
-                input_html = ''.join([
-                    '<input STYLE="background-color: ',
-                    background_color, ';"  type="text"', readonly,
-                    ' name="', section_data['name'], '-', setting, '">'])
-
-            if setting_data['type'] == 'password':
-                input_html = ''.join([
-                    '<input STYLE="background-color: ',
-                    background_color, ';"  type="password"', readonly,
-                    ' name="', section_data['name'], '-', setting, '">'])
-
-            elif setting_data['type'] == 'integer' \
-                    or setting_data['type'] == 'float':
-                input_html = ''.join([
-                    '<input STYLE="background-color: ',
-                    background_color, ';" type="number"', readonly,
-                    ' name="', section_data['name'], '-', setting, '">'])
-
-            elif setting_data['type'] == 'boolean':
-                if 'writable' in setting_data and not setting_data['writable']:
-                    readonly = ' disabled'
-
-                input_html = ''.join([
-                    '<input value="1" STYLE="background-color: ',
-                    background_color, ';" type="checkbox"', readonly,
-                    ' name="', section_data['name'], '-', setting, '">'
-                                                                   '<input value="0" id="', setting,
-                    'hidden" type="hidden"',
-                    ' name="', section_data['name'], '-', setting, '">'
+            print(display_image)
+            if sid_data['json']['thumbnail_size'] is not None:
+                original_size = sid_data['json']['thumbnail_size']
+            else:
+                original_size = 'UNK'
+                
+            row = ''.join([
+                '<tr><td style="text-align: center"><input type=hidden value="', sid, '">',
+                '<input type=checkbox ', enabled, '></td>',
+                '<td style="text-align: center">', sid_data['instance'], '</td>',
+                '<td style="text-align: center">', sid_data['display_number'], '</td>',
+                '<td style="text-align: center">', sid_data['display_name'], '</td>',
+                group_cell,
+                '<td style="display: grid">', sid_data['thumbnail'],
+                display_image,
+                'size=', str(image_size), '   original_size=', str(original_size),
+                '</td>',
+                '<td style="text-align: center">', quality, ' ',
+                sid_data['json']['callsign'], '</td>',
+                '</tr>'
                 ])
-
-            elif setting_data['type'] == 'list':
-                dlsetting = ''
-                if section_data['name'] == 'display' and setting == 'display_level':
-                    dlsetting = ' class="dlsetting" '
-
-                option_html = ''.join(['<option value="">default</option>'])
-                for value in setting_data['values']:
-                    option_html += ''.join([
-                        '<option value="', value, '">', value, '</option>'])
-                input_html = ''.join([
-                    '<select STYLE="background-color: ',
-                    background_color, ';"', readonly,
-                    dlsetting,
-                    'name="', section_data['name'], '-', setting, '">',
-                    option_html, '</select>'])
-
-            if is_section_new:
-                is_section_new = False
-                section_html = ''.join([section_html,
-                '<tr class="hlevel"><td><hr><h3>', subsection.upper(), '</h3></td></tr>'])
-
-            section_html = ''.join([section_html,
-                '<tr class="dlevel', str(setting_data['level']),
-                '"><td><label ', title,
-                '>', setting_data['label'], '</label></td><td>', input_html,
-                '</td></tr>'])
-        return ''.join([form_html, section_html, '</tbody></table>'
-                                                 '<button STYLE="background-color: #E0E0E0; margin-top:1em" ',
-            'type="submit"><b>Save changes</b></button>',
-            '<input type=hidden name="area" value="', self.area, '"></form>'])
+            section_html += row
+        return ''.join([section_html, '</tbody></table>'
+            '<button STYLE="background-color: #E0E0E0; margin-top:1em" ',
+            'type="submit"><b>Save changes</b></button>'
+            ])
 
     @property
     def body(self):
         return ''.join([
-            self.forms,
+            self.form,
             '<section id="status"></section>',
-            '<footer><p>Not all configuration parameters are listed.  ',
+            '<footer><p>Not all configuration parameters are listed 2.  ',
             'Edit the config file directly to change any parameters.</p>',
-            '</footer></div></body></html>'])
+            '</footer>'])
 
+    def lookup_config_size(self):
+        size_text = self.config['channels']['thumbnail_size']
+        if size_text == 'Tiny(16)':
+            return 16
+        elif size_text == 'Small(48)':
+            return 48
+        elif size_text == 'Medium(128)':
+            return 128
+        elif size_text == 'Large(180)':
+            return 180
+        elif size_text == 'X-Large(270)':
+            return 270
+        elif size_text == 'Full-Size':
+            return None
+        else:
+            self.logger.warning('UNKNOWN [channels][thumbnail_size] = {}'.format(size_text))
+            return None

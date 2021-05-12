@@ -19,6 +19,7 @@ substantial portions of the Software.
 import datetime
 import json
 import logging
+import io
 import urllib.request
 
 import lib.m3u8 as m3u8
@@ -26,6 +27,7 @@ import lib.common.exceptions as exceptions
 from lib.common.decorators import handle_url_except
 from lib.common.decorators import handle_json_except
 from lib.db.db_channels import DBChannels
+import lib.image_size.get_image_size as get_image_size
 
 from . import constants
 # from .fcc_data import FCCData
@@ -90,10 +92,17 @@ class Channels:
             ch_id = str(locast_channel['id'])
             ch_callsign = locast_channel['name']
             thumbnail = None
+            thumbnail_size = None
             if 'logoUrl' in locast_channel.keys():
                 thumbnail = locast_channel['logoUrl']
             elif 'logo226Url' in locast_channel.keys():
                 thumbnail = locast_channel['logo226Url']
+            if thumbnail is not None:
+                with urllib.request.urlopen(thumbnail) as resp:
+                    img_blob = resp.read()
+                    fp = io.BytesIO(img_blob)
+                    sz = len(img_blob)
+                    thumbnail_size = get_image_size.get_image_size_from_bytesio(fp, sz)
             if 'videoProperties' in locast_channel['listings'][0]:
                 if 'HD' in locast_channel['listings'][0]['videoProperties']:
                     hd = 1
@@ -113,7 +122,8 @@ class Channels:
                     'group_hdtv': self.locast_instance.config_obj.data[self.config_section]['m3u-group_hdtv'],
                     'group_sdtv': self.locast_instance.config_obj.data[self.config_section]['m3u-group_sdtv'],
                     'groups_other': None,  # array list of groups/categories
-                    'thumbnail': thumbnail
+                    'thumbnail': thumbnail,
+                    'thumbnail_size': thumbnail_size
                 }
                 ch_list.append(channel)
             except ValueError:
