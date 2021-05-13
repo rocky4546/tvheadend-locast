@@ -46,8 +46,6 @@ class EPG:
         self.namespace = _namespace
         self.instance = _instance
 
-
-
     def get_epg_xml(self):
         self.plugins.refresh_epg(self.namespace, self.instance)
         xml_out = self.gen_header_xml()

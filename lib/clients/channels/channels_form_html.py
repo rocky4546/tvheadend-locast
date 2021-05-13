@@ -19,14 +19,9 @@ substantial portions of the Software.
 import urllib
 import io
 
-
-import json
-
-from lib.web.pages.templates import web_templates
+import lib.image_size.get_image_size as get_image_size
 from lib.common.decorators import getrequest
 from lib.common.decorators import postrequest
-import lib.clients.channels.channels as channels
-import lib.image_size.get_image_size as get_image_size
 
 
 @getrequest.route('/pages/channels_form.html')
@@ -124,7 +119,6 @@ class ChannelsFormHTML:
                 image_size = 'UNK'
                 img_width = 0
                 
-            print(display_image)
             if sid_data['json']['thumbnail_size'] is not None:
                 original_size = sid_data['json']['thumbnail_size']
             else:
