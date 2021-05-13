@@ -121,9 +121,10 @@ Function TestPython
     Pop $0 ;return value
     Pop $1 ; status text
     IntCmp $0 0 PythonFound
-        MessageBox MB_OK "$0 $1 Python 3.x not found, Make sure to install python$\r$\n\
+        MessageBox MB_OK "Python 3.x not found, Make sure to install python$\r$\n\
             for all users if a Windows Service is needed or single user$\r$\n\
-            without admin access"
+            without admin access$\r$\n\
+            $1"
         StrCpy $pythonpath ""
         Goto PythonMissing
     PythonFound:

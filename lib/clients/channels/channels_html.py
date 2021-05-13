@@ -20,7 +20,6 @@ import json
 
 from lib.web.pages.templates import web_templates
 from lib.common.decorators import getrequest
-from lib.common.decorators import postrequest
 import lib.clients.channels.channels as channels
 
 
