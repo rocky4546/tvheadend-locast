@@ -61,6 +61,7 @@ class TVHUserConfig:
             config_file = TVHUserConfig.get_config_path(_script_dir, _args)
             self.import_config(config_file)
             self.defn_json.call_oninit(self)
+            utils.logging_setup(self.data['paths'])
             self.defn_json.set_config(self.data)
             self.defn_json.save_defn_to_db()
         else:
@@ -79,7 +80,8 @@ class TVHUserConfig:
 
     def init_logger_config(self):
         log_sections = ['loggers', 'logger_root', 'handlers', 'formatters',
-            'handler_loghandler', 'formatter_extend', 'formatter_simple']
+            'handler_filehandler', 'handler_loghandler', 
+            'formatter_extend', 'formatter_simple']
         for section in log_sections:
             try:
                 self.config_handler.add_section(section)
@@ -89,13 +91,13 @@ class TVHUserConfig:
                 self.config_handler.set(section, key, str(value))
         with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
-        utils.logging_setup(self.data['paths']['config_file'])
+        utils.logging_setup(self.data['paths'])
 
     def import_config(self, config_file):
         self.config_handler.read(config_file)
         self.data['paths']['config_file'] = str(config_file)
         try:
-            utils.logging_setup(config_file)
+            utils.logging_setup(self.data['paths'])
         except KeyError:
             self.init_logger_config()
         self.logger = logging.getLogger(__name__)

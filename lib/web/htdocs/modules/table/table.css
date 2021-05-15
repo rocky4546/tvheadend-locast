@@ -10,17 +10,22 @@ table thead {
     font-size: 0.9em;
     line-height: 1.5;
 
-
-background: rgb(81,94,114); /* Old browsers */
-background: -moz-linear-gradient(top, rgba(81,94,114,1) 0%, rgba(103,123,140,1) 26%, rgba(153,165,193,1) 57%, rgba(177,190,226,1) 80%, rgba(145,168,201,1) 90%, rgba(109,130,175,1) 100%); /* FF3.6-15 */
-background: -webkit-linear-gradient(top, rgba(81,94,114,1) 0%,rgba(103,123,140,1) 26%,rgba(153,165,193,1) 57%,rgba(177,190,226,1) 80%,rgba(145,168,201,1) 90%,rgba(109,130,175,1) 100%); /* Chrome10-25,Safari5.1-6 */
-
+/* https://www.colorzilla.com/gradient-editor/ */
 background: linear-gradient(to bottom, rgb(50, 50, 80) 0%,rgb(88, 88, 100) 36%,rgb(121, 121, 170) 87%,rgb(140, 140, 181) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
-
-filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#515e72', endColorstr='#6d82af',GradientType=0 ); /* IE6-9 */
-
-
 }
+td.enabled {
+    background: rgba(0,255,133,0.6);
+}
+td.disabled {
+    background: rgba(255,0,0,0.6);
+}
+td.duplicate {
+    background: rgba(255,255,0,0.7);
+}
+td.duplicate_disabled {
+    background: rgba(255,0,108,0.7);
+}
+
 img.filterit {
     padding: 8px 8px 8px 5px;
     background: url("asc_w.gif");
@@ -41,14 +46,12 @@ img.sortit {
   border-right: 1px ridge rgb(230,230,230);
 
 }
-
-
 table.sortable td, table.sortable th {
+	border:1px solid rgb(180,180,180);
 	padding: 0px;
 }
 
-table, th, td {
-	border:1px solid rgb(180,180,180);
+table.sortable, th, td {
     border-collapse: collapse;
 }
 td {

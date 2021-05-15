@@ -70,7 +70,7 @@ logger = None
 
 def hdhr_process(config, _tuner_queue):
     global logger
-    utils.logging_setup(config['paths']['config_file'])
+    utils.logging_setup(config['paths'])
     logger = logging.getLogger(__name__)
     if config['hdhomerun']['udp_netmask'] is None:
         logger.error('Config setting [hdhomerun][udp_netmask] required. Exiting hdhr service')
@@ -353,7 +353,7 @@ class HDHRServer:
         return msg_type, value, _offset
 
     def run_multicast(self, _bind_ip=''):
-        utils.logging_setup(self.config['paths']['config_file'])
+        utils.logging_setup(self.config['paths'])
         self.logger = logging.getLogger(__name__ + '_udp')
         self.logger.info('UDP: Starting HDHR multicast server')
         self.sock_multicast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)

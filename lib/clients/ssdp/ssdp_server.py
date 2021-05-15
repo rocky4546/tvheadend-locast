@@ -54,7 +54,7 @@ class SSDPServer:
     def __init__(self, _config):
         self.config = _config
         self.sock = None
-        utils.logging_setup(self.config['paths']['config_file'])
+        utils.logging_setup(self.config['paths'])
         self.logger = logging.getLogger(__name__)
 
     def run(self, _bind_ip=''):

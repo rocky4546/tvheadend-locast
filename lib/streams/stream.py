@@ -38,13 +38,15 @@ class Stream:
                 {'namespace': _namespace, 'tuner': _index, 
                 'channel': _channel, 'status': _status})
 
-    def find_tuner(self, _namespace, _ch_num, _tuner):
+    def find_tuner(self, _namespace, _instance, _ch_num, _tuner):
         # keep track of how many tuners we can use at a time
         index = -1
-        for index, scan_status in enumerate(WebHTTPHandler.rmg_station_scans):
+        scan_list = WebHTTPHandler.rmg_station_scans[_namespace]
+        for index, scan_status in enumerate(scan_list):
             # the first idle tuner gets it
             if scan_status == 'Idle':
-                WebHTTPHandler.rmg_station_scans[_namespace][index] = _ch_num
+                WebHTTPHandler.rmg_station_scans[_namespace][index] = {'instance': _instance, 'ch': _ch_num}
+                self.logger.debug('Using tuner: [{}][{}]'.format(_namespace, _instance))
                 self.put_hdhr_queue(_namespace, index, _ch_num, 'Stream')
                 break
         return index
@@ -61,14 +63,14 @@ class Stream:
         return self.plugins.plugins[_channel_dict['namespace']] \
             .plugin_obj.get_channel_uri(_channel_dict['uid'], _channel_dict['instance'])
 
-    def gen_response(self, _namespace, _ch_num, _tuner):
+    def gen_response(self, _namespace, _instance, _ch_num, _tuner):
         """
         Returns dict where the dict is consistent with
         the method do_dict_response requires as an argument
         A code other than 200 means do not tune
         dict also include a "tuner_index" that informs caller what tuner is allocated
         """
-        index = self.find_tuner(_namespace, _ch_num, _tuner)
+        index = self.find_tuner(_namespace, _instance, _ch_num, _tuner)
         if index >= 0:
             return {
                 'tuner': index,

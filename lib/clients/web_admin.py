@@ -53,7 +53,8 @@ class WebAdminHttpHandler(WebHTTPHandler):
     def do_GET(self):
         valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
         self.content_path, self.query_data = self.get_query_data()
-
+        self.plugins.config_obj.refresh_config_data()
+        self.config = self.plugins.config_obj.data
         if getrequest.call_url(self, self.content_path):
             pass
         elif valid_check:
@@ -73,6 +74,8 @@ class WebAdminHttpHandler(WebHTTPHandler):
         self.logger.debug('Receiving POST form {} {}'.format(self.content_path, self.query_data))
         # get POST data
         self.content_path, self.query_data = self.get_query_data()
+        self.plugins.config_obj.refresh_config_data()
+        self.config = self.plugins.config_obj.data
         if postrequest.call_url(self, self.content_path):
             pass
         else:

@@ -112,7 +112,11 @@ class DBepg(DB):
 
     def get_next_row(self):
         row = self.get_dict_next()
+        namespace = None
+        instance = None
         if row:
+            namespace = row['namespace']
+            instance = row['instance']
             json_data = json.loads(row['json'])
             row = json_data
-        return row
+        return row, namespace, instance

@@ -52,33 +52,57 @@ class EPG:
         channel_list = self.channels_db.get_channels(self.namespace, self.instance)
         self.gen_channel_xml(xml_out, channel_list)
         self.epg_db.init_get_query(self.namespace, self.instance)
-        day_data = self.epg_db.get_next_row()
+        day_data, ns, inst = self.epg_db.get_next_row()
+        self.prog_processed = []
         while day_data:
-            self.gen_program_xml(xml_out, day_data)
-            day_data = self.epg_db.get_next_row()
+            self.gen_program_xml(xml_out, day_data, channel_list, ns, inst)
+            day_data, ns, inst = self.epg_db.get_next_row()
         epg_dom = minidom.parseString(ElementTree.tostring(xml_out, encoding='UTF-8', method='xml'))
         return epg_dom.toprettyxml()
 
     def gen_channel_xml(self, _et_root, _channel_list):
-        for sid, ch_data in _channel_list.items():
-            updated_chnum = utils.wrap_chnum(
-                ch_data['display_number'], ch_data['namespace'], 
-                ch_data['instance'], self.config)
-            c_out = EPG.sub_el(_et_root, 'channel', id=sid)
-            EPG.sub_el(c_out, 'display-name', _text='%s %s' %
-                (updated_chnum, ch_data['display_name']))
-            EPG.sub_el(c_out, 'display-name', _text='%s %s' % 
-                (updated_chnum, ch_data['json']['callsign']))
-            EPG.sub_el(c_out, 'display-name', _text=ch_data['display_number'])
-            EPG.sub_el(c_out, 'display-name', _text=ch_data['json']['callsign'])
-            EPG.sub_el(c_out, 'display-name', _text=ch_data['display_name'])
+        sids_processed = []
+        for sid, sid_data_list in _channel_list.items():
+            if sid in sids_processed:
+                continue
+            sids_processed.append(sid)
 
-            if self.config['epg']['epg_channel_icon']:
-                EPG.sub_el(c_out, 'icon', src=ch_data['thumbnail'])
+            for ch_data in sid_data_list:
+                if not ch_data['enabled']:
+                    continue
+
+                updated_chnum = utils.wrap_chnum(
+                    ch_data['display_number'], ch_data['namespace'], 
+                    ch_data['instance'], self.config)
+                c_out = EPG.sub_el(_et_root, 'channel', id=sid)
+                EPG.sub_el(c_out, 'display-name', _text='%s %s' %
+                    (updated_chnum, ch_data['display_name']))
+                EPG.sub_el(c_out, 'display-name', _text='%s %s' % 
+                    (updated_chnum, ch_data['json']['callsign']))
+                EPG.sub_el(c_out, 'display-name', _text=ch_data['display_number'])
+                EPG.sub_el(c_out, 'display-name', _text=ch_data['json']['callsign'])
+                EPG.sub_el(c_out, 'display-name', _text=ch_data['display_name'])
+
+                if self.config['epg']['epg_channel_icon']:
+                    EPG.sub_el(c_out, 'icon', src=ch_data['thumbnail'])
         return _et_root
     
-    def gen_program_xml(self, _et_root, _prog_list):        
+    def gen_program_xml(self, _et_root, _prog_list, _channel_list, _ns, _inst):
         for prog_data in _prog_list:
+            proginfo = prog_data['start']+prog_data['channel']
+            if proginfo in self.prog_processed:
+                continue
+            skip = False
+            for ch_data in _channel_list[prog_data['channel']]:
+                if ch_data['namespace'] == _ns \
+                        and ch_data['instance'] == _inst \
+                        and not ch_data['enabled']:
+                    skip = True
+                    break
+            if skip:
+                continue
+            self.prog_processed.append(proginfo)
+    
             prog_out = EPG.sub_el(_et_root, 'programme', 
                 start=prog_data['start'], 
                 stop=prog_data['stop'], 
@@ -89,7 +113,6 @@ class EPG:
                 EPG.sub_el(prog_out, 'sub-title', lang='en', _text=prog_data['subtitle'])
             descr_add = ''
             if self.config['epg']['description'] == 'extend':
-                
                 if prog_data['formatted_date']:
                     descr_add += '(' + prog_data['formatted_date'] + ') '
                 if prog_data['genres']:
