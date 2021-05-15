@@ -110,6 +110,7 @@ class Channels:
                 friendly_name = locast_channel['callSign'].split()[1]
                 channel = {
                     'id': ch_id,
+                    'enabled': True,
                     'callsign': ch_callsign,
                     'number': channel,
                     'name': friendly_name,

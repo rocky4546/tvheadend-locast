@@ -5,59 +5,9 @@
         "label": "Logging",
         "description": "Python Logging Settings",
         "sections":{
-            "handler_filehandler":{
-                "label": "File Log Handler",
-                "sort": "1",
-                "icon": "comment",
-                "description": "Python debug log settings",
-                "settings":{
-                    "enabled":{
-                        "label": "Enabled",
-                        "type": "boolean",
-                        "default": false,
-                        "level": 1,
-                        "onChange": "lib.config.config_callbacks.logging_enable",
-                        "help": "Used to enable debug logging to the data area"
-                    },
-                    "level":{
-                        "label": "Level",
-                        "type": "list",
-                        "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-                        "default": "INFO",
-                        "level": 1,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": "Used for debugging. Default is INFO"
-                    },
-                    "formatter":{
-                        "label": "formatter",
-                        "type": "list",
-                        "values": ["extend", "simple"],
-                        "default": "extend",
-                        "level": 2,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": "Use with or without date stamps"
-                    },
-                    "class":{
-                        "label": "class",
-                        "type": "string",
-                        "default": "handlers.RotatingFileHandler",
-                        "level": 4,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": null
-                    },
-                    "args":{
-                        "label": "args",
-                        "type": "string",
-                        "default": "(os.getenv('LOGS_DIR','data/logs')+'/cabernet.log', 'a', 1000000, 10)",
-                        "level": 4,
-                        "onChange": "lib.config.config_callbacks.logging_refresh",
-                        "help": "Arguments are path-filename, a=append, 1000000 is max size per file, 10 is max number of files to keep"
-                    }
-                }
-            },
             "handler_loghandler":{
                 "label": "System Log Handler",
-                "sort": "2",
+                "sort": "1",
                 "icon": "comment",
                 "description": "Python system log settings",
                 "settings":{
@@ -102,6 +52,56 @@
                         "level": 4,
                         "onChange": "lib.config.config_callbacks.logging_refresh",
                         "help": null
+                    }
+                }
+            },
+            "handler_filehandler":{
+                "label": "File Log Handler",
+                "sort": "2",
+                "icon": "comment",
+                "description": "Python debug log settings",
+                "settings":{
+                    "enabled":{
+                        "label": "Enabled",
+                        "type": "boolean",
+                        "default": false,
+                        "level": 1,
+                        "onChange": "lib.config.config_callbacks.logging_enable",
+                        "help": "Used to enable debug logging to the data area"
+                    },
+                    "level":{
+                        "label": "Level",
+                        "type": "list",
+                        "values": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        "default": "INFO",
+                        "level": 1,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": "Used for debugging. Default is INFO"
+                    },
+                    "formatter":{
+                        "label": "formatter",
+                        "type": "list",
+                        "values": ["extend", "simple"],
+                        "default": "extend",
+                        "level": 2,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": "Use with or without date stamps"
+                    },
+                    "class":{
+                        "label": "class",
+                        "type": "string",
+                        "default": "handlers.RotatingFileHandler",
+                        "level": 4,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": null
+                    },
+                    "args":{
+                        "label": "args",
+                        "type": "string",
+                        "default": "(os.getenv('LOGS_DIR','data/logs')+'/cabernet.log', 'a', 1000000, 10)",
+                        "level": 4,
+                        "onChange": "lib.config.config_callbacks.logging_refresh",
+                        "help": "Arguments are path-filename, a=append, 1000000 is max size per file, 10 is max number of files to keep"
                     }
                 }
             },

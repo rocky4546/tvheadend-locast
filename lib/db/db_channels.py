@@ -94,7 +94,7 @@ sqlcmds = {
     'channels_get':
         """
         SELECT * FROM channels WHERE namespace LIKE ?
-        AND instance LIKE ? ORDER BY CAST(number as FLOAT)
+        AND instance LIKE ? ORDER BY CAST(number as FLOAT), namespace, instance
         """,
     'channels_one_get':
         """

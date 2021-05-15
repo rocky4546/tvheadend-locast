@@ -79,12 +79,12 @@ class ChannelsFormHTML:
             'type="submit"><b>Save changes</b></button>'
             '</td></tr></table>',
             '<table class="sortable" ><thead><tr>',
-            '<th style="min-width: 3ch;" class="header"><label title="enabled=green, disabled=red, disabled dup=violet, duplicate=yellow indicator"><img class="filterit"><span class=vertline><img></span></label></th>',
+            '<th style="min-width: 7ch;" class="header"><label title="enabled=green, disabled=red, disabled dup=violet, duplicate=yellow indicator"><input type=checkbox><img class="sortit"><img class="filterit"><span class=vertline><img></span></label></th>',
             '<th style="min-width: 11ch;" class="header"><label title="Table is for a plugin. Each row has an instance for a channel">instance<img class="sortit"><img class="filterit"><span class=vertline><img></span></label></th>',
             '<th style="min-width: 8ch;" class="header"><label title="Channel number.  DVR may require this to be a number">num<img class="sortit"><img class="filterit"><span class=vertline><img></span></label></th>',
             '<th style="min-width: 10ch;" class="header"><label title="Channel display name">name<img class="sortit"><img class="filterit"><span class=vertline><img></span></label></th>',
             '<th style="min-width: 10ch;" class="header"><label title="Group or tag name. Expects only one value">group<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
-            '<th class="header"><label title="Use http:// https:// or (Linux) file:/// (Windows) file://C:/ Be careful when using spaces in the path">thumbnail<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
+            '<th class="header"><label title="Use http:// https:// or (Linux) file:/// (Windows) file:///C:/ Be careful when using spaces in the path">thumbnail<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
             '<th class="header"><label title="Extra data used in filtering">metadata<img class="sortit"><span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
             '</tr></thead>'
             ])

@@ -66,13 +66,11 @@ class EPG:
             if sid in sids_processed:
                 continue
             sids_processed.append(sid)
-
             for ch_data in sid_data_list:
                 if not ch_data['enabled']:
-                    continue
-
+                    break
                 updated_chnum = utils.wrap_chnum(
-                    ch_data['display_number'], ch_data['namespace'], 
+                    ch_data['display_number'], ch_data['namespace'],
                     ch_data['instance'], self.config)
                 c_out = EPG.sub_el(_et_root, 'channel', id=sid)
                 EPG.sub_el(c_out, 'display-name', _text='%s %s' %
@@ -85,6 +83,7 @@ class EPG:
 
                 if self.config['epg']['epg_channel_icon']:
                     EPG.sub_el(c_out, 'icon', src=ch_data['thumbnail'])
+                break
         return _et_root
     
     def gen_program_xml(self, _et_root, _prog_list, _channel_list, _ns, _inst):
