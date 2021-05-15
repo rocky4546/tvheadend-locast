@@ -50,14 +50,18 @@ def handle_json_except(f):
 
 
 class Request:
-
+    """
+    Adds urls to functions for GET and POST methods
+    """
+    
     def __init__(self):
         self.url2func = {}
         self.method = None
 
-    def route(self, pattern):
+    def route(self, *pattern):
         def wrap(func):
-            self.url2func[pattern] = func
+            for p in pattern:
+                self.url2func[p] = func
             return func
         return wrap
 
@@ -66,9 +70,9 @@ class Request:
         for name in self.url2func.keys():
             logger.debug('Registering {} URL: {}'.format(self.method, name))
 
-    def call_url(self, tuner, name, *args, **kwargs):
-        if name in self.url2func:
-            self.url2func[name](tuner, *args, **kwargs)
+    def call_url(self, _tuner, _name, *args, **kwargs):
+        if _name in self.url2func:
+            self.url2func[_name](_tuner, *args, **kwargs)
             return True
         else:
             return False
@@ -80,7 +84,6 @@ class GetRequest(Request):
         super().__init__()
         self.method = 'GET'
 
-
     
 class PostRequest(Request):
 
@@ -89,5 +92,23 @@ class PostRequest(Request):
         self.method = 'POST'
 
 
+class FileRequest(Request):
+    """
+    Adds HTDOCS areas to be processed by function
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.method = 'GET'
+
+    def call_url(self, _tuner, _name, *args, **kwargs):
+        for key in self.url2func.keys():
+            if _name.startswith(key):
+                self.url2func[key](_tuner, *args, **kwargs)
+                return True
+        return False
+
+
 getrequest = GetRequest()
 postrequest = PostRequest()
+filerequest = FileRequest()

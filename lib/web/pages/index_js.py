@@ -23,6 +23,7 @@ from lib.common.decorators import getrequest
 def pages_index_js(_tuner):
     indexjs = IndexJS()
     _tuner.do_mime_response(200, 'text/javascript', indexjs.get(_tuner.config))
+    return True
 
 
 class IndexJS:

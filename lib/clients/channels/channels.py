@@ -61,9 +61,9 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
         for sid_data in sid_data_list:
             if sid in sids_processed:
                 continue
+            sids_processed.append(sid)
             if not sid_data['enabled']:
                 continue
-            sids_processed.append(sid)
             # NOTE tvheadend supports '|' separated names in two attributes
             # either 'group-title' or 'tvh-tags'
             # if a ';' is used in group-title, tvheadend will use the 
@@ -119,9 +119,9 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
         for sid_data in sid_data_list:
             if sid in sids_processed:
                 continue
+            sids_processed.append(sid)
             if not sid_data['enabled']:
                 continue
-            sids_processed.append(sid)
             return_json = return_json + \
                 ch_templates['jsonLineup'].format(
                     sid_data['number'],
@@ -149,9 +149,9 @@ def get_channels_xml(_config, _base_url, _namespace, _instance):
         for sid_data in sid_data_list:
             if sid in sids_processed:
                 continue
+            sids_processed.append(sid)
             if not sid_data['enabled']:
                 continue
-            sids_processed.append(sid)
             return_xml = return_xml + \
                 ch_templates['xmlLineup'].format(
                     sid_data['number'],

@@ -115,18 +115,18 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
                     self.logger.debug('Client dropped connection while writing out, ignoring. {}'.format(ex))
 
             except IsADirectoryError as e:
-                self.logger.info(e)
+                self.logger.info('1:{}'.format(e))
                 self.do_mime_response(401, 'text/html', web_templates['htmlError'].format('401 - Unauthorized'))
             except FileNotFoundError as e:
-                self.logger.info(e)
+                self.logger.info('2:{}'.format(e))
                 self.do_mime_response(404, 'text/html', web_templates['htmlError'].format('404 - File Not Found'))
             except NotADirectoryError as e:
-                self.logger.info(e)
+                self.logger.info('3:{}'.format(e))
                 self.do_mime_response(404, 'text/html', web_templates['htmlError'].format('404 - Folder Not Found'))
             except ConnectionAbortedError as e:
-                self.logger.info(e)
+                self.logger.info('4:{}'.format(e))
             except ModuleNotFoundError as e:
-                self.logger.info(e)
+                self.logger.info('5:{}'.format(e))
                 self.do_mime_response(404, 'text/html', web_templates['htmlError'].format('404 - Area Not Found'))
 
     def do_response(self, _code, _mime, _reply_str=None):

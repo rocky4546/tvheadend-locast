@@ -25,8 +25,38 @@ from http.server import HTTPServer
 
 from lib.common.decorators import getrequest
 from lib.common.decorators import postrequest
+from lib.common.decorators import filerequest
 from lib.web.pages.templates import web_templates
 from .web_handler import WebHTTPHandler
+
+
+@filerequest.route('/html/', '/images/', '/modules/')
+def lib_web_htdocs(_tuner):
+    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _tuner.path)
+    if not valid_check:
+        return False
+    file_path = valid_check.group(1)
+    htdocs_path = _tuner.config['paths']['www_pkg']
+    path_list = file_path.split('/')
+    fullfile_path = htdocs_path + '.'.join(path_list[:-1])
+    _tuner.do_file_response(200, fullfile_path, path_list[-1])
+    return True
+
+
+@filerequest.route('/temp/')
+def data_web(_tuner):
+    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _tuner.path)
+    if not valid_check:
+        return False
+    url_path = valid_check.group(1)
+
+    temp_path = pathlib.Path(_tuner.config['paths']['data_dir'],
+        'web')
+    if not temp_path.exists():
+        return False
+    path_list = url_path.split('/')
+    file_path = temp_path.joinpath(*path_list[:])
+    _tuner.do_file_response(200, None, file_path)
 
 
 class WebAdminHttpHandler(WebHTTPHandler):
@@ -57,12 +87,8 @@ class WebAdminHttpHandler(WebHTTPHandler):
         self.config = self.plugins.config_obj.data
         if getrequest.call_url(self, self.content_path):
             pass
-        elif valid_check:
-            file_path = valid_check.group(1)
-            htdocs_path = self.config["paths"]["www_pkg"]
-            path_list = file_path.split('/')
-            fullfile_path = htdocs_path + '.'.join(path_list[:-1])
-            self.do_file_response(200, fullfile_path, path_list[-1])
+        elif filerequest.call_url(self, self.content_path):
+            pass
         else:
             self.logger.info('UNKNOWN HTTP Request {}'.format(self.content_path))
             self.do_mime_response(501, 'text/html', 
@@ -130,6 +156,7 @@ class WebAdminHttpHandler(WebHTTPHandler):
         super(WebAdminHttpHandler, cls).init_class_var(_plugins, _hdhr_queue)
         getrequest.log_urls()
         postrequest.log_urls()
+        filerequest.log_urls()
         
 
 class WebAdminHttpServer(Thread):

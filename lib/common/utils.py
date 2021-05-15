@@ -24,6 +24,7 @@ import mimetypes
 import ntpath
 import os
 import pathlib
+import platform
 import shutil
 import socket
 import struct
@@ -31,7 +32,7 @@ import sys
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.4'
+VERSION = '0.8.4a'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -39,6 +40,7 @@ CABERNET_NAME = 'cabernet'
 def get_version_str():
     return VERSION
 
+logger = None
 
 def logging_setup(_config_paths):
     if os.environ.get('LOGS_DIR') is None:
@@ -50,6 +52,7 @@ def logging_setup(_config_paths):
     if str(logging.getLevelName('NOTUSED')).startswith('Level'):
         logging.config.fileConfig(fname=_config_paths['config_file'])
         logging.addLevelName(100, 'NOTUSED')
+    logger = logging.getLogger(__name__)
 
 
 def clean_exit(exit_code=0):
@@ -164,24 +167,28 @@ def process_image_url(_config, _thumbnail_url):
         if mime_lookup[0] is not None and \
                 mime_lookup[0].startswith('image'):
             old_path = _thumbnail_url.replace('file://', '')
-            new_path = pathlib.Path(_config['paths']['main_dir']) \
-                .joinpath('lib/web/htdocs/temp') \
-                .joinpath(new_filename)
+            new_path = pathlib.Path(_config['paths']['data_dir'],
+                'web', 'temp')
+            if not new_path.exists():
+                os.makedirs(new_path)
+            new_path = new_path.joinpath(new_filename)
             if not new_path.exists():
                 try:
                     shutil.copyfile(old_path, new_path)
-                except OSError:
-                    # windows path exception.  remove '/'
-                    try:
-                        shutil.copyfile(old_path[1:], new_path)                
-                    except FileNotFoundError:
-                        logger = logging.getLogger(__name__)
-                        logger.warning('Image file not found: {}'.format(old_path))
-                        return '/temp/FILENOTFOUND'
                 except FileNotFoundError:
-                    logger = logging.getLogger(__name__)
-                    logger.warning('Image file not found: {}'.format(old_path))
+                    logging.warning('FileNotFoundError: Image not found: {}'.format(old_path))
                     return '/temp/FILENOTFOUND'
+                except OSError as e:
+                    try:
+                        if platform.system() in ['Windows']:
+                            # standard windows path exception.  remove '/'
+                            shutil.copyfile(old_path[1:], new_path)                
+                        else:
+                            logging.warning('3 OSError:{}'.format(e))
+                            return '/temp/FILENOTFOUND'
+                    except FileNotFoundError:
+                        logging.warning('FileNotFoundError: Image file not found: {}'.format(old_path[1:]))
+                        return '/temp/FILENOTFOUND'
             return '/temp/'+new_filename
         else:
             return '/temp/NOTANIMAGE'
@@ -189,8 +196,8 @@ def process_image_url(_config, _thumbnail_url):
         return _thumbnail_url
 
 def cleanup_web_temp(_config):
-    dir = _config['paths']['main_dir']
-    filelist = glob.glob(os.path.join(dir, 'lib', 'web', 'htdocs', 'temp', '[!__]*'))
+    dir = _config['paths']['data_dir']
+    filelist = glob.glob(os.path.join(dir, 'web', 'temp', '*'))
     for f in filelist:
         if os.path.isfile(f):
             os.remove(f)
@@ -220,3 +227,4 @@ def set_str(string, add_null):
         return struct.pack('B%dsB' % (len(string)), len(string) + 1, string, 0)
     else:
         return struct.pack('B%ds' % (len(string)), len(string), string)
+
