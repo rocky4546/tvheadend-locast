@@ -41,6 +41,15 @@
                         "onInit": "lib.config.config_callbacks.set_database_path",
                         "help": "Location of temporary files"
                     },
+                    "logs_dir":{
+                        "label": "Log Path",
+                        "type": "path",
+                        "default": null,
+                        "level": 1,
+                        "writable": false,
+                        "onInit": "lib.config.config_callbacks.set_logs_path",
+                        "help": "Location of log files when set to be used"
+                    },
                     "cache_dir":{
                         "label": "Cache Path",
                         "type": "path",

@@ -69,6 +69,20 @@ def logging_refresh(_config_obj, _section, _key):
     with urllib.request.urlopen(req) as resp:
         content = resp.read()
 
+def logging_enable(_config_obj, _section, _key):
+    # update the config_file to enable or disable the log
+    # [logger_root]
+    # handlers = loghandler, filehandler
+    handler_list = []
+    if _config_obj.data['handler_filehandler']['enabled']:
+        handler_list.append('filehandler')
+    elif _config_obj.data['handler_loghandler']['enabled']:
+        handler_list.append('loghandler')
+    handlers = ','.join(handler_list)
+    _config_obj.write('logger_root', 'handlers', handlers)
+    _config_obj.data['logger_root']['handlers'] = handlers
+    logging_refresh(_config_obj, _section, _key)
+
 
 def set_version(_config_obj, _section, _key):
     _config_obj.data[_section][_key] \
@@ -93,6 +107,10 @@ def set_data_path(_config_obj, _section, _key):
 def set_cache_path(_config_obj, _section, _key):
     set_path(_config_obj, _section, _key,
         _config_obj.data["paths"]["data_dir"], 'cache')
+
+def set_logs_path(_config_obj, _section, _key):
+    set_path(_config_obj, _section, _key,
+        _config_obj.data["paths"]["data_dir"], 'logs')
 
 
 def set_stations_path(_config_obj, _section, _key):

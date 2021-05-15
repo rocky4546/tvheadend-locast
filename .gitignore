@@ -22,6 +22,8 @@ cache/*_epg.xml*
 cache/stations/*facilities.json*
 *.ts
 lib/tvheadend/development/
+lib/web/htdocs/temp/*
+!lib/web/htdocs/temp/__init__.py
 build/*/tvheadend*.exe
 ffmpeg/
 #IntelliJ

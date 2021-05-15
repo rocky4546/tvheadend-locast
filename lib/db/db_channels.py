@@ -76,6 +76,12 @@ sqlcmds = {
             enabled=?, number=?, thumbnail=?, thumbnail_size=?, updated=?, json=?
             WHERE namespace=? AND instance=? AND uid=?
         """,
+    'channels_editable_update':
+        """
+        UPDATE channels SET 
+            enabled=?, display_number=?, display_name=?, group_tag=?, thumbnail=?, thumbnail_size=?
+            WHERE namespace=? AND instance=? AND uid=?
+        """,        
     'channels_updated_update':
         """
         UPDATE channels SET updated = False
@@ -160,6 +166,21 @@ class DBChannels(DB):
                 _namespace, _instance, datetime.datetime.now()))
         self.delete(DB_CHANNELS_TABLE, (False, _namespace, _instance,))
 
+    def update_channel(self, _ch):
+        """
+        Updates the editable fields for one channel
+        """
+        self.update(DB_CHANNELS_TABLE+'_editable', (
+            _ch['enabled'],
+            _ch['display_number'],
+            _ch['display_name'],
+            _ch['group_tag'],
+            _ch['thumbnail'],
+            str(_ch['thumbnail_size']),
+            _ch['namespace'],
+            _ch['instance'],
+            _ch['uid']
+        ))
 
     def del_channels(self, _namespace, _instance):
         self.delete(DB_CHANNELS_TABLE, ('%', _namespace, _instance,))
@@ -187,7 +208,12 @@ class DBChannels(DB):
             ch = json.loads(row['json'])
             row['json'] = ch
             row['thumbnail_size'] = ast.literal_eval(row['thumbnail_size'])
-            rows_dict[row['uid']] = row
+            # handles the uid multiple times across instances
+            if row['uid'] in rows_dict.keys():
+                rows_dict[row['uid']].append(row)
+            else:
+                rows_dict[row['uid']] = []
+                rows_dict[row['uid']].append(row)
         return rows_dict
 
     def get_channel_names(self):

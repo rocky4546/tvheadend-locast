@@ -19,7 +19,6 @@ substantial portions of the Software.
 import datetime
 import json
 import logging
-import io
 import urllib.request
 
 import lib.m3u8 as m3u8
@@ -27,7 +26,7 @@ import lib.common.exceptions as exceptions
 from lib.common.decorators import handle_url_except
 from lib.common.decorators import handle_json_except
 from lib.db.db_channels import DBChannels
-import lib.image_size.get_image_size as get_image_size
+import lib.clients.channels.channels as channels
 
 from . import constants
 # from .fcc_data import FCCData
@@ -98,11 +97,7 @@ class Channels:
             elif 'logo226Url' in locast_channel.keys():
                 thumbnail = locast_channel['logo226Url']
             if thumbnail is not None:
-                with urllib.request.urlopen(thumbnail) as resp:
-                    img_blob = resp.read()
-                    fp = io.BytesIO(img_blob)
-                    sz = len(img_blob)
-                    thumbnail_size = get_image_size.get_image_size_from_bytesio(fp, sz)
+                thumbnail_size = channels.get_thumbnail_size(thumbnail)
             if 'videoProperties' in locast_channel['listings'][0]:
                 if 'HD' in locast_channel['listings'][0]['videoProperties']:
                     hd = 1

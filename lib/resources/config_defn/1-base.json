@@ -90,7 +90,7 @@
                         "label": "Thumbnail Size",
                         "type": "list",
                         "default": "Medium(128)",
-                        "values": ["Tiny(16)", "Small(48)", "Medium(128)", 
+                        "values": ["None", "Tiny(16)", "Small(48)", "Medium(128)", 
                             "Large(180)", "X-Large(270)", "Full-Size"],
                         "level": 1,
                         "help": "The default size of the thumbnails displayed in the Channel Editor"

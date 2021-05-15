@@ -123,8 +123,7 @@ Function TestPython
     IntCmp $0 0 PythonFound
         MessageBox MB_OK "Python 3.x not found, Make sure to install python$\r$\n\
             for all users if a Windows Service is needed or single user$\r$\n\
-            without admin access$\r$\n\
-            $1"
+            without admin access"
         StrCpy $pythonpath ""
         Goto PythonMissing
     PythonFound:

@@ -178,18 +178,23 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         tmp_rmg_scans = {}
         for plugin_name in _plugins.plugins.keys():
             if 'player-tuner_count' in _plugins.config_obj.data[plugin_name.lower()]:
+                WebHTTPHandler.logger.debug('{} Implementing {} tuners for {}'
+                    .format(cls.__name__,
+                    _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'],
+                    plugin_name))
                 tmp_rmg_scans[plugin_name] = []
                 for x in range(int(_plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'])):
                     tmp_rmg_scans[plugin_name].append('Idle')
+                
         WebHTTPHandler.rmg_station_scans = tmp_rmg_scans
-
+        
     @classmethod
     def start_httpserver(cls, _plugins, _hdhr_queue, _port, _http_server_class):
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((_plugins.config_obj.data['web']['bind_ip'], _port))
         server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
-        utils.logging_setup(_plugins.config_obj.data['paths']['config_file'])
+        utils.logging_setup(_plugins.config_obj.data['paths'])
         logger = logging.getLogger(__name__)
         logger.debug(
             'Now listening for requests. Number of listeners={}'

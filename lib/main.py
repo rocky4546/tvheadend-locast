@@ -75,9 +75,11 @@ def main(script_dir):
     config = config_obj.data
     logger = logging.getLogger(__name__)
 
+    logger.warning('#########################################')
     logger.warning('MIT License, Copyright (C) 2021 ROCKY4546')
     logger.info('Initiating Cabernet v' + utils.get_version_str())
 
+    utils.cleanup_web_temp(config)
     logger.info('Getting Plugins...')
     plugins = plugin_handler.PluginHandler(config_obj)
     plugins.initialize_plugins()
