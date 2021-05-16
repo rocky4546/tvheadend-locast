@@ -111,13 +111,13 @@ class TunerHttpHandler(WebHTTPHandler):
         self.config = self.plugins.config_obj.data
         self.config = self.db_configdefn.get_config()
         self.plugins.config_obj.data = self.config
-        try:
-            station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
-            self.real_namespace, self.real_instance, station_data = self.get_ns_inst_station(station_list[sid])
-        except KeyError:
-            self.logger.warning('Unknown channel id {}'.format(sid))
-            self.do_mime_response(501, 'text/html', web_templates['htmlError'].format('501 - Unknown channel'))
-            return
+        #try:
+        station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
+        self.real_namespace, self.real_instance, station_data = self.get_ns_inst_station(station_list[sid])
+        #except KeyError:
+            #self.logger.warning('Unknown channel id {}'.format(sid))
+            #self.do_mime_response(501, 'text/html', web_templates['htmlError'].format('501 - Unknown channel'))
+            #return
         if self.config[self.real_namespace.lower()]['player-stream_type'] == 'm3u8redirect':
             self.do_dict_response(self.m3u8_redirect.gen_m3u8_response(station_data))
             return
@@ -152,11 +152,13 @@ class TunerHttpHandler(WebHTTPHandler):
             ns.append(one_station['namespace'])
             inst.append(one_station['instance'])
             counter[one_station['instance']] = 0
-
         for namespace, status_list in WebHTTPHandler.rmg_station_scans.items():
             for status in status_list:
                 if type(status) is dict:
-                    counter[status['instance']] += 1
+                    if status['instance'] not in counter:
+                        counter[status['instance']] = 1
+                    else:
+                        counter[status['instance']] += 1
 
         # pick the instance with the lowest counter
         lowest_value = 100
@@ -170,7 +172,7 @@ class TunerHttpHandler(WebHTTPHandler):
         for i in range(len(inst)):
             if inst[i] == lowest_instance:
                 lowest_namespace = ns[i]
-
+        
         # find the station data associated with the pick
         station = None
         for one_station in _station_data:
