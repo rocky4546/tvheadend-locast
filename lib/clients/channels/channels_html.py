@@ -18,7 +18,6 @@ substantial portions of the Software.
 
 import json
 
-from lib.web.pages.templates import web_templates
 from lib.common.decorators import getrequest
 
 
@@ -53,7 +52,7 @@ class ChannelsHTML:
             '<link rel="stylesheet" type="text/css" href="/modules/tabs/tabs.css">',
             '<link rel="stylesheet" type="text/css" href="/modules/table/table.css">',
             '<script src="/modules/tabs/tabs.js"></script>',
-            '<script src="/modules/pages/channels.js"></script></head>',
+            '<script src="/modules/channels/channels.js"></script></head>',
             '<script>load_form_url("/pages/channels_form.html?name=',
             list(self.tab_names.keys())[0], '")</script>' ])
 

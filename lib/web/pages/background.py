@@ -67,8 +67,9 @@ def send_random_image(_tuner):
                 count -= 1
             if image_found:
                 _tuner.do_file_response(200, None, full_image_path)
+                _tuner.logger.debug('Background Image: {}'.format(str(image).replace(lbackground,'.')))
             else:
-                _tuner.logger.debug('Image not found at {}'.format(lbackground))
+                _tuner.logger.warning('Image not found at {}'.format(lbackground))
                 _tuner.do_mime_response(404, 'text/html',
                     web_templates['htmlError'].format('404 - Background Image Not Found'))
 
