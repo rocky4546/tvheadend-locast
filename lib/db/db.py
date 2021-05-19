@@ -84,8 +84,11 @@ class DB:
         cur = self.sql_exec(sqlcmd, _where)
         return cur.fetchall()
 
-    def get_dict(self, _table, _where=None):
-        sqlcmd = self.sqlcmds[''.join([_table, SQL_GET])]
+    def get_dict(self, _table, _where=None, sql=None):
+        if sql is None:
+            sqlcmd = self.sqlcmds[''.join([_table, SQL_GET])]
+        else:
+            sqlcmd = sql
         cur = self.sql_exec(sqlcmd, _where)
         records = cur.fetchall()
         rows = []

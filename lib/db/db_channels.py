@@ -231,3 +231,66 @@ class DBChannels(DB):
             row['json'] = ch
             return row
         return None
+
+    def get_sorted_channels(self, _namespace, _instance, _first_sort_key=[None, True], _second_sort_key=[None, True]):
+        """
+        Using dynamic SQl to create a SELECT statement and send to the DB
+        keys are [name_of_column, direction_asc=True]
+        """
+        where = ' WHERE namespace LIKE ? AND instance LIKE ? '
+        orderby_front = ' ORDER BY '
+        orderby_end = ' CAST(number as FLOAT), namespace, instance '
+        orderby1 = self.get_channels_orderby(_first_sort_key[0], _first_sort_key[1])
+        orderby2 = self.get_channels_orderby(_second_sort_key[0], _second_sort_key[1])
+        print(orderby1, orderby2)
+        sqlcmd = ''.join(['SELECT * FROM channels ', where, orderby_front, orderby1, orderby2, orderby_end])
+
+        if not _namespace:
+            _namespace = '%'
+        if not _instance:
+            _instance = '%'
+
+        rows_dict = {}
+        rows = self.get_dict(None, (_namespace, _instance,), sql=sqlcmd)
+        for row in rows:
+            ch = json.loads(row['json'])
+            row['json'] = ch
+            row['thumbnail_size'] = ast.literal_eval(row['thumbnail_size'])
+        return rows
+    
+    def get_channels_orderby(self, _column, _ascending):
+        str_types = ['namespace', 'instance', 'enabled', 'display_name', 'group_tag', 'thumbnail']
+        float_types = ['uid', 'display_number']
+        json_types = ['HD', 'callsign']
+        if _ascending:
+            dir = 'ASC'
+        else:
+            dir = 'DESC'
+        if _column is None:
+            return ''
+        elif _column in str_types:
+            return ''.join([_column, ' ', dir, ', '])
+        elif _column in float_types:
+            return ''.join(['CAST(', _column, ' as FLOAT) ', dir, ', '])
+        elif _column in json_types:
+            return ''.join(['JSON_EXTRACT(json, "$.', _column,  '") ', dir, ', '])    
+        
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    

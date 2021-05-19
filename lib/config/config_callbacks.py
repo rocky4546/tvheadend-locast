@@ -159,28 +159,29 @@ def set_ffprobe_path(_config_obj, _section, _key):
 
 
 def load_encrypted_setting(_config_obj, _section, _key):
-    if CRYPTO_LOADED and _config_obj.data['main']['encrypt_key'] is None \
-            and _config_obj.data['main']['use_encryption'] \
-            and _config_obj.data[_section][_key] is not None:
-        _config_obj.data['main']['encrypt_key'] = encryption.set_fernet_key().decode('utf-8')
-        if _config_obj.data[_section][_key].startswith(ENCRYPT_STRING):
-            # encrypted
-            _config_obj.data[_section][_key] \
-                = encryption.decrypt(
-                _config_obj.data[_section][_key],
-                _config_obj.data['main']['encrypt_key'])
-            if _config_obj.data[_section][_key] is None:
-                _config_obj.logger.error(
-                    'Unable to decrypt password. ' +
-                    'Try updating password in config file in clear text')
-        else:
-            # not encrypted
-            clear_pwd = _config_obj.data[_section][_key]
-            encrypted_pwd = encryption.encrypt(
-                _config_obj.data[_section][_key],
-                _config_obj.data['main']['encrypt_key'])
-            _config_obj.write(_section, _key, encrypted_pwd)
-            _config_obj.data[_section][_key] = clear_pwd
+    if CRYPTO_LOADED and _config_obj.data['main']['use_encryption']:
+        if _config_obj.data['main']['encrypt_key'] is None:
+            _config_obj.data['main']['encrypt_key'] = encryption.set_fernet_key().decode('utf-8')
+    
+        if _config_obj.data[_section][_key] is not None:
+            if _config_obj.data[_section][_key].startswith(ENCRYPT_STRING):
+                # encrypted
+                _config_obj.data[_section][_key] \
+                    = encryption.decrypt(
+                    _config_obj.data[_section][_key],
+                    _config_obj.data['main']['encrypt_key'])
+                if _config_obj.data[_section][_key] is None:
+                    _config_obj.logger.error(
+                        'Unable to decrypt password. ' +
+                        'Try updating password in config file in clear text')
+            else:
+                # not encrypted
+                clear_pwd = _config_obj.data[_section][_key]
+                encrypted_pwd = encryption.encrypt(
+                    _config_obj.data[_section][_key],
+                    _config_obj.data['main']['encrypt_key'])
+                _config_obj.write(_section, _key, encrypted_pwd)
+                _config_obj.data[_section][_key] = clear_pwd
 
 
 def set_ip(_config_obj, _section, _key):
@@ -231,11 +232,6 @@ def set_uuid(_config_obj, _section, _key):
         _config_obj.data["main"]["uuid"] = str(uuid.uuid1()).upper()
         _config_obj.write('main', 'uuid', _config_obj.data["main"]["uuid"])
 
-
-def check_value_4(_config_obj, _section, _key):
-    value = _config_obj.data[_section][_key]
-    if not 1 <= value <= 4:
-        _config_obj.data[_section][_key] = 4
 
 def update_instance_label(_config_obj, _section, _key):
     value = _config_obj.data[_section][_key]

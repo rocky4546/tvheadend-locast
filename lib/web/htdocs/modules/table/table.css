@@ -27,19 +27,59 @@ td.duplicate_disabled {
 }
 
 img.filterit {
-    padding: 8px 8px 8px 5px;
-    background: url("asc_w.gif");
+    padding: 8px 8px 13px 5px;
+    background-image: url("asc_w.gif");
 	background-repeat: no-repeat;
-  	background-position: right bottom;
+  	background-position: right center;
+    float: right
+}
+img.filterit:hover {
+    padding: 8px 8px 13px 5px;
+    background-image: linear-gradient(to right, rgba(200, 200, 255, 0), rgba(255, 255, 255, 0.5)), url("asc_w.gif");
+	background-repeat: no-repeat;
+  	background-position: right center;
     float: right
 }
 
-img.sortit {
-    padding: 8px;
+
+
+img.sortnone {
     background: url("both_w.gif");
+    padding: 8px 8px 8px 8px;
 	background-repeat: no-repeat;
   	background-position: left bottom;
 }
+img.sortnone:hover {
+    background: linear-gradient(to right, rgba(200, 200, 255, 0), rgba(255, 255, 255, 0.5)), url("both_w.gif");
+    padding: 8px 8px 8px 8px;
+	background-repeat: no-repeat;
+  	background-position: left bottom;
+}
+img.sortasc {
+    background: url("asc_w.gif");
+    padding: 8px 8px 8px 8px;
+	background-repeat: no-repeat;
+  	background-position: left bottom;
+}
+img.sortasc:hover {
+    background: linear-gradient(to right, rgba(200, 200, 255, 0), rgba(255, 255, 255, 0.5)), url("asc_w.gif");
+    padding: 8px 8px 8px 8px;
+	background-repeat: no-repeat;
+  	background-position: left bottom;
+}
+img.sortdesc {
+    background: url("desc_w.gif");
+    padding: 8px 8px 8px 8px;
+	background-repeat: no-repeat;
+  	background-position: left bottom;
+}
+img.sortdesc {
+    background: linear-gradient(to right, rgba(200, 200, 255, 0), rgba(255, 255, 255, 0.5)), url("desc_w.gif");
+    padding: 8px 8px 8px 8px;
+	background-repeat: no-repeat;
+  	background-position: left bottom;
+}
+
 .vertline{
   height: 100%;
   float: right;
