@@ -181,7 +181,22 @@ class TunerHttpHandler(WebHTTPHandler):
                 station = one_station
                 break
         return lowest_namespace, lowest_instance, station
-        
+
+
+    @classmethod
+    def init_class_var(cls, _plugins, _hdhr_queue):
+        WebHTTPHandler.logger = logging.getLogger(__name__)
+        tuner_count = 0
+        for plugin_name in _plugins.plugins.keys():
+            if 'player-tuner_count' in _plugins.config_obj.data[plugin_name.lower()]:
+                WebHTTPHandler.logger.debug('{} Implementing {} tuners for {}'
+                    .format(cls.__name__,
+                    _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'],
+                    plugin_name))
+                tuner_count += _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count']
+        WebHTTPHandler.total_tuners = tuner_count
+        super(TunerHttpHandler, cls).init_class_var(_plugins, _hdhr_queue)
+
 
 class TunerHttpServer(Thread):
 
