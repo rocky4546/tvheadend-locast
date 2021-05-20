@@ -242,7 +242,6 @@ class DBChannels(DB):
         orderby_end = ' CAST(number as FLOAT), namespace, instance '
         orderby1 = self.get_channels_orderby(_first_sort_key[0], _first_sort_key[1])
         orderby2 = self.get_channels_orderby(_second_sort_key[0], _second_sort_key[1])
-        print(orderby1, orderby2)
         sqlcmd = ''.join(['SELECT * FROM channels ', where, orderby_front, orderby1, orderby2, orderby_end])
 
         if not _namespace:

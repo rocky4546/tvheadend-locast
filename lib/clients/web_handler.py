@@ -45,6 +45,7 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
     channels_db = None
     rmg_station_scans = {}
     namespace_list = None
+    total_tuners = 0
 
     def log_message(self, _format, *args):
         if int(args[1]) > 399:
@@ -178,15 +179,13 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         tmp_rmg_scans = {}
         for plugin_name in _plugins.plugins.keys():
             if 'player-tuner_count' in _plugins.config_obj.data[plugin_name.lower()]:
-                WebHTTPHandler.logger.debug('{} Implementing {} tuners for {}'
-                    .format(cls.__name__,
-                    _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'],
-                    plugin_name))
                 tmp_rmg_scans[plugin_name] = []
                 for x in range(int(_plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'])):
                     tmp_rmg_scans[plugin_name].append('Idle')
-                
         WebHTTPHandler.rmg_station_scans = tmp_rmg_scans
+        if WebHTTPHandler.total_tuners == 0:
+            WebHTTPHandler.total_tuners = _plugins.config_obj.data['web']['concurrent_listeners']
+
         
     @classmethod
     def start_httpserver(cls, _plugins, _hdhr_queue, _port, _http_server_class):
@@ -196,11 +195,13 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
         utils.logging_setup(_plugins.config_obj.data['paths'])
         logger = logging.getLogger(__name__)
+        cls.init_class_var(_plugins, _hdhr_queue)
+        if cls.total_tuners == 0:
+            _plugins.config_obj.data['web']['concurrent_listeners']
         logger.debug(
             'Now listening for requests. Number of listeners={}'
-                .format(_plugins.config_obj.data['web']['concurrent_listeners']))
-        cls.init_class_var(_plugins, _hdhr_queue)
-        for i in range(int(_plugins.config_obj.data['web']['concurrent_listeners'])):
+                .format(cls.total_tuners))
+        for i in range(cls.total_tuners):
             _http_server_class(server_socket, _plugins)
         try:
             while True:

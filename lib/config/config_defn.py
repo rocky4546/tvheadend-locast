@@ -147,8 +147,11 @@ class ConfigDefn:
                     if key in _updated_data[section] and \
                             _updated_data[section][key][1] and \
                             'onChange' in setting_data:
-                        config_callbacks.call_function(setting_data['onChange'], section, key, _config_obj)
-                        results += '<li>[{}][{}] implemented</li>'.format(section, key)
+                        status = config_callbacks.call_function(setting_data['onChange'], section, key, _config_obj)
+                        if status is None:
+                            results += '<li>[{}][{}] implemented</li>'.format(section, key)
+                        else:
+                            results += '<li>[{}][{}] {}</li>'.format(section, key, status)
         return results
 
     def save_defn_to_db(self, _delta_defn=None):

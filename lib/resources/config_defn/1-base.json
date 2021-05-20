@@ -75,7 +75,8 @@
                         "label": "use_encryption",
                         "type": "boolean",
                         "default": false,
-                        "level": 2,
+                        "level": 1,
+                        "onChange": "lib.config.config_callbacks.check_encryption",
                         "help": "Will encrypt the password using a self-generated key.  Use with only one user running service."
                     }
                 }

@@ -26,15 +26,14 @@ import lib.common.utils as utils
 import lib.clients.channels.channels as channels
 
 
-
 @getrequest.route('/pages/channels_form.html')
-def get_channels_form_html(_tuner, _namespace=None, _sort_col=None, _sort_dir=None):
+def get_channels_form_html(_tuner, _namespace=None, _sort_col=None, _sort_dir=None, filter_dict=None):
     channels_form = ChannelsFormHTML(_tuner.channels_db, _tuner.config)
     if _namespace is None:
         name = _tuner.query_data['name']
     else:
         name = _namespace
-    form = channels_form.get(name, _sort_col, _sort_dir)
+    form = channels_form.get(name, _sort_col, _sort_dir, filter_dict)
     _tuner.do_mime_response(200, 'text/html', form)
 
 
@@ -45,17 +44,17 @@ def post_channels_html(_tuner):
     namespace = _tuner.query_data['name'][0]
     sort_col = _tuner.query_data['sort_col'][0]
     sort_dir = _tuner.query_data['sort_dir'][0]
-    print(sort_dir)
     del _tuner.query_data['name']
     del _tuner.query_data['instance']
     del _tuner.query_data['sort_dir']
     del _tuner.query_data['sort_col']
+    filter_dict = get_filter_data(_tuner.query_data)
     
     if sort_col is None:
         results = channels.update_channels(_tuner.config, namespace, _tuner.query_data)
         _tuner.do_mime_response(200, 'text/html', results)
     else:
-        get_channels_form_html(_tuner, namespace, sort_col, sort_dir)
+        get_channels_form_html(_tuner, namespace, sort_col, sort_dir, filter_dict)
 
 
 class ChannelsFormHTML:
@@ -70,10 +69,11 @@ class ChannelsFormHTML:
         self.sort_column = None
         self.sort_direction = None
 
-    def get(self, _namespace, _sort_col, _sort_dir):
+    def get(self, _namespace, _sort_col, _sort_dir, _filter_dict):
         self.sort_column = _sort_col
         self.sort_direction = _sort_dir
         self.namespace = _namespace
+        self.filter_dict = _filter_dict
         sort_data = self.get_db_sort_data(_sort_col, _sort_dir)
         self.ch_data = self.db.get_sorted_channels(self.namespace, None, sort_data[0], sort_data[1])
         return ''.join([self.header,self.body])
@@ -107,16 +107,13 @@ class ChannelsFormHTML:
             db_column1 = None
         return [[db_column1, ascending], [db_column2, ascending]]
 
-
-
-
-
     @property
     def header(self):
         return ''.join([
             '<html><head>',
             '<script src="/modules/channels/channelsform.js"></script>',
             '<script src="/modules/table/table.js"></script>',
+            '<link rel="stylesheet" type="text/css" href="/modules/channels/channelsform.css">',
             '</head><body>'
             ])
 
@@ -144,8 +141,8 @@ class ChannelsFormHTML:
             'type="submit"><b>Save changes</b></button>',
             '</td></tr></table>',
             '<table class="sortable" ><thead><tr>',
-            '<th style="min-width: 7ch;" class="header">'
-            '<input id="enabled" type=checkbox>',
+            '<th style="min-width: 7ch;" class="header"><label title="checkbox to enable/disable all displayed rows">',
+            '<input id="enabled" type=checkbox></label>',
             '<label title="enabled=green, disabled=red, disabled dup=violet, duplicate=yellow indicator">',
             '<img class="sortit ', header_dir['enabled'], '">',
             '<img class="filterit"><span class=vertline><img></span></label></th>',
@@ -164,17 +161,112 @@ class ChannelsFormHTML:
             '<th style="min-width: 10ch;" class="header"><label title="Group or tag name. Expects only one value">',
             'group',
             '<img class="sortit ', header_dir['group'], '">',
-            '<span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
+            '<img class="filterit"><span class=vertline><img></span></label></th>',
             '<th class="header"><label title="Use http:// https:// or (Linux) file:/// (Windows) file:///C:/ Be careful when using spaces in the path">',
             'thumbnail',
             '<img class="sortit ', header_dir['thumbnail'], '">',
-            '<span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
+            '<img class="filterit"><span class=vertline><img></span></label></th>',
             '<th class="header"><label title="Extra data used in filtering">',
             'metadata',
             '<img class="sortit ', header_dir['metadata'], '">',
-            '<span class="filter"><img class="filterit"></span><span class=vertline><img></span></label></th>',
+            '<img class="filterit"><span class=vertline><img></span></label></th>',
             '</tr></thead>'
+
+            '<div style="display: none;" id="enabled-menu" class="xmenu">',
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_enable_checkbox('enabled'), ' Active Normal ',
+            '</li>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_enable_checkbox('duplicate'), ' Active Duplicates ',
+            '</li>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_enable_checkbox('disabled'), ' Disabled Normal ',
+            '</li>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_enable_checkbox('duplicate_disabled'), ' Disabled Duplicates ',
+            '</li>',
+            '</ul>',
+            '</div>',
+
+            '<div style="display: none;" id="instance-menu" class="xmenu">',
+            '<center>instance</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_text_chkbox('instance'), ' Filter: ', self.get_filter_textbox('instance'), 
+            '</li>',
+            '</ul>',
+            '</div>',
+
+            '<div style="display: none;" id="num-menu" class="xmenu">',
+            '<center>num</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_text_chkbox('num'), ' Filter: ', self.get_filter_textbox('num'), 
+            '</li>',
+            '</ul>',
+            '</div>',
+            '<div style="display: none;" id="name-menu" class="xmenu">',
+            '<center>name</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_text_chkbox('name'), ' Filter: ', self.get_filter_textbox('name'), 
+            '</li>',
+            '</ul>',
+            '</div>',
+            '<div style="display: none;" id="group-menu" class="xmenu">',
+            '<center>group</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_text_chkbox('group'), ' Filter: ', self.get_filter_textbox('group'), 
+            '</li>',
+            '</ul>',
+            '</div>',
+            '<div style="display: none;" id="thumbnail-menu" class="xmenu">',
+            '<center>thumbnail</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            self.get_filter_text_chkbox('thumbnail'), ' Filter: ', self.get_filter_textbox('thumbnail'), 
+            '</li>',
+            '</ul>',
+            '</div>',
+            '<div style="display: none;" id="metadata-menu" class="xmenu">',
+            '<center>metadata</center>'
+            '<ul>',
+            '<li style="list-style-type:none;">',
+            '<input id="text-mi" name="metadata-checkbox" type=checkbox> Filter: <input name="metadata-text" type=text size=7>',
+            '</li>',
+            '</ul>',
+            '</div>',
             ])
+
+
+    def get_filter_enable_checkbox(self, _name):
+        name = _name + "-mi"
+        if self.filter_dict is None:
+            return '<input id="' + name + '" name="' + name + '" value="1" type=checkbox checked>'
+        elif name in self.filter_dict:
+            return '<input id="' + name + '" name="' + name + '" value="1" type=checkbox checked>'
+        else:
+            return '<input id="' + name + '" name="' + name + '" value="1" type=checkbox>'
+
+
+    def get_filter_textbox(self, _name):
+        name = _name + "-text"
+        if self.filter_dict is not None and self.filter_dict[name] is not None:
+            return '<input name="' + name + '" type=text size=7 value="' + self.filter_dict[name] + '">'
+        else:
+            return '<input name="' + name + '" type=text size=7>'
+
+    def get_filter_text_chkbox(self, _name):
+        name = _name + "-checkbox"
+        if self.filter_dict is None:
+            return '<input id="text-mi" name="' + name + '" value="1" type=checkbox>'        
+        elif name in self.filter_dict:
+            return '<input id="text-mi" name="' + name + '" value="1" type=checkbox checked>'
+        else:
+            return '<input id="text-mi" name="' + name + '" value="1" type=checkbox>'
+        
 
     @property
     def form(self):
@@ -235,7 +327,7 @@ class ChannelsFormHTML:
                 original_size = 'UNK'
             row = ''.join([
                 '<tr><td style="text-align: center" class="', enabled_status, '">',
-                '<input value="1" type=checkbox name="',
+                '<input class="enabled" value="1" type=checkbox name="',
                 self.get_input_name(sid, instance, 'enabled'),
                 '" ', enabled, '>',
                 '<input value="0" type="hidden" name="',
@@ -285,9 +377,11 @@ class ChannelsFormHTML:
         return ''.join([
             '<section id="status"></section>',
             self.form,
-            '<footer><p>Clearing any field and saving will revert to the default value. Help is provided on the column titles.',
+            '<footer><p>Clearing any field and saving will revert to the default value. Sorting a column will clear any filters applied. ',
+            ' Help is provided on the column titles.',
             ' First column displays the status of the channel: either enabled, disabled or duplicate (enabled or disabled).',
             ' The thumbnail field must have an entry; not using the thumbnail is a configuration parameter under Settings - Clients - EPG.',
+            ' Thumbnail filtering is only on the URL.',
             ' The size of the thumbnail presented in the table is set using the configuration parameter under Settings - Internal - Channels.</p>',
             '</footer></body>'])
 
@@ -310,3 +404,19 @@ class ChannelsFormHTML:
         else:
             self.logger.warning('UNKNOWN [channels][thumbnail_size] = {}'.format(size_text))
             return None
+
+
+
+def get_filter_data(query_data):
+    filter_names_list = ['enabled-mi', 'duplicate-mi', 'disabled-mi', 'duplicate_disabled-mi',
+        'instance-checkbox', 'instance-text', 'num-text', 'num-checkbox', 'name-text', 'name-checkbox', 'group-text', 
+        'group-checkbox', 'thumbnail-text', 'thumbnail-checkbox',
+        'metadata-text', 'metadata-checkbox']
+    filter_dict = {}
+    for name in filter_names_list:
+        try:
+            filter_dict[name] = query_data[name][0]
+            del query_data[name]
+        except KeyError:
+            pass
+    return filter_dict

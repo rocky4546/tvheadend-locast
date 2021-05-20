@@ -59,9 +59,9 @@
                     "concurrent_listeners":{
                         "label": "concurrent_listeners",
                         "type": "integer",
-                        "default": 5,
+                        "default": 8,
                         "level": 2,
-                        "help": "Number of simultaneous HTTP requests.  Should be at least the number of tuners"
+                        "help": "GUI Webadmin site only. Number of simultaneous HTTP requests at one time. If requests are exceeded, the request will hang until a listener becomes available."
                     }
                 }
             },
