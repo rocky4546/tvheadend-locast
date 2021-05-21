@@ -7,7 +7,7 @@ https://github.com/rocky4546
 This file is part of Cabernet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the “Software”), to deal in the Software without restriction,
+and associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
@@ -81,19 +81,25 @@ class WebAdminHttpHandler(WebHTTPHandler):
             super().__init__(*args)
 
     def do_GET(self):
-        valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
-        self.content_path, self.query_data = self.get_query_data()
-        self.plugins.config_obj.refresh_config_data()
-        self.config = self.plugins.config_obj.data
-        if getrequest.call_url(self, self.content_path):
-            pass
-        elif filerequest.call_url(self, self.content_path):
-            pass
-        else:
-            self.logger.info('UNKNOWN HTTP Request {}'.format(self.content_path))
+        try:
+            valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', self.path)
+            self.content_path, self.query_data = self.get_query_data()
+            self.plugins.config_obj.refresh_config_data()
+            self.config = self.plugins.config_obj.data
+            if getrequest.call_url(self, self.content_path):
+                pass
+            elif filerequest.call_url(self, self.content_path):
+                pass
+            else:
+                self.logger.info('UNKNOWN HTTP Request {}'.format(self.content_path))
+                self.do_mime_response(501, 'text/html', 
+                    web_templates['htmlError'].format('501 - Not Implemented'))
+            return
+        except MemoryError as e:
+            self.logger.error('UNKNOWN EXCEPTION: {}'.format(e))
             self.do_mime_response(501, 'text/html', 
-                web_templates['htmlError'].format('501 - Not Implemented'))
-        return
+                web_templates['htmlError'].format('501 - {}'.format(e)))
+            
 
     def do_POST(self):
         self.content_path = self.path

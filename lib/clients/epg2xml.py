@@ -8,7 +8,7 @@ https://github.com/rocky4546
 This file is part of Cabernet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the “Software”), to deal in the Software without restriction,
+and associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
@@ -26,39 +26,82 @@ import lib.tvheadend.epg_category as epg_category
 from lib.common.decorators import getrequest
 from lib.db.db_channels import DBChannels
 from lib.db.db_epg import DBepg
+from lib.web.pages.templates import web_templates
+
+
 
 
 @getrequest.route('/xmltv.xml')
 def xmltv_xml(_tuner):
-    epg = EPG(_tuner.plugins, _tuner.query_data['name'], _tuner.query_data['instance'])
-    reply_str = epg.get_epg_xml()
-    _tuner.do_mime_response(200, 'application/xml', reply_str)
+    try:
+        epg = EPG(_tuner)
+        reply_str = epg.get_epg_xml(_tuner)
+    except MemoryError as e:
+        self.do_mime_response(501, 'text/html', 
+            web_templates['htmlError'].format('501 - MemoryError: {}'.format(e)))
+        
+
 
 
 class EPG:
     # https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd
-    def __init__(self, _plugins, _namespace, _instance):
+    def __init__(self, _tuner):
         self.logger = logging.getLogger(__name__)
-        self.config = _plugins.config_obj.data
+        self.tuner = _tuner
+        self.config = _tuner.plugins.config_obj.data
         self.epg_db = DBepg(self.config)
         self.channels_db = DBChannels(self.config)
-        self.plugins = _plugins
-        self.namespace = _namespace
-        self.instance = _instance
+        self.plugins = _tuner.plugins
+        self.namespace = _tuner.query_data['name']
+        self.instance = _tuner.query_data['instance']
 
-    def get_epg_xml(self):
-        self.plugins.refresh_epg(self.namespace, self.instance)
-        xml_out = self.gen_header_xml()
-        channel_list = self.channels_db.get_channels(self.namespace, self.instance)
-        self.gen_channel_xml(xml_out, channel_list)
-        self.epg_db.init_get_query(self.namespace, self.instance)
-        day_data, ns, inst = self.epg_db.get_next_row()
-        self.prog_processed = []
-        while day_data:
-            self.gen_program_xml(xml_out, day_data, channel_list, ns, inst)
+    def get_epg_xml(self, _tuner):
+        try:
+            _tuner.do_dict_response({
+                'code': 200,
+                'headers': {'Content-type': 'application/xml; Transfer-Encoding: chunked'},
+                'text': None})
+
+            self.plugins.refresh_epg(self.namespace, self.instance)
+            xml_out = self.gen_header_xml()
+            channel_list = self.channels_db.get_channels(self.namespace, self.instance)
+            self.gen_channel_xml(xml_out, channel_list)
+            self.write_xml(xml_out, keep_xml_prolog=True)
+            xml_out = None
+
+            self.epg_db.init_get_query(self.namespace, self.instance)
             day_data, ns, inst = self.epg_db.get_next_row()
-        epg_dom = minidom.parseString(ElementTree.tostring(xml_out, encoding='UTF-8', method='xml'))
-        return epg_dom.toprettyxml()
+            self.prog_processed = []
+            while day_data:
+                xml_out = self.gen_minimal_header_xml()
+                self.gen_program_xml(xml_out, day_data, channel_list, ns, inst)
+                self.write_xml(xml_out)
+                day_data, ns, inst = self.epg_db.get_next_row()
+            self.tuner.wfile.write(b'</tv>')
+        except MemoryError as e:
+            self.logger.error('MemoryError parsing large xml')
+            raise e
+        xml_out = None
+
+    def write_xml(self, _xml, keep_xml_prolog=False):
+        if self.config['epg']['epg_prettyprint']:
+            if not keep_xml_prolog:
+                epg_dom = ElementTree.tostring(_xml)
+                if len(epg_dom) < 20:
+                    return
+                epg_dom = minidom.parseString(epg_dom).toprettyxml()[27:-6]
+            else:
+                epg_dom = minidom.parseString(ElementTree.tostring(_xml, encoding='UTF-8', method='xml')).toprettyxml()[:-6]
+            self.tuner.wfile.write(epg_dom.encode())
+        else:
+            if not keep_xml_prolog:
+                epg_dom = ElementTree.tostring(_xml)[4:-5]
+                if len(epg_dom) < 10:
+                    return
+            else:
+                epg_dom = ElementTree.tostring(_xml)[:-5]
+            self.tuner.wfile.write(epg_dom+b'\r\n')
+        epg_dom = None
 
     def gen_channel_xml(self, _et_root, _channel_list):
         sids_processed = []
@@ -189,6 +232,10 @@ class EPG:
         xml_out.set('generator-info-url', utils.CABERNET_URL)
         xml_out.set('generator-special-thanks', 'locast2plex')
         return xml_out
+
+    def gen_minimal_header_xml(self):
+        return ElementTree.Element('tv')
+
 
     @staticmethod
     def sub_el(_parent, _name, _text=None, **kwargs):
