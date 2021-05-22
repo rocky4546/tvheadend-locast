@@ -108,15 +108,16 @@ class EPG:
 
         program_list = []
         json_data = self.get_url_data(_day)
-        for ch_data in json_data:
-            for listing_data in ch_data['listings']:
-                program_json = EPG.get_program(listing_data)
-                program_list.append(program_json)
+        if json_data is not None:
+            for ch_data in json_data:
+                for listing_data in ch_data['listings']:
+                    program_json = EPG.get_program(listing_data)
+                    program_list.append(program_json)
 
-        # push the update to the database
-        self.db.save_program_list(self.locast_instance.locast.name, self.instance, _day, program_list)
-        self.logger.debug('Refreshing EPG data for {}:{} day:{}'
-            .format(self.locast_instance.locast.name, self.instance, _day))
+            # push the update to the database
+            self.db.save_program_list(self.locast_instance.locast.name, self.instance, _day, program_list)
+            self.logger.debug('Refreshing EPG data for {}:{} day:{}'
+                .format(self.locast_instance.locast.name, self.instance, _day))
 
     @staticmethod
     def get_program(_program_data):
