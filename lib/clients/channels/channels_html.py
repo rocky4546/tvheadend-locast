@@ -41,6 +41,11 @@ class ChannelsHTML:
 
     @property
     def header(self):
+        if bool(self.tab_names):
+            tabform = ''.join(['<script>load_form_url("/pages/channels_form.html?name=',
+            list(self.tab_names.keys())[0], '")</script>' ])
+        else:
+            tabform = ''
         return ''.join([
             '<!DOCTYPE html><html><head>',
             '<meta charset="utf-8"/><meta name="author" content="rocky4546">',
@@ -53,8 +58,7 @@ class ChannelsHTML:
             '<link rel="stylesheet" type="text/css" href="/modules/table/table.css">',
             '<script src="/modules/tabs/tabs.js"></script>',
             '<script src="/modules/channels/channels.js"></script></head>',
-            '<script>load_form_url("/pages/channels_form.html?name=',
-            list(self.tab_names.keys())[0], '")</script>' ])
+            tabform])
 
     @property
     def title(self):
@@ -87,7 +91,7 @@ class ChannelsHTML:
         return ''.join([
             self.title,
             self.tabs,
-            '<div id="tablecontent">EMPTY DIV AREA FOR TABLES</div>'
+            '<div id="tablecontent">NO CHANNEL DATA FOUND</div>'
             ])
 
     def get_channels_tabs(self):

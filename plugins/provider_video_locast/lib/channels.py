@@ -98,11 +98,14 @@ class Channels:
                 thumbnail = locast_channel['logo226Url']
             if thumbnail is not None:
                 thumbnail_size = channels.get_thumbnail_size(thumbnail)
-            if 'videoProperties' in locast_channel['listings'][0]:
-                if 'HD' in locast_channel['listings'][0]['videoProperties']:
-                    hd = 1
-                else:
-                    hd = 0
+            try:
+                if 'videoProperties' in locast_channel['listings'][0]:
+                    if 'HD' in locast_channel['listings'][0]['videoProperties']:
+                        hd = 1
+                    else:
+                        hd = 0
+            except IndexError:
+                pass
 
             try:
                 assert (float(locast_channel['callSign'].split()[0]))

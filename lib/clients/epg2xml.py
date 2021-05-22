@@ -72,12 +72,18 @@ class EPG:
             self.epg_db.init_get_query(self.namespace, self.instance)
             day_data, ns, inst = self.epg_db.get_next_row()
             self.prog_processed = []
+            data_written = False
             while day_data:
                 xml_out = self.gen_minimal_header_xml()
                 self.gen_program_xml(xml_out, day_data, channel_list, ns, inst)
-                self.write_xml(xml_out)
+                did_write_data = self.write_xml(xml_out)
+                data_written = did_write_data or data_written
                 day_data, ns, inst = self.epg_db.get_next_row()
-            self.tuner.wfile.write(b'</tv>')
+            if data_written:
+                self.tuner.wfile.write(b'</tv>')
+            else:
+                self.tuner.wfile.write(b'<tv/>')
+            
         except MemoryError as e:
             self.logger.error('MemoryError parsing large xml')
             raise e
@@ -88,20 +94,25 @@ class EPG:
             if not keep_xml_prolog:
                 epg_dom = ElementTree.tostring(_xml)
                 if len(epg_dom) < 20:
-                    return
+                    return False
                 epg_dom = minidom.parseString(epg_dom).toprettyxml()[27:-6]
             else:
                 epg_dom = minidom.parseString(ElementTree.tostring(_xml, encoding='UTF-8', method='xml')).toprettyxml()[:-6]
+                if len(epg_dom) < 500:
+                    return False
             self.tuner.wfile.write(epg_dom.encode())
         else:
             if not keep_xml_prolog:
                 epg_dom = ElementTree.tostring(_xml)[4:-5]
                 if len(epg_dom) < 10:
-                    return
+                    return False
             else:
                 epg_dom = ElementTree.tostring(_xml)[:-5]
+                if len(epg_dom) < 500:
+                    return False
             self.tuner.wfile.write(epg_dom+b'\r\n')
         epg_dom = None
+        return True
 
     def gen_channel_xml(self, _et_root, _channel_list):
         sids_processed = []
@@ -135,12 +146,15 @@ class EPG:
             if proginfo in self.prog_processed:
                 continue
             skip = False
-            for ch_data in _channel_list[prog_data['channel']]:
-                if ch_data['namespace'] == _ns \
-                        and ch_data['instance'] == _inst \
-                        and not ch_data['enabled']:
-                    skip = True
-                    break
+            try:
+                for ch_data in _channel_list[prog_data['channel']]:
+                    if ch_data['namespace'] == _ns \
+                            and ch_data['instance'] == _inst \
+                            and not ch_data['enabled']:
+                        skip = True
+                        break
+            except KeyError:
+                skip = True
             if skip:
                 continue
             self.prog_processed.append(proginfo)
