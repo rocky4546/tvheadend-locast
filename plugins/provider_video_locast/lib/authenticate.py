@@ -36,7 +36,7 @@ class Authenticate:
     def __init__(self, _config_obj, _section):
         self.config_obj = _config_obj
         self.section = _section
-        self.token = None
+        self.token = self.config_obj.data[self.section]['login-token']
         self.login()
 
     @handle_url_except 
@@ -49,6 +49,10 @@ class Authenticate:
             self.logger.error('{} Unable to login due to invalid logins.  Clear config entry login_invalid to try again'.format(self.section))
             raise exceptions.CabernetException('Locast Login Failed')
 
+        if self.validate_user():
+            self.logger.info('Reusing Locast token [{}]'.format(self.section))
+            return True
+
         self.logger.info('Logging into Locast [{}]'.format(self.section))
         self.token = self.get_token()
         if not self.token:
@@ -56,6 +60,9 @@ class Authenticate:
             current_time = str(int(time.time()))
             self.config_obj.write(self.section, 'login-invalid', current_time)
             raise exceptions.CabernetException("Locast Login Failed")
+        else:
+            self.config_obj.write(self.section, 'login-token', self.token)
+
         return self.validate_user()
 
     @handle_json_except 
@@ -72,6 +79,9 @@ class Authenticate:
     @handle_json_except 
     @handle_url_except
     def validate_user(self):
+        if self.token is None:
+            return False
+
         self.logger.debug('Validating User Info...')
         url = 'https://api.locastnet.org/api/user/me'
         header = {'Content-Type': 'application/json',
@@ -80,6 +90,10 @@ class Authenticate:
         req = urllib.request.Request(url, headers=header)
         with urllib.request.urlopen(req) as resp:
             user_result = json.load(resp)
+
+        if user_result.get('email', '').lower() != self.username:
+            self.logger.info('Token is invalid, refreshing login accredentials')
+            return False
 
         if user_result['didDonate'] and user_result['donationExpire']:
             donate_exp = datetime.fromtimestamp(user_result['donationExpire'] / 1000)

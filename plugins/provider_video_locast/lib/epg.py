@@ -61,13 +61,16 @@ class EPG:
         can only occur based on epg_min_refresh_rate
         """
         todaydate = datetime.date.today()
-        last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, todaydate)
-        if not last_update:
-            return True
-        expired_date = datetime.datetime.now() - datetime.timedelta(
-            seconds=self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
-        if last_update < expired_date:
-            return True
+        for x in range(0, self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days']):
+            checking_date = todaydate + datetime.timedelta(days=x)
+            last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, checking_date)
+            if not last_update:
+                return True
+            expired_date = datetime.datetime.now() - datetime.timedelta(
+                seconds=self.locast_instance.config_obj.data[
+                    self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
+            if last_update < expired_date:
+                return True
         return False
 
     def dates_to_pull(self):
@@ -101,9 +104,10 @@ class EPG:
             last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, _day)
             if last_update:
                 todaydate = datetime.datetime.now()
-                use_cache_after = todaydate + datetime.timedelta(
-                    days=self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days_aging_refresh'])
-                if last_update < use_cache_after:
+                use_cache_after = todaydate - datetime.timedelta(
+                    days=self.locast_instance.config_obj.data[
+                        self.locast_instance.locast.name.lower()]['epg-days_aging_refresh'])
+                if last_update > use_cache_after:
                     return
 
         program_list = []

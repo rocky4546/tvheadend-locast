@@ -66,6 +66,14 @@
                         "onInit": "lib.config.config_callbacks.load_encrypted_setting",
                         "help": "Server never provides current password to page.  Add to change password"
                     },
+                    "login-token":{
+                        "label": "Login Token",
+                        "type": "string",
+                        "default": null,
+                        "level": 4,
+                        "onInit": "lib.config.config_callbacks.load_encrypted_setting",
+                        "help": null
+                    },
                     "login-invalid":{
                         "label": "login_invalid",
                         "type": "integer",

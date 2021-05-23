@@ -62,19 +62,25 @@ class DB:
         sqlcmd = self.sqlcmds[''.join([_table, SQL_ADD_ROW])]
         cur = self.sql_exec(sqlcmd, _values)
         DB.conn[self.db_name][threading.get_ident()].commit()
-        return cur.lastrowid
+        lastrow = cur.lastrowid
+        cur.close()
+        return lastrow
 
     def delete(self, _table, _values):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_DELETE])]
         cur = self.sql_exec(sqlcmd, _values)
         DB.conn[self.db_name][threading.get_ident()].commit()
-        return cur.lastrowid
+        lastrow = cur.lastrowid
+        cur.close()
+        return lastrow
 
     def update(self, _table, _values=None):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_UPDATE])]
         cur = self.sql_exec(sqlcmd, _values)
         DB.conn[self.db_name][threading.get_ident()].commit()
-        return cur.lastrowid
+        lastrow = cur.lastrowid
+        cur.close()
+        return lastrow
 
     def commit(self):
         DB.conn[self.db_name][threading.get_ident()].commit()
@@ -82,7 +88,9 @@ class DB:
     def get(self, _table, _where=None):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_GET])]
         cur = self.sql_exec(sqlcmd, _where)
-        return cur.fetchall()
+        result = cur.fetchall()
+        cur.close()
+        return result
 
     def get_dict(self, _table, _where=None, sql=None):
         if sql is None:
@@ -94,10 +102,12 @@ class DB:
         rows = []
         for row in records:
             rows.append(dict(zip([c[0] for c in cur.description], row)))
+        cur.close()
         return rows
 
     def get_init(self, _table, _where=None):
         """
+            Cursor must remain active following the call.
             runs the query and returns the first row
             while maintaining the cursor.
             Get_dict_next returns the next row
@@ -106,6 +116,10 @@ class DB:
         self.cur = self.sql_exec(sqlcmd, _where)
 
     def get_dict_next(self):
+        """
+            Cursor must remain active following the call.
+            Termination of the cursor mut be handled externally
+        """    
         row = self.cur.fetchone()
         row_dict = None
         if row:
