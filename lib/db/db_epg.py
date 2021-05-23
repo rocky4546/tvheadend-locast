@@ -120,3 +120,6 @@ class DBepg(DB):
             json_data = json.loads(row['json'])
             row = json_data
         return row, namespace, instance
+
+    def close_query(self):
+        self.cur.close()

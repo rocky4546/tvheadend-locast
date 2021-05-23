@@ -159,7 +159,7 @@ def set_ffprobe_path(_config_obj, _section, _key):
 
 
 def check_encryption(_config_obj, _section, _key):
-    if CRYPTO_LOADED:
+    if not CRYPTO_LOADED:
         return 'python cryptography module not installed, unable to encrypt'
         
 

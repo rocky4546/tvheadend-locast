@@ -79,6 +79,7 @@ class EPG:
                 did_write_data = self.write_xml(xml_out)
                 data_written = did_write_data or data_written
                 day_data, ns, inst = self.epg_db.get_next_row()
+            self.epg_db.close_query()
             if data_written:
                 self.tuner.wfile.write(b'</tv>')
             else:

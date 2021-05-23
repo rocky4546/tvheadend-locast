@@ -118,7 +118,7 @@ class TVHUserConfig:
         if args is not None and args.cfg:
             config_file = pathlib.Path(str(args.cfg))
         else:
-            for x in ['data/config.ini', 'config.ini']:
+            for x in ['config.ini', 'data/config.ini']:
                 poss_config = pathlib.Path(_script_dir).joinpath(x)
                 if os.path.exists(poss_config):
                     config_file = poss_config
@@ -126,7 +126,7 @@ class TVHUserConfig:
         if config_file and os.path.exists(config_file):
             return config_file
         else:
-            print('ERROR: Config file missing {}, Exiting...'.format(config_file))
+            print('ERROR: Config file missing {}, Exiting...'.format(poss_config))
             clean_exit(1)
 
     def fix_value_type(self, _section, _key, _value):
