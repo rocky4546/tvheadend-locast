@@ -61,7 +61,7 @@ class TVHUserConfig:
             config_file = TVHUserConfig.get_config_path(_script_dir, _args)
             self.import_config(config_file)
             self.defn_json.call_oninit(self)
-            utils.logging_setup(self.data['paths'])
+            utils.logging_setup(self.data)
             self.defn_json.set_config(self.data)
             self.defn_json.save_defn_to_db()
         else:
@@ -91,13 +91,13 @@ class TVHUserConfig:
                 self.config_handler.set(section, key, str(value))
         with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
-        utils.logging_setup(self.data['paths'])
+        utils.logging_setup(self.data)
 
     def import_config(self, config_file):
         self.config_handler.read(config_file)
         self.data['paths']['config_file'] = str(config_file)
         try:
-            utils.logging_setup(self.data['paths'])
+            utils.logging_setup(self.data)
         except KeyError:
             self.init_logger_config()
         self.logger = logging.getLogger(__name__)

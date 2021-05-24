@@ -73,7 +73,7 @@ sqlcmds = {
     'channels_update':
         """
         UPDATE channels SET 
-            enabled=?, number=?, thumbnail=?, thumbnail_size=?, updated=?, json=?
+            number=?, updated=?, json=?
             WHERE namespace=? AND instance=? AND uid=?
         """,
     'channels_editable_update':
@@ -151,10 +151,7 @@ class DBChannels(DB):
                     json.dumps(ch)))
             except sqlite3.IntegrityError:
                 self.update(DB_CHANNELS_TABLE, (
-                    ch['enabled'],
                     ch['number'],
-                    ch['thumbnail'],
-                    str(ch['thumbnail_size']),
                     True,
                     json.dumps(ch),
                     _namespace,
