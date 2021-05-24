@@ -10,7 +10,7 @@ if sys.version_info.major == 2 or sys.version_info < (3, 7):
 from lib import main
 
 if __name__ == '__main__':
-    #os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     #script_dir = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
     #print('os.path.realpath', os.path.realpath(__file__))
     #print('os.path.abspath(os.path.dirname',os.path.abspath(os.path.dirname(__file__)))
