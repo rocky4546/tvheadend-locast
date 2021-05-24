@@ -32,7 +32,7 @@ import sys
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.4g'
+VERSION = '0.8.4h'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -42,18 +42,25 @@ def get_version_str():
 
 logger = None
 
-def logging_setup(_config_paths):
+def logging_setup(_config):
     if os.environ.get('LOGS_DIR') is None:
-        if _config_paths['logs_dir'] is not None:        
-            os.environ['LOGS_DIR'] = _config_paths['logs_dir']
-            logging.config.fileConfig(fname=_config_paths['config_file'])
+        if _config['paths']['logs_dir'] is not None:
+            os.environ['LOGS_DIR'] = _config['paths']['logs_dir']
+            logging.config.fileConfig(fname=_config['paths']['config_file'])
         elif not os.path.isdir('data/logs'):
-            os.makedirs('data/logs')
+            try:
+                os.makedirs('data/logs')
+            except PermissionError:
+                if _config['handler_filehandler']['enabled']:
+                    logging.warning('Permission denied trying to make the data/logs folder in the installation area. this must exist in order to use file logging')
     if str(logging.getLevelName('NOTUSED')).startswith('Level'):
-        logging.config.fileConfig(fname=_config_paths['config_file'])
+        try:
+            logging.config.fileConfig(fname=_config['paths']['config_file'])
+        except FileNotFoundError:
+            if _config['handler_filehandler']['enabled']:
+                logging.warning('Unable to create cabernet.log in the data/logs area with File Logging enabled.')
         logging.addLevelName(100, 'NOTUSED')
     logger = logging.getLogger(__name__)
-
 
 def clean_exit(exit_code=0):
     sys.stderr.flush()

@@ -76,7 +76,7 @@ def logging_enable(_config_obj, _section, _key):
     handler_list = []
     if _config_obj.data['handler_filehandler']['enabled']:
         handler_list.append('filehandler')
-    elif _config_obj.data['handler_loghandler']['enabled']:
+    if _config_obj.data['handler_loghandler']['enabled']:
         handler_list.append('loghandler')
     handlers = ','.join(handler_list)
     _config_obj.write('logger_root', 'handlers', handlers)
