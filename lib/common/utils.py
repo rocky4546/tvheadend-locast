@@ -32,7 +32,7 @@ import sys
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.4h'
+VERSION = '0.8.4i'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -47,9 +47,9 @@ def logging_setup(_config):
         if _config['paths']['logs_dir'] is not None:
             os.environ['LOGS_DIR'] = _config['paths']['logs_dir']
             logging.config.fileConfig(fname=_config['paths']['config_file'])
-        elif not os.path.isdir('data/logs'):
+        elif not os.path.isdir(os.path.dirname(os.path.abspath(__file__))+'data/logs'):
             try:
-                os.makedirs('data/logs')
+                os.makedirs(os.path.dirname(os.path.abspath(__file__))+'data/logs')
             except PermissionError:
                 if _config['handler_filehandler']['enabled']:
                     logging.warning('Permission denied trying to make the data/logs folder in the installation area. this must exist in order to use file logging')
