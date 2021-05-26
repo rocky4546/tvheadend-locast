@@ -20,9 +20,9 @@ from lib.common.decorators import getrequest
 
 
 @getrequest.route('/pages/index.js')
-def pages_index_js(_tuner):
+def pages_index_js(_webserver):
     indexjs = IndexJS()
-    _tuner.do_mime_response(200, 'text/javascript', indexjs.get(_tuner.config))
+    _webserver.do_mime_response(200, 'text/javascript', indexjs.get(_webserver.config))
     return True
 
 

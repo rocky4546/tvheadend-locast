@@ -194,7 +194,7 @@ class TunerHttpHandler(WebHTTPHandler):
                     _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'],
                     plugin_name))
                 tuner_count += _plugins.config_obj.data[plugin_name.lower()]['player-tuner_count']
-        WebHTTPHandler.total_tuners = tuner_count
+        WebHTTPHandler.total_instances = tuner_count
         super(TunerHttpHandler, cls).init_class_var(_plugins, _hdhr_queue)
 
 

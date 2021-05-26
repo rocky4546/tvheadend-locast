@@ -27,14 +27,14 @@ from lib.common.decorators import getrequest
 
 
 @getrequest.route('/background')
-def background(_tuner):
-    send_random_image(_tuner)
+def background(_webserver):
+    send_random_image(_webserver)
 
 
-def send_random_image(_tuner):
-    if not _tuner.config['display']['backgrounds']:
-        background_dir = _tuner.config['paths']['themes_pkg'] + '.' + \
-                         _tuner.config['display']['theme']
+def send_random_image(_webserver):
+    if not _webserver.config['display']['backgrounds']:
+        background_dir = _webserver.config['paths']['themes_pkg'] + '.' + \
+                         _webserver.config['display']['theme']
         image_list = list(importlib.resources.contents(background_dir))
         image_found = False
         count = 10
@@ -47,13 +47,13 @@ def send_random_image(_tuner):
                 image_found = True
             count -= 1
         if image_found:
-            _tuner.do_file_response(200, background_dir, image)
+            _webserver.do_file_response(200, background_dir, image)
         else:
-            _tuner.logger.warning('No Background Image found: ' + background_dir)
-            _tuner.do_mime_response(404, 'text/html', web_templates['htmlError']
+            _webserver.logger.warning('No Background Image found: ' + background_dir)
+            _webserver.do_mime_response(404, 'text/html', web_templates['htmlError']
                 .format('404 - Background Image Not Found'))
     else:
-        lbackground = _tuner.config['display']['backgrounds']
+        lbackground = _webserver.config['display']['backgrounds']
         try:
             image_found = False
             count = 10
@@ -66,14 +66,14 @@ def send_random_image(_tuner):
                     image_found = True
                 count -= 1
             if image_found:
-                _tuner.do_file_response(200, None, full_image_path)
-                _tuner.logger.debug('Background Image: {}'.format(str(image).replace(lbackground,'.')))
+                _webserver.do_file_response(200, None, full_image_path)
+                _webserver.logger.debug('Background Image: {}'.format(str(image).replace(lbackground,'.')))
             else:
-                _tuner.logger.warning('Image not found at {}'.format(lbackground))
-                _tuner.do_mime_response(404, 'text/html',
+                _webserver.logger.warning('Image not found at {}'.format(lbackground))
+                _webserver.do_mime_response(404, 'text/html',
                     web_templates['htmlError'].format('404 - Background Image Not Found'))
 
         except (FileNotFoundError, IndexError):
-            _tuner.logger.warning('Background Theme Folder not found: ' + lbackground)
-            _tuner.do_mime_response(404, 'text/html', web_templates['htmlError']
+            _webserver.logger.warning('Background Theme Folder not found: ' + lbackground)
+            _webserver.do_mime_response(404, 'text/html', web_templates['htmlError']
                 .format('404 - Background Folder Not Found'))

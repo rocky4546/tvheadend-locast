@@ -81,6 +81,13 @@
                         "level": 2,
                         "help": "Normally empty, but if locast login locks out, it will be set. Lockouts are normally 60 minutes. Manually clearing entry will allow a re-login attempt on restart"
                     },
+                    "epg-enabled":{
+                        "label": "EPG Collection Enabled",
+                        "type": "boolean",
+                        "default": true,
+                        "level": 1,
+                        "help": "Disable if you have multiple instances for the same city"
+                    },
                     "epg-prefix":{
                         "label": "EPG Channel Prefix",
                         "type": "string",

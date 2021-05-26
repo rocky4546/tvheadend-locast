@@ -20,14 +20,14 @@ from lib.common.decorators import getrequest
 
 
 @getrequest.route('/')
-def root_url(_tuner):
-    _tuner.send_response(302)
-    _tuner.send_header('Location', 'html/index.html')
-    _tuner.end_headers()
+def root_url(_webserver):
+    _webserver.send_response(302)
+    _webserver.send_header('Location', 'html/index.html')
+    _webserver.end_headers()
 
 
 @getrequest.route('/favicon.ico')
-def favicon(_tuner):
-    _tuner.send_response(302)
-    _tuner.send_header('Location', 'images/favicon.png')
-    _tuner.end_headers()
+def favicon(_webserver):
+    _webserver.send_response(302)
+    _webserver.send_header('Location', 'images/favicon.png')
+    _webserver.end_headers()

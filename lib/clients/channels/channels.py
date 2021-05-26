@@ -29,19 +29,19 @@ import lib.image_size.get_image_size as get_image_size
 
 
 @getrequest.route('/playlist')
-def playlist(_tuner):
-    _tuner.send_response(302)
-    _tuner.send_header('Location', _tuner.path.replace('playlist', 'channels.m3u'))
-    _tuner.end_headers()
+def playlist(_webserver):
+    _webserver.send_response(302)
+    _webserver.send_header('Location', _webserver.path.replace('playlist', 'channels.m3u'))
+    _webserver.end_headers()
 
 
 @getrequest.route('/channels.m3u')
-def channels_m3u(_tuner):
-    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
-    _tuner.do_mime_response(200, 'audio/x-mpegurl', get_channels_m3u(
-        _tuner.config, _tuner.stream_url, 
-        _tuner.query_data['name'], 
-        _tuner.query_data['instance']))
+def channels_m3u(_webserver):
+    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
+    _webserver.do_mime_response(200, 'audio/x-mpegurl', get_channels_m3u(
+        _webserver.config, _webserver.stream_url, 
+        _webserver.query_data['name'], 
+        _webserver.query_data['instance']))
 
 
 def get_channels_m3u(_config, _base_url, _namespace, _instance):
@@ -102,11 +102,11 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
     
 
 @getrequest.route('/lineup.json')
-def lineup_json(_tuner):
-    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
-    _tuner.do_mime_response(200, 'application/json', get_channels_json(
-        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], 
-        _tuner.query_data['instance']))
+def lineup_json(_webserver):
+    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
+    _webserver.do_mime_response(200, 'application/json', get_channels_json(
+        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
+        _webserver.query_data['instance']))
 
     
 def get_channels_json(_config, _base_url, _namespace, _instance):
@@ -133,11 +133,11 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
 
 
 @getrequest.route('/lineup.xml')
-def lineup_xml(_tuner):
-    _tuner.plugins.refresh_channels(_tuner.query_data['name'])
-    _tuner.do_mime_response(200, 'application/xml', get_channels_xml(
-        _tuner.config, _tuner.stream_url, _tuner.query_data['name'], 
-        _tuner.query_data['instance']))
+def lineup_xml(_webserver):
+    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
+    _webserver.do_mime_response(200, 'application/xml', get_channels_xml(
+        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
+        _webserver.query_data['instance']))
 
 
 def get_channels_xml(_config, _base_url, _namespace, _instance):

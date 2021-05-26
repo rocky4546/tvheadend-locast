@@ -31,32 +31,32 @@ from .web_handler import WebHTTPHandler
 
 
 @filerequest.route('/html/', '/images/', '/modules/')
-def lib_web_htdocs(_tuner):
-    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _tuner.path)
+def lib_web_htdocs(_webserver):
+    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _webserver.path)
     if not valid_check:
         return False
     file_path = valid_check.group(1)
-    htdocs_path = _tuner.config['paths']['www_pkg']
+    htdocs_path = _webserver.config['paths']['www_pkg']
     path_list = file_path.split('/')
     fullfile_path = htdocs_path + '.'.join(path_list[:-1])
-    _tuner.do_file_response(200, fullfile_path, path_list[-1])
+    _webserver.do_file_response(200, fullfile_path, path_list[-1])
     return True
 
 
 @filerequest.route('/temp/')
-def data_web(_tuner):
-    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _tuner.path)
+def data_web(_webserver):
+    valid_check = re.match(r'^(/([A-Za-z0-9\._\-]+)/[A-Za-z0-9\._\-/]+)[?%&A-Za-z0-9\._\-/=]*$', _webserver.path)
     if not valid_check:
         return False
     url_path = valid_check.group(1)
 
-    temp_path = pathlib.Path(_tuner.config['paths']['data_dir'],
+    temp_path = pathlib.Path(_webserver.config['paths']['data_dir'],
         'web')
     if not temp_path.exists():
         return False
     path_list = url_path.split('/')
     file_path = temp_path.joinpath(*path_list[:])
-    _tuner.do_file_response(200, None, file_path)
+    _webserver.do_file_response(200, None, file_path)
 
 
 class WebAdminHttpHandler(WebHTTPHandler):
@@ -96,10 +96,16 @@ class WebAdminHttpHandler(WebHTTPHandler):
                     web_templates['htmlError'].format('501 - Not Implemented'))
             return
         except MemoryError as e:
-            self.logger.error('UNKNOWN EXCEPTION: {}'.format(e))
+            self.logger.error('UNKNOWN MEMORY EXCEPTION: {}'.format(e))
             self.do_mime_response(501, 'text/html', 
                 web_templates['htmlError'].format('501 - {}'.format(e)))
-            
+        except IOError as e:
+            if e.errno in [errno.EPIPE, errno.ECONNABORTED, errno.ECONNRESET, errno.ECONNREFUSED]:
+                self.logger.info('Connection dropped by end device {}'.format(e))
+            else:
+                self.logger.error('{}{}'.format(
+                    'UNEXPECTED IOERROR EXCEPTION=', e))
+                raise
 
     def do_POST(self):
         self.content_path = self.path

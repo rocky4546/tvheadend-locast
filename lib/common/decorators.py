@@ -70,9 +70,9 @@ class Request:
         for name in self.url2func.keys():
             logger.debug('Registering {} URL: {}'.format(self.method, name))
 
-    def call_url(self, _tuner, _name, *args, **kwargs):
+    def call_url(self, _webserver, _name, *args, **kwargs):
         if _name in self.url2func:
-            self.url2func[_name](_tuner, *args, **kwargs)
+            self.url2func[_name](_webserver, *args, **kwargs)
             return True
         else:
             return False
@@ -101,10 +101,10 @@ class FileRequest(Request):
         super().__init__()
         self.method = 'GET'
 
-    def call_url(self, _tuner, _name, *args, **kwargs):
+    def call_url(self, _webserver, _name, *args, **kwargs):
         for key in self.url2func.keys():
             if _name.startswith(key):
-                self.url2func[key](_tuner, *args, **kwargs)
+                self.url2func[key](_webserver, *args, **kwargs)
                 return True
         return False
 

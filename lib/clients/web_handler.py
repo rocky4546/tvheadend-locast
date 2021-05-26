@@ -45,13 +45,13 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
     channels_db = None
     rmg_station_scans = {}
     namespace_list = None
-    total_tuners = 0
+    total_instances = 0
 
     def log_message(self, _format, *args):
         if int(args[1]) > 399:
             self.logger.warning('[%s] %s' % (self.address_string(), _format % args))
         else:
-            self.logger.debug('[%s] %s' % (self.address_string(), _format % args))
+            self.logger.info('[%s] %s' % (self.address_string(), _format % args))
 
     def get_query_data(self):
         content_path = self.path
@@ -183,8 +183,8 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
                 for x in range(int(_plugins.config_obj.data[plugin_name.lower()]['player-tuner_count'])):
                     tmp_rmg_scans[plugin_name].append('Idle')
         WebHTTPHandler.rmg_station_scans = tmp_rmg_scans
-        if WebHTTPHandler.total_tuners == 0:
-            WebHTTPHandler.total_tuners = _plugins.config_obj.data['web']['concurrent_listeners']
+        if WebHTTPHandler.total_instances == 0:
+            WebHTTPHandler.total_instances = _plugins.config_obj.data['web']['concurrent_listeners']
 
         
     @classmethod
@@ -196,12 +196,12 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         utils.logging_setup(_plugins.config_obj.data['paths'])
         logger = logging.getLogger(__name__)
         cls.init_class_var(_plugins, _hdhr_queue)
-        if cls.total_tuners == 0:
+        if cls.total_instances == 0:
             _plugins.config_obj.data['web']['concurrent_listeners']
         logger.debug(
             'Now listening for requests. Number of listeners={}'
-                .format(cls.total_tuners))
-        for i in range(cls.total_tuners):
+                .format(cls.total_instances))
+        for i in range(cls.total_instances):
             _http_server_class(server_socket, _plugins)
         try:
             while True:

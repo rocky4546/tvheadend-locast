@@ -32,10 +32,10 @@ from lib.web.pages.templates import web_templates
 
 
 @getrequest.route('/xmltv.xml')
-def xmltv_xml(_tuner):
+def xmltv_xml(_webserver):
     try:
-        epg = EPG(_tuner)
-        reply_str = epg.get_epg_xml(_tuner)
+        epg = EPG(_webserver)
+        reply_str = epg.get_epg_xml(_webserver)
     except MemoryError as e:
         self.do_mime_response(501, 'text/html', 
             web_templates['htmlError'].format('501 - MemoryError: {}'.format(e)))
@@ -45,19 +45,19 @@ def xmltv_xml(_tuner):
 
 class EPG:
     # https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd
-    def __init__(self, _tuner):
+    def __init__(self, _webserver):
         self.logger = logging.getLogger(__name__)
-        self.tuner = _tuner
-        self.config = _tuner.plugins.config_obj.data
+        self.webserver = _webserver
+        self.config = _webserver.plugins.config_obj.data
         self.epg_db = DBepg(self.config)
         self.channels_db = DBChannels(self.config)
-        self.plugins = _tuner.plugins
-        self.namespace = _tuner.query_data['name']
-        self.instance = _tuner.query_data['instance']
+        self.plugins = _webserver.plugins
+        self.namespace = _webserver.query_data['name']
+        self.instance = _webserver.query_data['instance']
 
-    def get_epg_xml(self, _tuner):
+    def get_epg_xml(self, _webserver):
         try:
-            _tuner.do_dict_response({
+            _webserver.do_dict_response({
                 'code': 200,
                 'headers': {'Content-type': 'application/xml; Transfer-Encoding: chunked'},
                 'text': None})
@@ -81,9 +81,9 @@ class EPG:
                 day_data, ns, inst = self.epg_db.get_next_row()
             self.epg_db.close_query()
             if data_written:
-                self.tuner.wfile.write(b'</tv>')
+                self.webserver.wfile.write(b'</tv>')
             else:
-                self.tuner.wfile.write(b'<tv/>')
+                self.webserver.wfile.write(b'<tv/>')
             
         except MemoryError as e:
             self.logger.error('MemoryError parsing large xml')
@@ -101,7 +101,7 @@ class EPG:
                 epg_dom = minidom.parseString(ElementTree.tostring(_xml, encoding='UTF-8', method='xml')).toprettyxml()[:-6]
                 if len(epg_dom) < 500:
                     return False
-            self.tuner.wfile.write(epg_dom.encode())
+            self.webserver.wfile.write(epg_dom.encode())
         else:
             if not keep_xml_prolog:
                 epg_dom = ElementTree.tostring(_xml)[4:-5]
@@ -111,7 +111,7 @@ class EPG:
                 epg_dom = ElementTree.tostring(_xml)[:-5]
                 if len(epg_dom) < 500:
                     return False
-            self.tuner.wfile.write(epg_dom+b'\r\n')
+            self.webserver.wfile.write(epg_dom+b'\r\n')
         epg_dom = None
         return True
 

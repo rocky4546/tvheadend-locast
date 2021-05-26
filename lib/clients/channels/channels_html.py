@@ -22,10 +22,10 @@ from lib.common.decorators import getrequest
 
 
 @getrequest.route('/pages/channels.html')
-def get_channels_html(_tuner):
-    channels_html = ChannelsHTML(_tuner.channels_db)
+def get_channels_html(_webserver):
+    channels_html = ChannelsHTML(_webserver.channels_db)
     html = channels_html.get()
-    _tuner.do_mime_response(200, 'text/html', html)
+    _webserver.do_mime_response(200, 'text/html', html)
 
 
 class ChannelsHTML:
