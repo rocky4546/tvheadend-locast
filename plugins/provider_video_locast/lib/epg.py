@@ -44,9 +44,12 @@ class EPG:
                 self.locast_instance.locast.name, self.instance)
 
     def refresh_epg(self):
-        self.logger.debug('Checking EPG data for {}'.format(self.locast_instance.locast.name))
         if not self.is_refresh_expired():
-            self.logger.debug('EPG still new, not refreshing')
+            self.logger.debug('EPG still new for {} {}, not refreshing'.format(self.locast_instance.locast.name, self.instance))
+            return
+        if not self.locast_instance.config_obj.data[self.locast_instance.config_section]['epg-enabled']:
+            self.logger.debug('EPG collection not enabled for {} {}'
+                .format(self.locast_instance.locast.name, self.instance))
             return
         forced_dates, aging_dates = self.dates_to_pull()
         self.db.del_old_programs(self.locast_instance.locast.name, self.instance)

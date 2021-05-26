@@ -37,13 +37,13 @@ def get_config(script_dir, opersystem, args):
 
 
 @getrequest.route('/config.json')
-def config_json(_tuner):
-    if _tuner.config['web']['disable_web_config']:
-        _tuner.do_mime_response(501, 'text/html', web_templates['htmlError']
+def config_json(_webserver):
+    if _webserver.config['web']['disable_web_config']:
+        _webserver.do_mime_response(501, 'text/html', web_templates['htmlError']
             .format('501 - Config pages disabled.'
                     ' Set [web][disable_web_config] to False in the config file to enable'))
     else:
-        _tuner.do_mime_response(200, 'application/json', json.dumps(_tuner.plugins.config_obj.filter_config_data()))
+        _webserver.do_mime_response(200, 'application/json', json.dumps(_webserver.plugins.config_obj.filter_config_data()))
 
 
 class TVHUserConfig:
