@@ -193,7 +193,7 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind((_plugins.config_obj.data['web']['bind_ip'], _port))
         server_socket.listen(int(_plugins.config_obj.data['web']['concurrent_listeners']))
-        utils.logging_setup(_plugins.config_obj.data['paths'])
+        utils.logging_setup(_plugins.config_obj.data)
         logger = logging.getLogger(__name__)
         cls.init_class_var(_plugins, _hdhr_queue)
         if cls.total_instances == 0:

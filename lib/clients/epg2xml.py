@@ -84,7 +84,7 @@ class EPG:
                 self.webserver.wfile.write(b'</tv>')
             else:
                 self.webserver.wfile.write(b'<tv/>')
-            
+            self.webserver.wfile.flush()
         except MemoryError as e:
             self.logger.error('MemoryError parsing large xml')
             raise e

@@ -113,11 +113,12 @@ class TunerHttpHandler(WebHTTPHandler):
         self.plugins.config_obj.data = self.config
         #try:
         station_list = TunerHttpHandler.channels_db.get_channels(_namespace, _instance)
-        self.real_namespace, self.real_instance, station_data = self.get_ns_inst_station(station_list[sid])
-        #except KeyError:
-            #self.logger.warning('Unknown channel id {}'.format(sid))
-            #self.do_mime_response(501, 'text/html', web_templates['htmlError'].format('501 - Unknown channel'))
-            #return
+        try:
+            self.real_namespace, self.real_instance, station_data = self.get_ns_inst_station(station_list[sid])
+        except KeyError:
+            self.logger.warning('Unknown channel ID, not found in database {} {} {}'.format(_namespace, _instance, sid))
+            self.do_mime_response(501, 'text/html', web_templates['htmlError'].format('501 - Unknown channel'))
+            return
         if self.config[self.real_namespace.lower()]['player-stream_type'] == 'm3u8redirect':
             self.do_dict_response(self.m3u8_redirect.gen_m3u8_response(station_data))
             return
