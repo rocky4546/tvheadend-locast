@@ -91,7 +91,7 @@ class Authenticate:
         with urllib.request.urlopen(req) as resp:
             user_result = json.load(resp)
 
-        if user_result.get('email', '').lower() != self.username:
+        if user_result.get('email', '').lower() != self.username.lower():
             self.logger.info('Token is invalid, refreshing login accredentials')
             return False
 
