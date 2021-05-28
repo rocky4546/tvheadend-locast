@@ -39,6 +39,7 @@ def register(func):
     return func
 
 
+
 class Plugin:
 
     # Temporarily used to register the plugin setup() function
@@ -46,6 +47,9 @@ class Plugin:
     logger = None
 
     def __init__(self, _config_obj, _plugin_defn, _plugin_path):
+
+        if Plugin.logger is None:
+            Plugin.logger = logging.getLogger(__name__)
         self.enabled = True
         self.plugin_path = _plugin_path
         self.config_obj = _config_obj
@@ -150,5 +154,3 @@ class Plugin:
     def name(self):
         return self.plugin_settings['name']
 
-
-Plugin.logger = logging.getLogger(__name__)
