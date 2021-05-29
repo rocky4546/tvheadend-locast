@@ -49,7 +49,7 @@ class Authenticate:
             self.logger.error('{} Unable to login due to invalid logins.  Clear config entry login_invalid to try again'.format(self.section))
             raise exceptions.CabernetException('Locast Login Failed')
 
-        if self.validate_user():
+        if self.validate_user(True):
             self.logger.info('Reusing Locast token [{}]'.format(self.section))
             return True
 
@@ -63,7 +63,7 @@ class Authenticate:
         else:
             self.config_obj.write(self.section, 'login-token', self.token)
 
-        return self.validate_user()
+        return self.validate_user(False)
 
     @handle_json_except 
     @handle_url_except 
@@ -78,7 +78,7 @@ class Authenticate:
 
     @handle_json_except 
     @handle_url_except
-    def validate_user(self):
+    def validate_user(self, token_reuse_check):
         if self.token is None:
             return False
 
@@ -91,9 +91,9 @@ class Authenticate:
         with urllib.request.urlopen(req) as resp:
             user_result = json.load(resp)
 
-        if user_result.get('email', '').lower() != self.username.lower():
-            self.logger.info('Token is invalid, refreshing login accredentials')
-            self.logger.debug('config.ini has {}, while locast has {}'.format(self.username.lower(), user_result.get('email', '').lower()))
+        if user_result.get('email', '').lower() != self.username.lower() and token_reuse_check:
+            self.logger.warning('Token is invalid, refreshing login accredentials. Turn on DEBUG to see additional details.')
+            self.logger.debug('config.ini username: {}, while locast: {}'.format(self.username.lower(), user_result.get('email', '').lower()))
             return False
 
         if user_result['didDonate'] and user_result['donationExpire']:
