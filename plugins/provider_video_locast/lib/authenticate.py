@@ -93,6 +93,7 @@ class Authenticate:
 
         if user_result.get('email', '').lower() != self.username.lower():
             self.logger.info('Token is invalid, refreshing login accredentials')
+            self.logger.debug('config.ini has {}, while locast has {}'.format(self.username.lower(), user_result.get('email', '').lower()))
             return False
 
         if user_result['didDonate'] and user_result['donationExpire']:
