@@ -1,18 +1,18 @@
 #!/bin/bash
-dflag=
-vflag=
-cflag=
-uflag=
-if (( $# < 1 ))
+dflag=;
+vflag=;
+cflag=;
+uflag=;
+if (( $# < 1 ));
 then
-  printf "At least one option is required\n"
-  printf "Set -u [url] argument and try again\n"
-  exit 2
-fi
+  printf "At least one option is required\n";
+  printf "Set -u [url] argument and try again\n";
+  exit 2;
+fi;
 
-for arg
+for arg;
 do
-    delim=""
+    delim="";
     case "$arg" in
     #translate --gnu-long-options to -g (short options)
        --description) args="${args}-d ";;
@@ -20,49 +20,49 @@ do
        --capabilities) args="${args}-c ";;
        --url) args="${args}-u ";;
        #pass through anything else
-       *) [[ "${arg:0:1}" == "-" ]] || delim="\""
+       *) [[ "${arg:0:1}" == "-" ]] || delim="\"";
            args="${args}${delim}${arg}${delim} ";;
-    esac
-done
+    esac;
+done;
 
 #Reset the positional parameters to the short options
-eval set -- $args
+eval set -- $args;
 
-while getopts "hdvcu:" option 
+while getopts "hdvcu:" option;
 do
     case $option in
         d)  dflag=1;;
         v)  vflag=1;;
         c)  cflag=1;;
-        u)  uflag=1
-            url=$OPTARG
+        u)  uflag=1;
+            url=$OPTARG;
             ;;
-        h | *)  printf "Usage: %s: [--description] [--version]\n" $(basename $0)
-                printf "     [--capabilities] [--url url]\n" 
+        h | *)  printf "Usage: %s: [--description] [--version]\n" $(basename $0);
+                printf "     [--capabilities] [--url url]\n";
             ;;
-        \?) printf "unknown option: -%s\n" $OPTARG
-            printf "Usage: %s: [--description] [--version] [--capabilities] [--url url]\n" $(basename $0)
-            exit 2
+        \?) printf "unknown option: -%s\n" $OPTARG;
+            printf "Usage: %s: [--description] [--version] [--capabilities] [--url url]\n" $(basename $0);
+            exit 2;
             ;;
-    esac >&2
-done
+    esac >&2;
+done;
 
-if [ "$dflag" ]
+if [ "$dflag" ];
 then
-   path=$(realpath $0)
-   printf "$path -u [url]\n"
-fi
-if [ "$vflag" ]
+   path=$(realpath $0);
+   printf "$path -u [url]\n";
+fi;
+if [ "$vflag" ];
 then
-   printf "0.1\n"
-fi
-if [ "$cflag" ]
+   printf "0.1\n";
+fi;
+if [ "$cflag" ];
 then
-   printf "baseline\n"
-fi
-if [ "$uflag" ]
+   printf "baseline\n";
+fi;
+if [ "$uflag" ];
 then
-  wget -q --retry-connrefused --tries=5 --timeout=30 -O - $url
-fi
+  wget -q -T 20 -O - ${url};
+fi;
 
-exit 0
+exit 0;

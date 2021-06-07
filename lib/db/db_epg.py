@@ -55,7 +55,7 @@ sqlcmds = {
 
     'epg_last_update_get':
         """
-        SELECT last_update FROM epg WHERE
+        SELECT datetime(last_update, 'localtime') FROM epg WHERE
             namespace=? AND instance LIKE ? and day=?
         """,
 
@@ -78,7 +78,7 @@ class DBepg(DB):
             _namespace,
             _instance,
             _day,
-            datetime.datetime.now(),
+            datetime.datetime.utcnow(),
             json.dumps(_prog_list)))
 
     def del_old_programs(self, _namespace, _instance):
@@ -101,7 +101,11 @@ class DBepg(DB):
         if len(result) == 0:
             return None
         else:
-            return result[0][0]
+            last_update = result[0][0]
+            if last_update is not None:
+                return datetime.datetime.fromisoformat(last_update)
+            else:
+                return None
 
     def init_get_query(self, _namespace, _instance):
         if not _namespace:

@@ -17,13 +17,15 @@ substantial portions of the Software.
 """
 
 import importlib
+import importlib.resources
 import logging
 import logging.config
+import os
+import pathlib
 import platform
 import urllib.request
-import pathlib
-import os
 import uuid
+
 import lib.common.utils as utils
 import lib.common.encryption as encryption
 import lib.clients.hdhr.hdhr_server as hdhr_server
@@ -56,6 +58,21 @@ def call_function(_func_str, _section, _key, _config_obj):
         mod = importlib.import_module(mod_name)
     func = getattr(mod, func_name)
     return func(_config_obj, _section, _key)
+
+
+def call_ondefnload_function(_func_str, _section, _key, _config, _defn):
+    """ calls the function in the definition.  If relative path
+        then assume module is relative to the plugins directory
+    """
+    mod_name, func_name = _func_str.rsplit('.', 1)
+    if mod_name.startswith('.'):
+        mod = importlib.import_module(
+            mod_name,
+            package=_config['paths']['internal_plugins_pkg'])
+    else:
+        mod = importlib.import_module(mod_name)
+    func = getattr(mod, func_name)
+    return func(_defn, _config, _section, _key)
 
 
 def noop(_config_obj, _section, _key):
@@ -252,3 +269,26 @@ def update_instance_label(_config_obj, _section, _key):
     section_data[_section]['label'] = value
     db_confdefn.add_section(areas[0], _section, section_data[_section])
 
+# onDefnLoad
+
+def set_theme_folders(_defn, _config, _section, _key):
+    """
+    To make this work, the themes folder must be static and known
+    since theme folder list is set before the paths are initialized
+    """
+    theme_list = []
+    themes_path = 'lib.web.htdocs.modules.themes'
+    for folder in sorted(importlib.resources.contents(themes_path)):
+        if folder.startswith('__'):
+            continue
+        try:
+            importlib.resources.read_text(themes_path, folder)
+        except IsADirectoryError:
+            theme_list.append(folder)
+        except (PermissionError, UnicodeDecodeError):
+            continue
+    _defn['general']['sections']['display']['settings']['theme']['values'] = theme_list
+    theme_default = _defn['general']['sections']['display']['settings']['theme']['default']
+    if theme_default not in theme_list:
+        _defn['general']['sections']['display']['settings']['theme']['default'] = theme_list[0]
+    

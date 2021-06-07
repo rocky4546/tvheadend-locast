@@ -80,6 +80,9 @@ class WebAdminHttpHandler(WebHTTPHandler):
             self.logger.warning('########## ConnectionResetError occurred, will try again')
             time.sleep(1)
             super().__init__(*args)
+        except ValueError:
+            self.logger.warning('ValueError occurred, Looks like HTTPS was used')
+        
 
     def do_GET(self):
         try:

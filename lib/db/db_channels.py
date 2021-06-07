@@ -114,7 +114,7 @@ sqlcmds = {
         """,
     'status_get':
         """
-        SELECT last_update FROM status WHERE
+        SELECT datetime(last_update, 'localtime') FROM status WHERE
             namespace=? AND instance=?
         """,
     'status_del':
@@ -189,7 +189,11 @@ class DBChannels(DB):
         result = self.get(DB_STATUS_TABLE,
             (_namespace, _instance))
         if result:
-            return result[0][0]
+            last_update = result[0][0]
+            if last_update is not None:
+                return datetime.datetime.fromisoformat(last_update)
+            else:
+                return None
         else:
             return None
 

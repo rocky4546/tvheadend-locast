@@ -63,17 +63,16 @@ class EPG:
         Makes it so the minimum epg update rate
         can only occur based on epg_min_refresh_rate
         """
-        todaydate = datetime.date.today()
-        for x in range(0, self.locast_instance.config_obj.data[self.locast_instance.locast.name.lower()]['epg-days']):
-            checking_date = todaydate + datetime.timedelta(days=x)
-            last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, checking_date)
-            if not last_update:
-                return True
-            expired_date = datetime.datetime.now() - datetime.timedelta(
-                seconds=self.locast_instance.config_obj.data[
-                    self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
-            if last_update < expired_date:
-                return True
+        checking_date = datetime.date.today()
+        last_update = self.db.get_last_update(self.locast_instance.locast.name, self.instance, checking_date)
+        if not last_update:
+            return True
+        expired_date = datetime.datetime.now() - datetime.timedelta(
+            seconds=self.locast_instance.config_obj.data[
+                self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
+        print('date:', checking_date, 'last:', last_update, 'expired:', expired_date)
+        if last_update < expired_date:
+            return True
         return False
 
     def dates_to_pull(self):

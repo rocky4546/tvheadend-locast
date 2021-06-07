@@ -6,7 +6,7 @@
                 "sort": "3",
                 "icon": "perm_media",
                 "description": "Contains the general settings for the web GUI",
-                "settings":{                        
+                "settings":{
                     "main_dir":{
                         "label": "Root Path",
                         "type": "path",
@@ -99,7 +99,7 @@
                         "default": "lib.web.htdocs.modules.themes",
                         "level": 3,
                         "writable": false,
-                        "help": "Where the web site themes are located"
+                        "help": "Where the web site themes are located."
                     },
                     "internal_plugins_pkg":{
                         "label": "Main Plugins Package",
@@ -133,7 +133,7 @@
                 "sort": "4",
                 "icon": "inventory_2",
                 "description": "sqlite database names",
-                "settings":{                        
+                "settings":{
                     "defn_db":{
                         "label": "Config Definitions Database",
                         "type": "path",
