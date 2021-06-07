@@ -37,7 +37,7 @@ from lib.common.pickling import Pickling
 try:
     import pip
 except ModuleNotFoundError:
-    print('Unable to load pip module to install upgrades')
+    print('Unable to load pip module to install modules')
 
 try:
     import cryptography

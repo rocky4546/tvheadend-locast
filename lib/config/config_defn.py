@@ -68,6 +68,7 @@ class ConfigDefn:
         """
         json_file = resources.read_text(_defn_path, _defn_file)
         defn = json.loads(json_file)
+        self.call_ondefnload(defn)
         self.merge_defn_dict(defn)
 
     def merge_defn_dict(self, _defn_dict):
@@ -153,6 +154,14 @@ class ConfigDefn:
                         else:
                             results += '<li>[{}][{}] {}</li>'.format(section, key, status)
         return results
+
+    def call_ondefnload(self, _defn):
+        for module in list(_defn.keys()):
+            for section in list(_defn[module]['sections'].keys()):
+                for key, settings in list(_defn[module]['sections'][section]['settings'].items()):
+                    if 'onDefnLoad' in settings:
+                        config_callbacks.call_ondefnload_function(settings['onDefnLoad'], section, key, self.config, _defn)
+
 
     def save_defn_to_db(self, _delta_defn=None):
         if _delta_defn:

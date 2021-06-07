@@ -18,14 +18,15 @@
                         "values": ["0-Basic", "1-Standard", 
                             "2-Expert", "3-Advanced"],
                         "level": 0,
+                        "onDefnLoad": "lib.config.config_callbacks.set_theme_folders",
                         "help": "Displays settings based on complexity"
                     },
                     "theme":{
                         "label": "Theme",
                         "type": "list",
                         "default": "spring",
-                        "values": ["appletv", "black", "blueradiance", 
-                            "dark", "dark-red", "halloween", "holiday", 
+                        "values": ["appletv", "black", "blueradiance",
+                            "dark", "dark-red", "halloween", "holiday",
                             "light", "light-blue", "light-pink", 
                             "light-purple", "light-red", "spring", "wmc"],
                         "level": 0,
