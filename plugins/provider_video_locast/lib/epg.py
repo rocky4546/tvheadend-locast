@@ -70,7 +70,6 @@ class EPG:
         expired_date = datetime.datetime.now() - datetime.timedelta(
             seconds=self.locast_instance.config_obj.data[
                 self.locast_instance.locast.name.lower()]['epg-min_refresh_rate'])
-        print('date:', checking_date, 'last:', last_update, 'expired:', expired_date)
         if last_update < expired_date:
             return True
         return False
