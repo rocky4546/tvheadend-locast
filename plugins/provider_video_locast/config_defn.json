@@ -21,9 +21,9 @@
                     "channel_update_timeout":{
                         "label": "Channel Update Timeout",
                         "type": "integer",
-                        "default": 7,
+                        "default": 1,
                         "level": 3,
-                        "help": "Default pulls channel data from locast every 7 days"
+                        "help": "Default pulls channel data from locast day"
                     },
                     "login-username":{
                         "label": "username",

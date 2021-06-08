@@ -1,50 +1,42 @@
-#!/bin/bash
+#!/usr/bin/env sh
 dflag=;
 vflag=;
 cflag=;
 uflag=;
-if (( $# < 1 ));
+if [ "$#" -lt 1 ];
 then
   printf "At least one option is required\n";
   printf "Set -u [url] argument and try again\n";
   exit 2;
 fi;
 
-for arg;
+while [ $# -gt 0 ];
 do
-    delim="";
-    case "$arg" in
-    #translate --gnu-long-options to -g (short options)
-       --description) args="${args}-d ";;
-       --version) args="${args}-v ";;
-       --capabilities) args="${args}-c ";;
-       --url) args="${args}-u ";;
-       #pass through anything else
-       *) [[ "${arg:0:1}" == "-" ]] || delim="\"";
-           args="${args}${delim}${arg}${delim} ";;
+    case "$1" in
+       -d | --description ) 
+           dflag=1
+           ;;
+       -v | --version ) 
+           vflag=1
+           ;;
+       -c | --capabilities ) 
+           cflag=1;;
+       -u | --url ) 
+           uflag=1;
+           shift;
+           url=$1;
+           ;;
+       -h )
+           printf "Usage: %s: [--description] [--version] [--capabilities] [--url url]\n" $(basename $0);
+           exit 2
+           ;;
+       * )
+           printf "unknown option: %s\n" $1;
+           printf "Usage: %s: [--description] [--version] [--capabilities] [--url url]\n" $(basename $0);
+           exit 2
+           ;;
     esac;
-done;
-
-#Reset the positional parameters to the short options
-eval set -- $args;
-
-while getopts "hdvcu:" option;
-do
-    case $option in
-        d)  dflag=1;;
-        v)  vflag=1;;
-        c)  cflag=1;;
-        u)  uflag=1;
-            url=$OPTARG;
-            ;;
-        h | *)  printf "Usage: %s: [--description] [--version]\n" $(basename $0);
-                printf "     [--capabilities] [--url url]\n";
-            ;;
-        \?) printf "unknown option: -%s\n" $OPTARG;
-            printf "Usage: %s: [--description] [--version] [--capabilities] [--url url]\n" $(basename $0);
-            exit 2;
-            ;;
-    esac >&2;
+    shift;
 done;
 
 if [ "$dflag" ];

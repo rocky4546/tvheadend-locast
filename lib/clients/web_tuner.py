@@ -52,7 +52,17 @@ class TunerHttpHandler(WebHTTPHandler):
         self.internal_proxy = InternalProxy(TunerHttpHandler.plugins, TunerHttpHandler.hdhr_queue)
         self.ffmpeg_proxy = FFMpegProxy(TunerHttpHandler.plugins, TunerHttpHandler.hdhr_queue)
         self.db_configdefn = DBConfigDefn(self.config)
-        super().__init__(*args)
+        try:
+            super().__init__(*args)
+        except ConnectionResetError:
+            self.logger.warning('########## ConnectionResetError occurred, will try again')
+            time.sleep(1)
+            super().__init__(*args)
+        except ValueError:
+            self.logger.warning('ValueError occurred, Bad stream recieved.  Could be HTTPS or the stream was disconnected early')
+
+
+
 
     def do_GET(self):
         content_path, query_data = self.get_query_data()

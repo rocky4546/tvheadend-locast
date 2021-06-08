@@ -81,7 +81,7 @@ class WebAdminHttpHandler(WebHTTPHandler):
             time.sleep(1)
             super().__init__(*args)
         except ValueError:
-            self.logger.warning('ValueError occurred, Looks like HTTPS was used')
+            self.logger.warning('ValueError occurred, Bad stream recieved.  Could be HTTPS or the stream was disconnected early')
         
 
     def do_GET(self):
