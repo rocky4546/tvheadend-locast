@@ -283,12 +283,13 @@ def set_theme_folders(_defn, _config, _section, _key):
             continue
         try:
             importlib.resources.read_text(themes_path, folder)
-        except IsADirectoryError:
+        except (IsADirectoryError, PermissionError):
             theme_list.append(folder)
-        except (PermissionError, UnicodeDecodeError):
+        except (UnicodeDecodeError):
             continue
     _defn['general']['sections']['display']['settings']['theme']['values'] = theme_list
     theme_default = _defn['general']['sections']['display']['settings']['theme']['default']
     if theme_default not in theme_list:
+        print(theme_list)
         _defn['general']['sections']['display']['settings']['theme']['default'] = theme_list[0]
     

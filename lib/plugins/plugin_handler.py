@@ -32,7 +32,7 @@ PLUGIN_DEFN_FILE = 'plugin_defn.json'
 class PluginHandler:
 
     logger = None
-
+    cls_plugins = None
 
     def __init__(self, _config_obj):
         self.plugins = {}
@@ -41,6 +41,7 @@ class PluginHandler:
             PluginHandler.logger = logging.getLogger(__name__)
         self.plugin_defn = self.load_plugin_defn()
         self.collect_plugins(self.config_obj.data['paths']['internal_plugins_pkg'])
+        PluginHandler.cls_plugins = self.plugins
 
     def collect_plugins(self, _plugins_pkg):
         plugin_db = DBPlugins(self.config_obj.data)
