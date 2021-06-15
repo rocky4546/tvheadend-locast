@@ -94,6 +94,7 @@ class Location:
             geo_data = self.get_ip_location()
         if not geo_data:
             self.logger.error("Unable to retrieve DMA location by %s." % location_type)
+            return False
         self.set_location(geo_data)
         return True
 

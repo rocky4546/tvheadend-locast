@@ -53,7 +53,15 @@ class LocastInstance:
         else:
             self.token = self.locast.auth.token
             self.is_free_account = self.locast.auth.is_free_account
-        self.location = Location(self)
+        try:
+            self.location = Location(self)
+        except exceptions.CabernetException:
+            self.logger.error('Setting Locast instance {} to disabled'.format(self.instance))
+            self.config_obj.data[self.config_section]['enabled'] = False
+            self.token = None
+            self.is_free_account = False
+            return
+        
         self.channels = Channels(self)
         self.stream = Stream(self)
         self.epg = EPG(self)

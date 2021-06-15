@@ -34,6 +34,7 @@ from lib.config.config_defn import ConfigDefn
 from lib.db.db_plugins import DBPlugins
 from lib.db.db_channels import DBChannels
 from lib.common.pickling import Pickling
+from lib.plugins.plugin_handler import PluginHandler
 
 
 class WebHTTPHandler(BaseHTTPRequestHandler):
@@ -168,6 +169,7 @@ class WebHTTPHandler(BaseHTTPRequestHandler):
         if platform.system() in ['Windows']:
             unpickle_it = Pickling(WebHTTPHandler.config)
             _plugins = unpickle_it.from_pickle(_plugins.__class__.__name__)
+            PluginHandler.cls_plugins = _plugins.plugins
 
         WebHTTPHandler.plugins = _plugins
         WebHTTPHandler.hdhr_queue = _hdhr_queue
