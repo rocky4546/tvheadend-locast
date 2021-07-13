@@ -140,7 +140,7 @@
                         "default": "config_defn",
                         "level": 3,
                         "writable": false,
-                        "help": "Location of database holding definition data"
+                        "help": "Filename of database containing config defn data"
                     },
                     "plugins_db":{
                         "label": "Plugin Manifest Database",
@@ -148,7 +148,7 @@
                         "default": "plugins",
                         "level": 3,
                         "writable": false,
-                        "help": "Location of database holding plugin manifests"
+                        "help": "Filename of database containing plugin manifests"
                     },
                     "channels_db":{
                         "label": "Channels Database",
@@ -156,7 +156,7 @@
                         "default": "channels",
                         "level": 3,
                         "writable": false,
-                        "help": "Location of database holding channels data"
+                        "help": "Filename of database containing channel data"
                     },
                     "epg_db":{
                         "label": "EPG Database",
@@ -164,7 +164,15 @@
                         "default": "epg",
                         "level": 3,
                         "writable": false,
-                        "help": "Location of database holding program data for each day"
+                        "help": "Filename of database containing program data"
+                    },
+                    "scheduler_db":{
+                        "label": "Scheduler Database",
+                        "type": "path",
+                        "default": "scheduler",
+                        "level": 3,
+                        "writable": false,
+                        "help": "Filename of database containing scheduled tasking"
                     }
                 }
             }

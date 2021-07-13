@@ -195,7 +195,7 @@ class TunerHttpHandler(WebHTTPHandler):
 
 
     @classmethod
-    def init_class_var(cls, _plugins, _hdhr_queue):
+    def init_class_var(cls, _plugins, _hdhr_queue, _sched_queue):
         WebHTTPHandler.logger = logging.getLogger(__name__)
         tuner_count = 0
         for plugin_name in _plugins.plugins.keys():

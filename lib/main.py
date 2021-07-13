@@ -32,6 +32,7 @@ import lib.plugins.plugin_handler as plugin_handler
 import lib.clients.ssdp.ssdp_server as ssdp_server
 from lib.common.utils import clean_exit
 from lib.common.pickling import Pickling
+from lib.schedule.scheduler import Scheduler
 
 
 try:
@@ -76,6 +77,8 @@ def main(script_dir):
     config = config_obj.data
     logger = logging.getLogger(__name__)
 
+
+
     logger.warning('#########################################')
     logger.warning('MIT License, Copyright (C) 2021 ROCKY4546')
     logger.info('Initiating Cabernet v' + utils.get_version_str())
@@ -85,7 +88,6 @@ def main(script_dir):
     plugins = plugin_handler.PluginHandler(config_obj)
     plugins.initialize_plugins()
     config_obj.defn_json = None
-    plugins.refresh_channels()
 
     if opersystem in ['Windows']:
         pickle_it = Pickling(config)
@@ -93,10 +95,11 @@ def main(script_dir):
 
     try:
         hdhr_queue = Queue()
+        sched_queue = Queue()
         logger.info('Starting admin website on {}:{}'.format(
             config['web']['plex_accessible_ip'],
             config['web']['web_admin_port']))
-        webadmin = Process(target=web_admin.start, args=(plugins, hdhr_queue,))
+        webadmin = Process(target=web_admin.start, args=(plugins, hdhr_queue, sched_queue))
         webadmin.start()
         time.sleep(0.1)
 
@@ -107,9 +110,9 @@ def main(script_dir):
         tuner.start()
         time.sleep(0.1)
 
-        logger.info('Refreshing EPG data')
-        plugins.refresh_epg()
+        scheduler = Scheduler(plugins, sched_queue)
         time.sleep(0.1)
+
         
         if not config['ssdp']['disable_ssdp']:
             logger.info('Starting SSDP service on port 1900')
