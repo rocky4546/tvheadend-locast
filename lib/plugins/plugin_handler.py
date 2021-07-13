@@ -83,7 +83,7 @@ class PluginHandler:
                 self.logger.info('Plugin {} is disabled in config.ini'.format(plugin.name))
                 plugin.enabled = False
 
-    def refresh_channels(self, _namespace=None):
+    def refresh_channels(self, _namespace=None, _instance=None):
         if _namespace is not None:
             self.call_function(self.plugins[_namespace], 'refresh_channels_ext', _instance)
         else:
