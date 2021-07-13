@@ -99,7 +99,7 @@ class EPG:
                 epg_dom = minidom.parseString(epg_dom).toprettyxml()[27:-6]
             else:
                 epg_dom = minidom.parseString(ElementTree.tostring(_xml, encoding='UTF-8', method='xml')).toprettyxml()[:-6]
-                if len(epg_dom) < 500:
+                if len(epg_dom) < 50:
                     return False
             self.webserver.wfile.write(epg_dom.encode())
         else:
@@ -109,7 +109,7 @@ class EPG:
                     return False
             else:
                 epg_dom = ElementTree.tostring(_xml)[:-5]
-                if len(epg_dom) < 500:
+                if len(epg_dom) < 50:
                     return False
             self.webserver.wfile.write(epg_dom+b'\r\n')
         epg_dom = None

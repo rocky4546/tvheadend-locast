@@ -217,6 +217,7 @@ class HDHRServer:
     def process_queue(self, _queue):
         while True:
             queue_item = _queue.get()
+            # queue item has a command and arguments which are based on the command.
             self.tuners[queue_item['namespace'].lower()][queue_item['tuner']] = {
                 'channel': queue_item['channel'],
                 'status': queue_item['status']

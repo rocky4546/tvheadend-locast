@@ -267,6 +267,7 @@ class ChannelsFormHTML:
         else:
             return '<input id="text-mi" name="' + name + '" value="1" type=checkbox>'
         
+
     @property
     def form(self):
         t = self.table
@@ -295,6 +296,7 @@ class ChannelsFormHTML:
                     enabled_status = "duplicate_disabled"
             else:
                 sids_processed[sid] = sid_data['enabled']
+
 
             if sid_data['json']['HD']:
                 quality = 'HD'
