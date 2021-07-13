@@ -47,11 +47,7 @@ class Channels:
             self.db.del_status( 
                 self.locast.name, self.instance)
 
-
-
     def refresh_channels(self, force=False):
-        self.logger.debug('Checking Channel data for {} {}'.format(self.locast.name, self.instance))
-        # fcc_stations = FCCData(self.locast)
         last_update = self.db.get_status(self.locast.name, self.instance)
         update_needed = False
         if not last_update:
@@ -63,6 +59,8 @@ class Channels:
         if update_needed or force:
             ch_dict = self.get_locast_channels()
             self.db.save_channel_list(self.locast.name, self.instance, ch_dict)
+        else:
+            self.logger.debug('Channel data still new for {} {}, not refreshing'.format(self.locast.name, self.instance))
 
     @handle_json_except
     @handle_url_except

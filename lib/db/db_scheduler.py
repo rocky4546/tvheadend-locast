@@ -89,13 +89,14 @@ sqlcmds = {
         """
         SELECT *
         FROM task
+        WHERE area LIKE ? AND title LIKE ?
         ORDER BY task.area ASC, task.title ASC
         """,
     'task_by_id_get':
         """
         SELECT *
         FROM task
-        where taskid like ?
+        WHERE taskid like ?
         ORDER BY task.area ASC, task.title ASC
         """,
 
@@ -111,7 +112,7 @@ sqlcmds = {
         FROM trigger 
         INNER JOIN task ON task.area = trigger.area
         AND task.title = trigger.title
-        where trigger.uuid = ?
+        WHERE trigger.uuid = ?
         """,
     'trigger_by_taskid_get':
         """
@@ -119,7 +120,7 @@ sqlcmds = {
         FROM trigger 
         INNER JOIN task ON task.area = trigger.area
         AND task.title = trigger.title
-        where task.taskid LIKE ?
+        WHERE task.taskid LIKE ?
         ORDER BY task.area ASC, task.title ASC, trigger.timetype DESC
         """,
     'trigger_by_type_get':
@@ -128,7 +129,7 @@ sqlcmds = {
         FROM trigger 
         INNER JOIN task ON task.area = trigger.area
         AND task.title = trigger.title
-        where trigger.timetype LIKE ?
+        WHERE trigger.timetype LIKE ?
         ORDER BY task.priority DESC
         """,
     'trigger_active_get':
@@ -137,7 +138,7 @@ sqlcmds = {
         FROM trigger 
         INNER JOIN task ON task.area = trigger.area
         AND task.title = trigger.title
-        where trigger.uuid = ?
+        WHERE trigger.uuid = ?
         """,
     'trigger_by_uuid_del':
         """
@@ -175,8 +176,15 @@ class DBScheduler(DB):
         except sqlite3.IntegrityError:
             return False
 
-    def get_tasks(self):
-        return self.get_dict(DB_TASK_TABLE)
+    def get_tasks(self, _area=None, _title=None):
+        if not _area:
+            _area = '%'
+        if not _title:
+            _title = '%'
+        return self.get_dict(DB_TASK_TABLE, (
+            _area,
+            _title
+        ))
 
     def get_task(self, _id):
         task = self.get_dict(DB_TASK_TABLE + '_by_id', (

@@ -16,6 +16,10 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import datetime
+import time
+import urllib.request
+
 from lib.db.db_scheduler import DBScheduler
 from lib.plugins.plugin_obj import PluginObj
 
@@ -28,11 +32,65 @@ class Locast(PluginObj):
     def __init__(self, _plugin):
         super().__init__(_plugin)
         self.auth = Authenticate(_plugin.config_obj, self.namespace.lower())
+        self.scheduler_db = DBScheduler(self.config_obj.data)
         for inst in _plugin.instances:
             self.instances[inst] = LocastInstance(self, inst)
         self.scheduler_tasks()
 
+    def refresh_channels_ext(self, _instance=None):
+        """
+        External request to refresh channels. Called from the plugin manager.
+        All tasks are namespace based so instance is ignored. 
+        This calls the scheduler to run the task.
+        """
+        self.web_admin_url = 'http://' + self.config_obj.data['web']['plex_accessible_ip'] + \
+            ':' + str(self.config_obj.data['web']['web_admin_port'])
+        task = self.scheduler_db.get_tasks('Channels', 'Refresh Locast Channels')[0]
+        url = ( self.web_admin_url + '/pages/scheduler?action=runtask&taskid={}'
+               .format(task['taskid']))
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as resp:
+            result = resp.read()
+
+        # wait for the last run to update indicating the task has completed.
+        while True:
+            task_status = self.scheduler_db.get_task(task['taskid'])
+            x = datetime.datetime.utcnow() - task_status['lastran']
+            # If updated in the last 20 minutes, then ignore
+            # Many media servers will request this multiple times.
+            if x.total_seconds() < 1200:
+                break
+            time.sleep(0.5)
+
+    def refresh_epg_ext(self, _instance=None):
+        """
+        External request to refresh epg. Called from the plugin manager.
+        All tasks are namespace based so instance is ignored.
+        This calls the scheduler to run the task.
+        """
+        self.web_admin_url = 'http://' + self.config_obj.data['web']['plex_accessible_ip'] + \
+            ':' + str(self.config_obj.data['web']['web_admin_port'])
+        task = self.scheduler_db.get_tasks('EPG', 'Refresh Locast EPG')[0]
+        url = ( self.web_admin_url + '/pages/scheduler?action=runtask&taskid={}'
+               .format(task['taskid']))
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as resp:
+            result = resp.read()
+
+        # wait for the last run to update indicating the task has completed.
+        while True:
+            task_status = self.scheduler_db.get_task(task['taskid'])
+            x = datetime.datetime.utcnow() - task_status['lastran']
+            # If updated in the last 20 minutes, then ignore
+            # Many media servers will request this multiple times.
+            if x.total_seconds() < 1200:
+                break
+            time.sleep(0.5)
+
     def refresh_channels(self, _instance=None):
+        """
+        Called from the scheduler
+        """
         if _instance is None:
             for key, instance in self.instances.items():
                 instance.refresh_channels()
@@ -40,6 +98,9 @@ class Locast(PluginObj):
             self.instances[_instance].refresh_channels()
 
     def refresh_epg(self, _instance=None):
+        """
+        Called from the scheduler
+        """
         if _instance is None:
             for key, instance in self.instances.items():
                 instance.refresh_epg()
@@ -53,8 +114,7 @@ class Locast(PluginObj):
         return self.instances[_instance].is_time_to_refresh(_last_refresh)
 
     def scheduler_tasks(self):
-        scheduler_db = DBScheduler(self.config_obj.data)
-        if scheduler_db.save_task(
+        if self.scheduler_db.save_task(
                 'Channels',
                 'Refresh Locast Channels',
                 self.name,
@@ -64,17 +124,17 @@ class Locast(PluginObj):
                 'inline',
                 'Pulls channel lineup from Locast'
                 ):
-            scheduler_db.save_trigger(
+            self.scheduler_db.save_trigger(
                 'Channels',
                 'Refresh Locast Channels',
                 'startup')
-            scheduler_db.save_trigger(
+            self.scheduler_db.save_trigger(
                 'Channels',
                 'Refresh Locast Channels',
                 'daily',
                 timeofday='22:00'
                 )
-        if scheduler_db.save_task(
+        if self.scheduler_db.save_task(
                 'EPG',
                 'Refresh Locast EPG',
                 self.name,
@@ -84,11 +144,11 @@ class Locast(PluginObj):
                 'thread',
                 'Pulls channel program data from Locast'
                 ):
-            scheduler_db.save_trigger(
+            self.scheduler_db.save_trigger(
                 'EPG',
                 'Refresh Locast EPG',
                 'startup')
-            scheduler_db.save_trigger(
+            self.scheduler_db.save_trigger(
                 'EPG',
                 'Refresh Locast EPG',
                 'interval',
