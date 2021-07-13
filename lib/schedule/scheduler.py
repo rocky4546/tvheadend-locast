@@ -16,6 +16,7 @@ The above copyright notice and this permission notice shall be included in all c
 substantial portions of the Software.
 """
 
+import datetime
 import time
 import traceback
 import logging
@@ -30,8 +31,25 @@ from lib.db.db_scheduler import DBScheduler
 from lib.web.pages.templates import web_templates
 
 
+@getrequest.route('/pages/scheduler')
+def get_scheduler(_webserver):
+    try:
+        if _webserver.query_data['action'] == 'runtask':
+            _webserver.sched_queue.put({'cmd': 'runtask', 'taskid': _webserver.query_data['taskid'] })
+            time.sleep(0.1)
+            _webserver.do_mime_response(200, 'text/html', 'action is ' + _webserver.query_data['action'])
+            return
+        else:
+            _webserver.do_mime_response(501, 'text/html',
+                web_templates['htmlError'].format('501 - Unknown action'))
+    except KeyError:
+        _webserver.do_mime_response(501, 'text/html', 
+            web_templates['htmlError'].format('501 - Badly formed request'))
+    
+
 class Scheduler(Thread):
     """
+    Assumed to be a singleton
     triggers are associated with a task in the database and define when a task runs
     jobs are listed in the Schedule object and run as cron jobs. Triggers with
     their associated tasks define jobs.
@@ -39,6 +57,8 @@ class Scheduler(Thread):
     Tasks are not managed by this class.
     Only one trigger/job can run from within a task at any point in time.
     """
+    scheduler_obj = None
+
 
     def __init__(self, _plugins, _queue):
         Thread.__init__(self)
@@ -50,6 +70,7 @@ class Scheduler(Thread):
         self.scheduler_db.reset_activity()
         self.schedule = lib.schedule.schedule
         self.daemon = True
+        Scheduler.scheduler_obj = self
         self.start()
 
     def run(self):
@@ -63,7 +84,7 @@ class Scheduler(Thread):
         for trigger in triggers:
             self.exec_trigger(trigger)
         self.setup_triggers()
-        delay = 10
+        delay = 5
         counter = 0
         while True:
             try:
@@ -79,7 +100,7 @@ class Scheduler(Thread):
             if counter > 0:
                 counter -= 1
             else:
-                delay = 10
+                delay = 5
 
     def exec_trigger(self, _trigger):
         """
@@ -187,6 +208,8 @@ class Scheduler(Thread):
         try:
             if _queue_item['cmd'] == 'run':
                 self.run_trigger(_queue_item['uuid'])
+            elif _queue_item['cmd'] == 'runtask':
+                self.run_task(_queue_item['taskid'])
             elif _queue_item['cmd'] == 'del':
                 self.delete_trigger(_queue_item['uuid'])
             elif _queue_item['cmd'] == 'add':
@@ -207,8 +230,11 @@ class Scheduler(Thread):
 
     def run_trigger(self, _uuid):
         jobs = self.schedule.get_jobs(_uuid)
-        for job in jobs:
-            job.run()
+        if len(jobs) == 0:
+            self.logger.info('Invalid uuid for run request')
+        else:
+            for job in jobs:
+                job.run()
 
     def add_trigger(self, trigger):
         if trigger['timetype'] == 'startup':
@@ -245,3 +271,26 @@ class Scheduler(Thread):
         trigger = self.scheduler_db.get_trigger(uuid)
         self.add_job(trigger)
 
+    def run_task(self, _taskid):
+        triggers = self.scheduler_db.get_triggers(_taskid)
+        if len(triggers) == 0:
+            self.logger.warning('Invalid taskid when requesting to run task')
+            return None
+
+        is_run = False
+        default_trigger = None
+        for trigger in triggers:
+            if trigger['timetype'] == 'startup':
+                continue
+            elif trigger['timetype'] == 'interval':
+                self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
+                is_run = True
+                break
+            else:
+                default_trigger = trigger
+        if not is_run:
+            if default_trigger is not None:
+                self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
+            else:
+                self.logger.warning('Need at least one non-startup trigger event to run manually')
+        return None

@@ -85,18 +85,18 @@ class PluginHandler:
 
     def refresh_channels(self, _namespace=None):
         if _namespace is not None:
-            self.call_function(self.plugins[_namespace], 'refresh_channels')
+            self.call_function(self.plugins[_namespace], 'refresh_channels_ext', _instance)
         else:
             for name, plugin in self.plugins.items():
-                self.call_function(plugin, 'refresh_channels')
+                self.call_function(plugin, 'refresh_channels_ext')
 
     def refresh_epg(self, _namespace=None, _instance=None):
-        if _namespace:
+        if _namespace is not None:
             if _namespace in self.plugins:
-                self.call_function(self.plugins[_namespace], 'refresh_epg', _instance)
+                self.call_function(self.plugins[_namespace], 'refresh_epg_ext', _instance)
         else:
             for name, plugin in self.plugins.items():
-                self.call_function(plugin, 'refresh_epg')
+                self.call_function(plugin, 'refresh_epg_ext')
 
     def call_function(self, _plugin, _f_name, *args):
         try:
