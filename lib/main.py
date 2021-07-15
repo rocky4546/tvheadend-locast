@@ -136,16 +136,18 @@ def main(script_dir):
 
     except KeyboardInterrupt:
         logger.info('^C received, shutting down the server')
-        shutdown(config, hdhr_serverx, ssdp_serverx, webadmin, tuner, config_obj)
+        shutdown(config, hdhr_serverx, ssdp_serverx, webadmin, tuner, scheduler, config_obj)
 
 
-def shutdown(_config, _hdhr_serverx, _ssdp_serverx, _webadmin, _tuner, _config_obj):
+def shutdown(_config, _hdhr_serverx, _ssdp_serverx, _webadmin, _tuner, _scheduler, _config_obj):
     if not _config['hdhomerun']['disable_hdhr'] and _hdhr_serverx:
         _hdhr_serverx.terminate()
         _hdhr_serverx.join()
     if not _config['ssdp']['disable_ssdp'] and _ssdp_serverx:
         _ssdp_serverx.terminate()
         _ssdp_serverx.join()
+    if _scheduler:
+        _scheduler.terminate()
     if _webadmin:
         _webadmin.terminate()
         _webadmin.join()
