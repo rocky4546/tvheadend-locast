@@ -467,6 +467,7 @@ class ScheduleHTML:
     def run_task(self, _taskid):
         triggers = self.scheduler_db.get_triggers(_taskid)
         if len(triggers) == 0:
+            self.logger.warning('Invalid taskid when requesting to run task')
             return None
 
         is_run = False
@@ -481,10 +482,11 @@ class ScheduleHTML:
                 break
             else:
                 default_trigger = trigger
-        if not is_run and default_trigger is not None:
-            self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
-            time.sleep(0.1)
-        else:
-            self.logger.warning('Need at least one non-startup trigger event to run manually')
+        if not is_run:
+            if default_trigger is not None:
+                self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
+                time.sleep(0.1)
+            else:
+                self.logger.warning('Need at least one non-startup trigger event to run manually')
         return None
 

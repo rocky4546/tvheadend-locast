@@ -39,16 +39,23 @@ class Authenticate:
         self.token = self.config_obj.data[self.section]['login-token']
         self.login()
 
-    @handle_url_except 
+    @handle_url_except
     def login(self):
         if not self.username:
             return None
         if not self.password:
             return None
-        if self.config_obj.data[self.section]['login-invalid'] is not None:
-            self.logger.error('{} Unable to login due to invalid logins.  Clear config entry login_invalid to try again'.format(self.section))
-            raise exceptions.CabernetException('Locast Login Failed')
-
+        login_invalid = self.config_obj.data[self.section]['login-invalid']
+        if login_invalid is not None:
+            delta_secs = time.time() - login_invalid
+            # if over 1hr 30 min, then retry login
+            if delta_secs < 5400:
+                self.logger.error('{} Unable to login due to invalid logins.  Clear config entry login_invalid to try again'.format(self.section))
+                raise exceptions.CabernetException('Locast Login Failed')
+            else:
+                self.logger.info('{} Resetting invalid logins config value and retrying login to Locast'.format(self.section))
+                self.config_obj.write(self.section, 'login-invalid', "")
+            
         if self.validate_user(True):
             self.logger.info('Reusing Locast token [{}]'.format(self.section))
             return True

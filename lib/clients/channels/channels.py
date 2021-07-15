@@ -44,6 +44,22 @@ def channels_m3u(_webserver):
         _webserver.query_data['instance']))
 
 
+@getrequest.route('/lineup.xml')
+def lineup_xml(_webserver):
+    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
+    _webserver.do_mime_response(200, 'application/xml', get_channels_xml(
+        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
+        _webserver.query_data['instance']))
+
+
+@getrequest.route('/lineup.json')
+def lineup_json(_webserver):
+    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
+    _webserver.do_mime_response(200, 'application/json', get_channels_json(
+        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
+        _webserver.query_data['instance']))
+
+
 def get_channels_m3u(_config, _base_url, _namespace, _instance):
 
     format_descriptor = '#EXTM3U'
@@ -99,14 +115,6 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
                 )
             )
     return fakefile.getvalue()
-    
-
-@getrequest.route('/lineup.json')
-def lineup_json(_webserver):
-    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
-    _webserver.do_mime_response(200, 'application/json', get_channels_json(
-        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
-        _webserver.query_data['instance']))
 
     
 def get_channels_json(_config, _base_url, _namespace, _instance):
@@ -130,14 +138,6 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
                     sid_data['json']['HD'])
             return_json = return_json + ','
     return "[" + return_json[:-1] + "]"
-
-
-@getrequest.route('/lineup.xml')
-def lineup_xml(_webserver):
-    _webserver.plugins.refresh_channels(_webserver.query_data['name'])
-    _webserver.do_mime_response(200, 'application/xml', get_channels_xml(
-        _webserver.config, _webserver.stream_url, _webserver.query_data['name'], 
-        _webserver.query_data['instance']))
 
 
 def get_channels_xml(_config, _base_url, _namespace, _instance):
@@ -192,6 +192,7 @@ def update_channels(_config, _namespace, _query_data):
             db.update_channel(ch_db)
     results += '</ul><hr>'
     return results
+
 
 def translate_main2json(_name):
     if _name == 'display_number':
