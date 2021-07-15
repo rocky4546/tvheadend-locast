@@ -149,6 +149,8 @@ class TVHUserConfig:
                 return _value
         except (configparser.NoOptionError, configparser.NoSectionError, TypeError):
             return _value
+        except ValueError:
+            return None
 
     # removes sensitive data from config and returns a copy
     def filter_config_data(self):

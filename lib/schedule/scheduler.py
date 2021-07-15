@@ -71,6 +71,14 @@ class Scheduler(Thread):
         self.schedule = lib.schedule.schedule
         self.daemon = True
         Scheduler.scheduler_obj = self
+
+        def _queue_thread():
+            while True:
+                queue_item = self.queue.get(True)
+                self.process_queue(queue_item)
+        _q_thread = Thread(target=_queue_thread, args=())
+        _q_thread.daemon = True
+        _q_thread.start()
         self.start()
 
     def run(self):
@@ -84,23 +92,10 @@ class Scheduler(Thread):
         for trigger in triggers:
             self.exec_trigger(trigger)
         self.setup_triggers()
-        delay = 5
-        counter = 0
         while True:
-            try:
-                while True:
-                    queue_item = self.queue.get(False)
-                    self.process_queue(queue_item)
-                    delay = 0.5
-                    counter = 600
-            except queue.Empty:
-                pass
             self.schedule.run_pending()
-            time.sleep(delay)
-            if counter > 0:
-                counter -= 1
-            else:
-                delay = 5
+            time.sleep(30)
+
 
     def exec_trigger(self, _trigger):
         """
@@ -137,6 +132,8 @@ class Scheduler(Thread):
             # call function directly
         else:
             plugin_obj = self.plugins.plugins[_trigger['namespace']].plugin_obj
+            if plugin_obj is None:
+                return
             if _trigger['instance'] is None:
                 call_f = getattr(plugin_obj, _trigger['funccall'])
                 call_f()
