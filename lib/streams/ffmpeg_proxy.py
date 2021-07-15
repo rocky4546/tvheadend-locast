@@ -127,7 +127,7 @@ class FFMpegProxy(Stream):
                 idle_timer -= 1
                 if idle_timer == 0:
                     if self.plugins.plugins[self.channel_dict['namespace']].plugin_obj \
-                            .is_time_to_refresh(self.last_refresh, _channel_dict['instance']):
+                            .is_time_to_refresh_ext(self.last_refresh, _channel_dict['instance']):
                         self.ffmpeg_proc = self.refresh_stream()
         # with open("x.ts"+str(datetime.datetime.now().timestamp()), 'wb') as temp_file:
         # with open("x.ts", 'wb') as temp_file:

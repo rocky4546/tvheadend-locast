@@ -61,7 +61,7 @@ class Stream:
 
     def get_stream_uri(self, _channel_dict):
         return self.plugins.plugins[_channel_dict['namespace']] \
-            .plugin_obj.get_channel_uri(_channel_dict['uid'], _channel_dict['instance'])
+            .plugin_obj.get_channel_uri_ext(_channel_dict['uid'], _channel_dict['instance'])
 
     def gen_response(self, _namespace, _instance, _ch_num, _tuner):
         """

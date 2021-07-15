@@ -87,6 +87,21 @@ class Locast(PluginObj):
                 break
             time.sleep(0.5)
 
+    def get_channel_uri_ext(self, sid, _instance=None):
+        """
+        External request to return the uri for a m3u8 stream.
+        Called from stream object.
+        """
+        return self.instances[_instance].get_channel_uri(sid)
+
+    def is_time_to_refresh_ext(self, _last_refresh, _instance):
+        """
+        External request to determine if the m3u8 stream uri needs to 
+        be refreshed.
+        Called from stream object.
+        """
+        return self.instances[_instance].is_time_to_refresh(_last_refresh)
+
     def refresh_channels(self, _instance=None):
         """
         Called from the scheduler
@@ -106,12 +121,6 @@ class Locast(PluginObj):
                 instance.refresh_epg()
         else:
             self.instances[_instance].refresh_epg()
-
-    def get_channel_uri(self, sid, _instance=None):
-        return self.instances[_instance].get_channel_uri(sid)
-
-    def is_time_to_refresh(self, _last_refresh, _instance):
-        return self.instances[_instance].is_time_to_refresh(_last_refresh)
 
     def scheduler_tasks(self):
         if self.scheduler_db.save_task(

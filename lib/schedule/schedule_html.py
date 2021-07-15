@@ -188,8 +188,6 @@ class ScheduleHTML:
             self.logger.warning('Invalid task id: {}'.format(_id))
             return ''
 
-        self.queue.put({'cmd': 'prep'})
-
         html = ''.join([
             '<table style="display: contents" width=95%>',
             '<tr>',

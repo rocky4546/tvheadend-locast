@@ -70,14 +70,14 @@ class Scheduler(Thread):
         self.scheduler_db.reset_activity()
         self.schedule = lib.schedule.schedule
         self.daemon = True
+        self.stop_thread = False
         Scheduler.scheduler_obj = self
 
         def _queue_thread():
-            while True:
+            while not self.stop_thread:
                 queue_item = self.queue.get(True)
                 self.process_queue(queue_item)
         _q_thread = Thread(target=_queue_thread, args=())
-        _q_thread.daemon = True
         _q_thread.start()
         self.start()
 
@@ -92,10 +92,16 @@ class Scheduler(Thread):
         for trigger in triggers:
             self.exec_trigger(trigger)
         self.setup_triggers()
-        while True:
+        while not self.stop_thread:
             self.schedule.run_pending()
-            time.sleep(30)
+            for i in range(30):
+                if self.stop_thread:
+                    break
+                time.sleep(1)
 
+    def terminate(self):
+        self.stop_thread = True
+        self.queue.put({'cmd': 'noop'})
 
     def exec_trigger(self, _trigger):
         """
@@ -211,7 +217,7 @@ class Scheduler(Thread):
                 self.delete_trigger(_queue_item['uuid'])
             elif _queue_item['cmd'] == 'add':
                 self.add_trigger(_queue_item['trigger'])
-            elif _queue_item['cmd'] == 'prep':
+            elif _queue_item['cmd'] == 'noop':
                 pass
             else:
                 self.logger.warning('UNKNOWN Scheduler cmd from queue: {}'.format(_queue_item))
