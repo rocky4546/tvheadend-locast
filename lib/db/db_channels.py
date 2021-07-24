@@ -20,12 +20,17 @@ import ast
 import json
 import datetime
 import sqlite3
+import threading
 
 from lib.db.db import DB
+from lib.common.decorators import Backup
+from lib.common.decorators import Restore
+
 
 DB_CHANNELS_TABLE = 'channels'
 DB_STATUS_TABLE = 'status'
 DB_CATEGORIES_TABLE = 'categories'
+DB_CONFIG_NAME = 'db_files-channels_db'
 
 sqlcmds = {
     'ct': [
@@ -63,6 +68,18 @@ sqlcmds = {
             )
         """
     ],
+    'dt': [
+        """
+        DROP TABLE IF EXISTS channels
+        """,
+        """
+        DROP TABLE IF EXISTS status
+        """,
+        """
+        DROP TABLE IF EXISTS categories
+        """
+        ],
+    
     'channels_add':
         """
         INSERT INTO channels (
@@ -103,6 +120,10 @@ sqlcmds = {
         """,
     'channels_name_get':
         """
+        SELECT DISTINCT namespace FROM channels
+        """,
+    'channels_instance_get':
+        """
         SELECT DISTINCT namespace,instance FROM channels
         """,
     
@@ -120,7 +141,7 @@ sqlcmds = {
     'status_del':
         """
         DELETE FROM status WHERE
-            namespace=? AND instance=?
+            namespace LIKE ? AND instance LIKE ?
         """
 }
 
@@ -128,7 +149,7 @@ sqlcmds = {
 class DBChannels(DB):
 
     def __init__(self, _config):
-        super().__init__(_config, _config['database']['channels_db'], sqlcmds)
+        super().__init__(_config, _config['datamgmt'][DB_CONFIG_NAME], sqlcmds)
 
     def save_channel_list(self, _namespace, _instance, _ch_dict):
         """
@@ -182,7 +203,11 @@ class DBChannels(DB):
     def del_channels(self, _namespace, _instance):
         self.delete(DB_CHANNELS_TABLE, ('%', _namespace, _instance,))
     
-    def del_status(self, _namespace, _instance):
+    def del_status(self, _namespace=None, _instance=None):
+        if not _namespace:
+            _namespace = '%'
+        if not _instance:
+            _instance = '%'
         self.delete(DB_STATUS_TABLE, (_namespace, _instance,))
 
     def get_status(self, _namespace, _instance):
@@ -219,6 +244,10 @@ class DBChannels(DB):
 
     def get_channel_names(self):
         return self.get_dict(DB_CHANNELS_TABLE + '_name')
+
+    def get_channel_instances(self):
+        return self.get_dict(DB_CHANNELS_TABLE + '_instance')
+
 
     def get_channel(self, _uid, _namespace, _instance):
         if not _namespace:
@@ -274,23 +303,15 @@ class DBChannels(DB):
             return ''.join(['CAST(', _column, ' as FLOAT) ', dir, ', '])
         elif _column in json_types:
             return ''.join(['JSON_EXTRACT(json, "$.', _column,  '") ', dir, ', '])    
-        
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    @Backup(DB_CONFIG_NAME)
+    def backup(self, backup_folder):
+        self.export_sql(backup_folder)
+
+    @Restore(DB_CONFIG_NAME)
+    def restore(self, backup_folder):
+        msg = self.import_sql(backup_folder)
+        if msg is None:
+            return 'Channels Database Restored'
+        else:
+            return msg

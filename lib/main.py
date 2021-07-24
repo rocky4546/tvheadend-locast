@@ -30,6 +30,7 @@ import lib.clients.web_admin as web_admin
 import lib.common.utils as utils
 import lib.plugins.plugin_handler as plugin_handler
 import lib.clients.ssdp.ssdp_server as ssdp_server
+import lib.db.datamgmt.backups as backups
 from lib.common.utils import clean_exit
 from lib.common.pickling import Pickling
 from lib.schedule.scheduler import Scheduler
@@ -92,6 +93,7 @@ def main(script_dir):
         pickle_it.to_pickle(plugins)
 
     try:
+        backups.scheduler_tasks(config)
         hdhr_queue = Queue()
         sched_queue = Queue()
         logger.info('Starting admin website on {}:{}'.format(

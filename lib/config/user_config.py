@@ -22,6 +22,8 @@ import json
 import logging
 import pathlib
 import os
+import shutil
+import time
 import urllib
 
 import lib.common.utils as utils
@@ -30,7 +32,12 @@ from lib.common.utils import clean_exit
 from lib.common.decorators import getrequest
 from lib.db.db_config_defn import DBConfigDefn
 from lib.web.pages.templates import web_templates
+from lib.common.decorators import Backup
+from lib.common.decorators import Restore
 
+
+CONFIG_BKUP_NAME = 'backups-config_ini'
+CONFIG_FILENAME = 'config.ini'
 
 def get_config(script_dir, opersystem, args):
     return TVHUserConfig(script_dir, opersystem, args)
@@ -54,14 +61,16 @@ class TVHUserConfig:
         self.logger = None
         self.defn_json = None
         self.script_dir = str(_script_dir)
-        if not self.defn_json:
-            self.defn_json = config_defn.load_default_config_defns()
+        self.defn_json = config_defn.load_default_config_defns()
         self.data = self.defn_json.get_default_config()
         if _script_dir is not None:
             config_file = TVHUserConfig.get_config_path(_script_dir, _args)
             self.import_config(config_file)
             self.defn_json.call_oninit(self)
             utils.logging_setup(self.data)
+            # at this point, the config is setup
+            self.db = DBConfigDefn(self.data)
+            self.db.reinitialize_tables()
             self.defn_json.set_config(self.data)
             self.defn_json.save_defn_to_db()
         else:
@@ -118,7 +127,7 @@ class TVHUserConfig:
         if args is not None and args.cfg:
             config_file = pathlib.Path(str(args.cfg))
         else:
-            for x in ['config.ini', 'data/config.ini']:
+            for x in [CONFIG_FILENAME, 'data/'+CONFIG_FILENAME]:
                 poss_config = pathlib.Path(_script_dir).joinpath(x)
                 if os.path.exists(poss_config):
                     config_file = poss_config
@@ -246,8 +255,8 @@ class TVHUserConfig:
                     self.logger.debug(
                         'Config Update: Removed [{}][{}]'.format(_section, key))
                     results += \
-                        '<li>Removed [{}][{}] from config.ini, using default value</li>' \
-                        .format(_section, key)
+                        '<li>Removed [{}][{}] from {}, using default value</li>' \
+                        .format(_section, key, CONFIG_FILENAME)
                 else:
                     # set new value
                     if len(_updated_data[_section][key]) == 3:
@@ -284,3 +293,38 @@ class TVHUserConfig:
             self.config_handler.set(_section, _key, _value)
         with open(self.data['paths']['config_file'], 'w') as config_file:
             self.config_handler.write(config_file)
+
+class BackupConfig:
+
+    def __init__(self, _config):
+        self.logger = logging.getLogger(__class__.__name__)
+        self.config = _config
+
+    @Backup(CONFIG_BKUP_NAME)
+    def backup(self, backup_folder):
+        self.logger.debug('Running backup for {}'.format(CONFIG_FILENAME))
+        try:
+            if not os.path.isdir(backup_folder):
+                os.mkdir(backup_folder)
+            backup_file = pathlib.Path(backup_folder, CONFIG_FILENAME)
+            shutil.copyfile(self.config['paths']['config_file'], 
+                backup_file)
+        except PermissionError as e:
+            self.logger.warning(e)
+            self.logger.warning('Unable to make backups')
+
+    @Restore(CONFIG_BKUP_NAME)
+    def restore(self, backup_folder):
+        self.logger.debug('Running restore for {}'.format(CONFIG_FILENAME))
+        if not os.path.isdir(backup_folder):
+            msg = 'Backup folder does not exist: {}'.format(backup_folder)
+            self.logger.warning(msg)
+            return msg
+        backup_file = pathlib.Path(backup_folder, CONFIG_FILENAME)
+        if not os.path.isfile(backup_file):
+            msg = 'Backup file does not exist, skipping: {}'.format(backup_file)
+            self.logger.info(msg)
+            return msg
+        shutil.copyfile(backup_file, 
+            self.config['paths']['config_file'])
+        return CONFIG_FILENAME+' restored, please restart the app'

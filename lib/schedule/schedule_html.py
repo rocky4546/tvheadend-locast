@@ -69,13 +69,13 @@ class ScheduleHTML:
         return ''.join([
             '<!DOCTYPE html><html><head>',
             '<meta charset="utf-8"/><meta name="author" content="rocky4546">',
-            '<meta name="description" content="database management for Cabernet">',
+            '<meta name="description" content="schedule task management for Cabernet">',
             '<title>Scheduled Tasks</title>',
             '<meta name="viewport" content="width=device-width, ',
             'minimum-scale=1.0, maximum-scale=1.0">',
             '<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>',
             '<link rel="stylesheet" type="text/css" href="/modules/scheduler/scheduler.css">',
-            '<script src="/modules/scheduler/scheduler.js"></script>',
+            '<script src="/modules/scheduler/scheduler.js"></script>'
         ])
 
     @property
@@ -110,31 +110,35 @@ class ScheduleHTML:
                     '</tr>',
                 ])
 
-            lastran_delta = datetime.datetime.utcnow() - task_dict['lastran']
-            lastran_secs = int(lastran_delta.total_seconds())
-            lastran_mins = lastran_secs // 60
-            lastran_hrs = lastran_mins // 60
-            lastran_days = lastran_hrs // 24
-            if lastran_days != 0:
-                lastran_delta = str(lastran_days) + ' days'
-            elif lastran_hrs != 0:
-                lastran_delta = str(lastran_hrs) + ' hours'
-            elif lastran_mins != 0:
-                lastran_delta = str(lastran_mins) + ' minutes'
+            if task_dict['lastran'] is None:
+                lastran_delta = 'Never'
+                dur_delta = ''
             else:
-                lastran_delta = str(lastran_secs) + ' seconds'
+                lastran_delta = datetime.datetime.utcnow() - task_dict['lastran']
+                lastran_secs = int(lastran_delta.total_seconds())
+                lastran_mins = lastran_secs // 60
+                lastran_hrs = lastran_mins // 60
+                lastran_days = lastran_hrs // 24
+                if lastran_days != 0:
+                    lastran_delta = str(lastran_days) + ' days'
+                elif lastran_hrs != 0:
+                    lastran_delta = str(lastran_hrs) + ' hours'
+                elif lastran_mins != 0:
+                    lastran_delta = str(lastran_mins) + ' minutes'
+                else:
+                    lastran_delta = str(lastran_secs) + ' seconds'
 
-            dur_mins = task_dict['duration'] // 60
-            dur_hrs = dur_mins // 60
-            dur_days = dur_hrs // 24
-            if dur_days != 0:
-                dur_delta = str(dur_days) + ' days'
-            elif dur_hrs != 0:
-                dur_delta = str(dur_hrs) + ' hours'
-            elif dur_mins != 0:
-                dur_delta = str(dur_mins) + ' minutes'
-            else:
-                dur_delta = str(task_dict['duration']) + ' seconds'
+                dur_mins = task_dict['duration'] // 60
+                dur_hrs = dur_mins // 60
+                dur_days = dur_hrs // 24
+                if dur_days != 0:
+                    dur_delta = str(dur_days) + ' days'
+                elif dur_hrs != 0:
+                    dur_delta = str(dur_hrs) + ' hours'
+                elif dur_mins != 0:
+                    dur_delta = str(dur_mins) + ' minutes'
+                else:
+                    dur_delta = str(task_dict['duration']) + ' seconds'
 
             html = ''.join([html,
                 '<tr>',
@@ -193,7 +197,7 @@ class ScheduleHTML:
             '<tr>',
             '<td class="schedIcon">',
             '<a href="#" onclick=\'display_tasks()\'>',
-            '<div ><i class="md-icon">arrow_back</i></div></a>',
+            '<div ><i class="md-icon">arrow_back</i></div></a></td>',
             '<td colspan=2 ><div class="schedSection">',
             str(task_dict['title']), '</div></td>',
             '</tr>',
@@ -296,7 +300,7 @@ class ScheduleHTML:
             '<input type="hidden" name="title" value="', task_dict['title'], '" >',
             '</b><br><br></td>'
             '</tr>',
-            '<tr><td>Trigger Type: &nbsp; ',
+            '<tr><td><label title="Interval will reset each time the task is requested">Trigger Type: &nbsp; </label>',
             '<select id="timetype" name="timetype"</select>',
             '<option value="daily">Daily</option>',
             '<option value="weekly">Weekly</option>',
@@ -320,7 +324,7 @@ class ScheduleHTML:
             '</select>',
             '<br><br>',
             '</div></td></tr>',
-            '<tr><td><div id="divTOD" class="schedShow">Time: &nbsp; ',
+            '<tr><td><div id="divTOD" class="schedShow"><label title="Local time">Time: &nbsp; </label>',
             '<select name="timeofdayhr"</select>',
             '<option value="">Not set</option>',
             '<option value="12">12AM</option>',

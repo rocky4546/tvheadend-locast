@@ -7,7 +7,7 @@ https://github.com/rocky4546
 This file is part of Cabernet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the “Software”), to deal in the Software without restriction,
+and associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
@@ -45,7 +45,7 @@ class PluginHandler:
 
     def collect_plugins(self, _plugins_pkg):
         plugin_db = DBPlugins(self.config_obj.data)
-        plugin_db.set_updated(False)
+        plugin_db.reinitialize_tables()
         for folder in importlib.resources.contents(_plugins_pkg):
             if folder.startswith('__'):
                 continue
@@ -57,7 +57,6 @@ class PluginHandler:
                     self.plugins[plugin.name] = plugin
                 except exceptions.CabernetException:
                     pass
-        plugin_db.del_not_updated()
 
     def load_plugin_defn(self):
         try:

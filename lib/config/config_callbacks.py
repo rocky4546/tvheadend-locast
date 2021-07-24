@@ -139,6 +139,10 @@ def set_database_path(_config_obj, _section, _key):
     set_path(_config_obj, _section, _key,
         _config_obj.data["paths"]["data_dir"], 'db')
 
+def set_backup_path(_config_obj, _section, _key):
+    set_path(_config_obj, _section, _key,
+        _config_obj.data["paths"]["data_dir"], 'backups')
+
 
 def set_configdefn_path(_config_obj, _section, _key):
     _config_obj.data['paths']['config_defn_pkg'] = _config_obj.defn_json.defn_path

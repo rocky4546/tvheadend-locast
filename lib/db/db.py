@@ -7,7 +7,7 @@ https://github.com/rocky4546
 This file is part of Cabernet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the “Software”), to deal in the Software without restriction,
+and associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
@@ -21,8 +21,10 @@ import os
 import pathlib
 import sqlite3
 import threading
+import time
 
 DB_EXT = '.db'
+BACKUP_EXT = '.sql'
 
 # trailers used in sqlcmds.py
 SQL_CREATE_TABLES = 'ct'
@@ -37,7 +39,7 @@ class DB:
     conn = {}
 
     def __init__(self, _config, _db_name, _sqlcmds):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__+str(threading.get_ident()))
         self.config = _config
         self.db_name = _db_name
         self.sqlcmds = _sqlcmds
@@ -52,11 +54,16 @@ class DB:
         DB.conn[self.db_name][threading.get_ident()].commit()
 
     def sql_exec(self, _sqlcmd, _bindings=None):
-        self.check_connection()
-        if _bindings:
-            return DB.conn[self.db_name][threading.get_ident()].execute(_sqlcmd, _bindings)
-        else:
-            return DB.conn[self.db_name][threading.get_ident()].execute(_sqlcmd)
+        try:
+            self.check_connection()
+            if _bindings:
+                return DB.conn[self.db_name][threading.get_ident()].execute(_sqlcmd, _bindings)
+            else:
+                return DB.conn[self.db_name][threading.get_ident()].execute(_sqlcmd)
+        except sqlite3.IntegrityError as e:
+            DB.conn[self.db_name][threading.get_ident()].close()
+            del DB.conn[self.db_name][threading.get_ident()]
+            raise e
 
     def add(self, _table, _values):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_ADD_ROW])]
@@ -132,16 +139,56 @@ class DB:
 
     def create_tables(self):
         for table in self.sqlcmds[''.join([SQL_CREATE_TABLES])]:
-            self.sql_exec(table)
+            cur = self.sql_exec(table)
+        DB.conn[self.db_name][threading.get_ident()].commit()
+            
 
     def drop_tables(self):
         for table in self.sqlcmds[SQL_DROP_TABLES]:
-            self.sql_exec(table)
+            cur = self.sql_exec(table)
+        DB.conn[self.db_name][threading.get_ident()].commit()
+
+    def export_sql(self, backup_folder):
+        self.logger.debug('Running backup for {} database'.format(self.db_name))
+        try:
+            if not os.path.isdir(backup_folder):
+                os.mkdir(backup_folder)
+            self.check_connection()
+            backup_file = pathlib.Path(backup_folder, self.db_name + BACKUP_EXT)
+            with open(backup_file, 'w') as export_f:
+                for line in DB.conn[self.db_name][threading.get_ident()].iterdump():
+                    export_f.write('%s\n' % line)
+        except PermissionError as e:
+            self.logger.warning(e)
+            self.logger.warning('Unable to make backups')
+            
+    def import_sql(self, backup_folder):
+        self.logger.debug('Running restore for {} database'.format(self.db_name))
+        if not os.path.isdir(backup_folder):
+            msg = 'Backup folder does not exist: {}'.format(backup_folder)
+            self.logger.warning(msg)
+            return msg
+        backup_file = pathlib.Path(backup_folder, self.db_name + BACKUP_EXT)
+        if not os.path.isfile(backup_file):
+            msg = 'Backup file does not exist, skipping: {}'.format(backup_file)
+            self.logger.info(msg)
+            return msg
+        self.check_connection()
+        self.drop_tables()
+        with open(backup_file, 'r') as import_f:
+            cmd = ''
+            for line in import_f:
+                cmd += line
+                if ';' in line[-3:]:
+                    DB.conn[self.db_name][threading.get_ident()].execute(cmd)
+                    cmd = ''
+        return None
 
     def close(self):
-        for thread, conn in DB.conn[self.db_name].items():
-            conn.close()
-            self.logger.debug('{} database closed for thread:{}'.format(self.db_name, thread))
+        thread_id = threading.get_ident()
+        DB.conn[self.db_name][thread_id].close()
+        del DB.conn[self.db_name][thread_id]
+        self.logger.debug('{} database closed for thread:{}'.format(self.db_name, thread_id))
 
     def check_connection(self):
         if self.db_name not in DB.conn:

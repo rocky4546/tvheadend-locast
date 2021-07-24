@@ -7,7 +7,7 @@ https://github.com/rocky4546
 This file is part of Cabernet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-and associated documentation files (the “Software”), to deal in the Software without restriction,
+and associated documentation files (the "Software"), to deal in the Software without restriction,
 including without limitation the rights to use, copy, modify, merge, publish, distribute,
 sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
 is furnished to do so, subject to the following conditions:
@@ -29,10 +29,11 @@ import shutil
 import socket
 import struct
 import sys
+import time
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.7d'
+VERSION = '0.8.8'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -46,19 +47,20 @@ def logging_setup(_config):
     if os.environ.get('LOGS_DIR') is None:
         if _config['paths']['logs_dir'] is not None:
             os.environ['LOGS_DIR'] = _config['paths']['logs_dir']
-            logging.config.fileConfig(fname=_config['paths']['config_file'])
-        elif not os.path.isdir(os.path.dirname(os.path.abspath(__file__))+'data/logs'):
             try:
-                os.makedirs(os.path.dirname(os.path.abspath(__file__))+'data/logs')
-            except PermissionError:
-                if _config['handler_filehandler']['enabled']:
-                    logging.warning('Permission denied trying to make the data/logs folder in the installation area. this must exist in order to use file logging')
+                logging.config.fileConfig(fname=_config['paths']['config_file'])
+            except PermissionError as e:
+                logging.critical(e)
+                raise e
     if str(logging.getLevelName('NOTUSED')).startswith('Level'):
         try:
             logging.config.fileConfig(fname=_config['paths']['config_file'])
         except FileNotFoundError:
             if _config['handler_filehandler']['enabled']:
                 logging.warning('Unable to create cabernet.log in the data/logs area with File Logging enabled.')
+        except PermissionError as e:
+            logging.critical(e)
+            raise e
         logging.addLevelName(100, 'NOTUSED')
     logger = logging.getLogger(__name__)
 
