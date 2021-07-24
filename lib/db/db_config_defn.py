@@ -17,14 +17,18 @@ substantial portions of the Software.
 """
 
 import json
+import threading
 
 from lib.db.db import DB
+from lib.common.decorators import Backup
+from lib.common.decorators import Restore
+
 
 DB_AREA_TABLE = 'area'
 DB_SECTION_TABLE = 'section'
 DB_INSTANCE_TABLE = 'instance'
 DB_CONFIG_TABLE = 'config'
-
+DB_CONFIG_NAME = 'db_files-defn_db'
 
 sqlcmds = {
     'ct': [
@@ -148,7 +152,7 @@ sqlcmds = {
 class DBConfigDefn(DB):
 
     def __init__(self, _config):
-        super().__init__(_config, _config['database']['defn_db'], sqlcmds)
+        super().__init__(_config, _config['datamgmt'][DB_CONFIG_NAME], sqlcmds)
 
     def get_area_dict(self, _where=None):
         if not _where:
@@ -237,3 +241,15 @@ class DBConfigDefn(DB):
     
     def get_config(self):
         return json.loads(self.get_dict(DB_CONFIG_TABLE)[0]['settings'])
+
+    @Backup(DB_CONFIG_NAME)
+    def backup(self, backup_folder):
+        self.export_sql(backup_folder)
+
+    @Restore(DB_CONFIG_NAME)
+    def restore(self, backup_folder):
+        msg = self.import_sql(backup_folder)
+        if msg is None:
+            return 'Config Database Restored'
+        else:
+            return msg

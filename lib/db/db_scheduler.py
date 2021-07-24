@@ -20,12 +20,18 @@ import ast
 import json
 import datetime
 import sqlite3
+import threading
 import uuid
 
 from lib.db.db import DB
+from lib.common.decorators import Backup
+from lib.common.decorators import Restore
+
 
 DB_TASK_TABLE = 'task'
 DB_TRIGGER_TABLE = 'trigger'
+DB_CONFIG_NAME = 'db_files-scheduler_db'
+
 
 sqlcmds = {
     'ct': [
@@ -66,6 +72,14 @@ sqlcmds = {
             )
         """
     ],
+    'dt': [
+        """
+        DROP TABLE IF EXISTS trigger
+        """,
+        """
+        DROP TABLE IF EXISTS task
+        """
+        ],
     
     'task_add':
         """
@@ -92,12 +106,33 @@ sqlcmds = {
         WHERE area LIKE ? AND title LIKE ?
         ORDER BY task.area ASC, task.title ASC
         """,
+    'task_name_get':
+        """
+        SELECT DISTINCT namespace FROM task
+        """,
     'task_by_id_get':
         """
         SELECT *
         FROM task
-        WHERE taskid like ?
+        WHERE taskid LIKE ?
         ORDER BY task.area ASC, task.title ASC
+        """,
+    'task_by_name_get':
+        """
+        SELECT *
+        FROM task
+        WHERE namespace LIKE ?
+        ORDER BY task.area ASC, task.title ASC
+        """,
+    'task_del':
+        """
+        DELETE FROM task WHERE
+        area = ? AND title = ?;
+        """,
+    'trigger_del':
+        """
+        DELETE FROM trigger WHERE
+        area = ? AND title = ?;
         """,
 
     'trigger_add':
@@ -150,7 +185,7 @@ sqlcmds = {
 class DBScheduler(DB):
 
     def __init__(self, _config):
-        super().__init__(_config, _config['database']['scheduler_db'], sqlcmds)
+        super().__init__(_config, _config['datamgmt'][DB_CONFIG_NAME], sqlcmds)        
 
     def save_task(self, _area, _title, _namespace, _instance, _funccall, 
             _priority, _threadtype, _description):
@@ -158,7 +193,6 @@ class DBScheduler(DB):
         Returns true if the record was saved.  If the record already exists,
         it will return false.
         """
-        
         try:
             id = str(uuid.uuid1()).upper()
             self.add(DB_TASK_TABLE, (
@@ -176,6 +210,17 @@ class DBScheduler(DB):
         except sqlite3.IntegrityError:
             return False
 
+    def del_task(self, _area=None, _title=None):
+        """
+        Deletes the task and associated triggers
+        """
+        if not _area:
+            _area = '%'
+        if not _title:
+            _title = '%'
+        self.delete(DB_TRIGGER_TABLE, (_area, _title,))
+        self.delete(DB_TASK_TABLE, (_area, _title,))
+
     def get_tasks(self, _area=None, _title=None):
         if not _area:
             _area = '%'
@@ -183,8 +228,17 @@ class DBScheduler(DB):
             _title = '%'
         return self.get_dict(DB_TASK_TABLE, (
             _area,
-            _title
+            _title,
         ))
+
+    def get_tasks_by_name(self, _name=None):
+        if not _name:
+            _name = '%'
+        return self.get_dict(DB_TASK_TABLE + '_by_name', (
+            _name,
+        ))
+
+
 
     def get_task(self, _id):
         task = self.get_dict(DB_TASK_TABLE + '_by_id', (
@@ -194,6 +248,38 @@ class DBScheduler(DB):
             return task[0]
         else:
             return None    
+
+    def get_task_names(self):
+        return self.get_dict(DB_TASK_TABLE + '_name')
+
+    def start_task(self, _area, _title):
+        self.update(DB_TASK_TABLE + '_active', (
+            1,
+            _area,
+            _title,
+        ))
+
+    def finish_task(self, _area, _title, _duration):
+        self.update(DB_TASK_TABLE + '_finish', (
+            datetime.datetime.utcnow(),
+            _duration,
+            _area,
+            _title,
+        ))
+
+    def reset_activity(self, _activity=False, _area=None, _title=None):
+        if not _area:
+            _area = '%'
+        if not _title:
+            _title = '%'
+        self.update(DB_TASK_TABLE + '_active', (
+            _activity,
+            _area,
+            _title,
+        ))
+
+    def get_active_status(self, _uuid):
+        return self.get_dict(DB_TRIGGER_TABLE + '_active', (_uuid,))[0]['active']
 
     def save_trigger(self, _area, _title, _timetype, timeofday=None, 
             dayofweek=None, interval=-1, timelimit=-1, randdur=-1):
@@ -216,38 +302,9 @@ class DBScheduler(DB):
             timeofday,
             dayofweek,
             interval,
-            randdur
+            randdur,
         ))
         return id
-
-    def start_task(self, _area, _title):
-        self.update(DB_TASK_TABLE + '_active', (
-            1,
-            _area,
-            _title
-        ))
-
-    def finish_task(self, _area, _title, _duration):
-        self.update(DB_TASK_TABLE + '_finish', (
-            datetime.datetime.utcnow(),
-            _duration,
-            _area,
-            _title
-        ))
-
-    def reset_activity(self, _activity=False, _area=None, _title=None):
-        if not _area:
-            _area = '%'
-        if not _title:
-            _title = '%'
-        self.update(DB_TASK_TABLE + '_active', (
-            _activity,
-            _area,
-            _title
-        ))
-
-    def get_active_status(self, _uuid):
-        return self.get_dict(DB_TRIGGER_TABLE + '_active', (_uuid,))[0]['active']
 
     def get_triggers_by_type(self, _timetype):
         """
@@ -277,3 +334,14 @@ class DBScheduler(DB):
     def del_trigger(self, _uuid):
         self.delete(DB_TRIGGER_TABLE + '_by_uuid', (_uuid,))
 
+    @Backup(DB_CONFIG_NAME)
+    def backup(self, backup_folder):
+        self.export_sql(backup_folder)
+
+    @Restore(DB_CONFIG_NAME)
+    def restore(self, backup_folder):
+        msg = self.import_sql(backup_folder)
+        if msg is None:
+            msg = 'Scheduler Database Restored'
+        self.reset_activity()
+        return msg

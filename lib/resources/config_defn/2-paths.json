@@ -128,21 +128,44 @@
 
                 }
             },
-            "database":{
-                "label": "Databases",
+            "datamgmt":{
+                "label": "Data Management",
                 "sort": "4",
                 "icon": "inventory_2",
-                "description": "sqlite database names",
+                "description": "Backup and Database Configuration",
                 "settings":{
-                    "defn_db":{
-                        "label": "Config Definitions Database",
+                    "backups-backupstoretain":{
+                        "label": "Backups to Retain",
+                        "type": "integer",
+                        "default": 10,
+                        "level": 1,
+                        "help": "Number of backups to retain"
+                    },
+                    "backups-location":{
+                        "label": "Path to backup location",
+                        "type": "path",
+                        "default": null,
+                        "level": 2,
+                        "onInit": "lib.config.config_callbacks.set_backup_path",
+                        "help": "Location where backups are stored"
+                    },
+                    "backups-config_ini":{
+                        "label": "Config.ini Backup",
+                        "type": "path",
+                        "default": "config.ini",
+                        "level": 3,
+                        "writable": false,
+                        "help": "Used to backup the config.ini file"
+                    },
+                    "db_files-defn_db":{
+                        "label": "Config Database",
                         "type": "path",
                         "default": "config_defn",
                         "level": 3,
                         "writable": false,
-                        "help": "Filename of database containing config defn data"
+                        "help": "Filename of database containing config defn and config data"
                     },
-                    "plugins_db":{
+                    "db_files-plugins_db":{
                         "label": "Plugin Manifest Database",
                         "type": "path",
                         "default": "plugins",
@@ -150,7 +173,7 @@
                         "writable": false,
                         "help": "Filename of database containing plugin manifests"
                     },
-                    "channels_db":{
+                    "db_files-channels_db":{
                         "label": "Channels Database",
                         "type": "path",
                         "default": "channels",
@@ -158,7 +181,7 @@
                         "writable": false,
                         "help": "Filename of database containing channel data"
                     },
-                    "epg_db":{
+                    "db_files-epg_db":{
                         "label": "EPG Database",
                         "type": "path",
                         "default": "epg",
@@ -166,7 +189,7 @@
                         "writable": false,
                         "help": "Filename of database containing program data"
                     },
-                    "scheduler_db":{
+                    "db_files-scheduler_db":{
                         "label": "Scheduler Database",
                         "type": "path",
                         "default": "scheduler",
@@ -174,6 +197,7 @@
                         "writable": false,
                         "help": "Filename of database containing scheduled tasking"
                     }
+                    
                 }
             }
         }

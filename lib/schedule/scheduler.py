@@ -17,11 +17,12 @@ substantial portions of the Software.
 """
 
 import datetime
-import time
-import traceback
+import importlib
 import logging
 import urllib.request
 import queue
+import time
+import traceback
 from multiprocessing import Process
 from threading import Thread
 
@@ -134,13 +135,17 @@ class Scheduler(Thread):
         """
         start = time.time()
         if _trigger['namespace'] == 'internal':
-            pass
-            # call function directly
+            mod_name, func_name = _trigger['funccall'].rsplit('.', 1)
+            mod = importlib.import_module(mod_name)
+            call_f = getattr(mod, func_name)
+            call_f(self.plugins)
         else:
             plugin_obj = self.plugins.plugins[_trigger['namespace']].plugin_obj
             if plugin_obj is None:
-                return
-            if _trigger['instance'] is None:
+                self.logger.debug('{} scheduled tasks ignored. plugin disabled' \
+                    .format(_trigger['namespace']))
+                pass
+            elif _trigger['instance'] is None:
                 call_f = getattr(plugin_obj, _trigger['funccall'])
                 call_f()
             else:
@@ -149,6 +154,7 @@ class Scheduler(Thread):
                 call_f()
         end = time.time()
         duration = int(end - start)
+        time.sleep(1)
         self.scheduler_db.finish_task(_trigger['area'], _trigger['title'], duration)
 
     def setup_triggers(self):

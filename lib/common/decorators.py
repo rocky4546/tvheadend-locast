@@ -18,6 +18,7 @@ substantial portions of the Software.
 
 import json
 import logging
+import sys
 import urllib
 import urllib.error
 from functools import update_wrapper
@@ -47,6 +48,98 @@ def handle_json_except(f):
             logger.error("JSONError in function {}(): {}".format(f.__name__, str(jsonError)))
             return None
     return update_wrapper(wrapper_func, f)
+
+
+class Backup:
+    """
+    Decorator for collecting and processing export/backup methods
+    """
+    
+    backup2func = {}
+    
+    def __init__(self, *pattern):
+        self.pattern = pattern
+
+    def __call__(self, call_class_fn):
+        if call_class_fn is None:
+            return call_class_fn
+        else:
+            for p in self.pattern:
+                Backup.backup2func[p] = call_class_fn
+            return call_class_fn
+            
+    @classmethod
+    def log_backups(cls):
+        logger = logging.getLogger(__name__)
+        for name in Backup.backup2func.keys():
+            logger.debug('Registering BACKUP {}'.format(name))
+
+    @classmethod
+    def call_backup(self, _name, *args, **kwargs):
+        """
+        Based on function, will create class instance and call
+        the function with no parameters. *args are
+        passed into the class constructor while **kwargs are
+        passed into the instance function
+        """
+        if _name in Backup.backup2func:
+            fn = Backup.backup2func[_name]
+            module = fn.__module__
+            class_fn = fn.__qualname__
+            (cls_name, fn_name) = class_fn.split('.')
+            cls = vars(sys.modules[module])[cls_name]
+            inst = cls(*args)
+            inst_fn = getattr(inst, fn_name)
+            inst_fn(**kwargs)
+            return True
+        else:
+            return False
+
+
+class Restore:
+    """
+    Decorator for collecting and processing import/restore methods
+    """
+    
+    restore2func = {}
+    
+    def __init__(self, *pattern):
+        self.pattern = pattern
+
+    def __call__(self, call_class_fn):
+        if call_class_fn is None:
+            return call_class_fn
+        else:
+            for p in self.pattern:
+                Restore.restore2func[p] = call_class_fn
+            return call_class_fn
+            
+    @classmethod
+    def log_backups(cls):
+        logger = logging.getLogger(__name__)
+        for name in Restore.restore2func.keys():
+            logger.debug('Registering RESTORE {}'.format(name))
+
+    @classmethod
+    def call_restore(cls, _name, *args, **kwargs):
+        """
+        Based on function, will create class instance and call
+        the function with no parameters. *args are
+        passed into the class constructor while **kwargs are
+        passed into the instance function
+        """
+        if _name in Restore.restore2func:
+            fn = Restore.restore2func[_name]
+            module = fn.__module__
+            class_fn = fn.__qualname__
+            (cls_name, fn_name) = class_fn.split('.')
+            cls = vars(sys.modules[module])[cls_name]
+            inst = cls(*args)
+            inst_fn = getattr(inst, fn_name)
+            msg = inst_fn(**kwargs)
+            return msg
+        else:
+            return None
 
 
 class Request:
@@ -112,3 +205,4 @@ class FileRequest(Request):
 getrequest = GetRequest()
 postrequest = PostRequest()
 filerequest = FileRequest()
+#backup = Backup()

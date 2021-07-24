@@ -217,7 +217,7 @@ class ConfigFormHTML:
                 '>', setting_data['label'], '</label></td><td>', input_html,
                 '</td></tr>'])
         return ''.join([form_html, section_html, '</tbody></table>'
-                                                 '<button id="submit" STYLE="background-color: #E0E0E0; margin-top:1em" ',
+            '<button id="submit" STYLE="background-color: #E0E0E0; margin-top:1em" ',
             'type="submit"><b>Save changes</b></button>',
             '<input type=hidden name="area" value="', self.area, '"></form>'])
 
