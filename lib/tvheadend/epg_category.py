@@ -174,6 +174,7 @@ TVHEADEND = {
     'Mystery'               : THRILLER,
     'News'                  : NEWS,
     'Newsmagazine'          : NEWS_MAGAZINE,
+    'Olympics'              : SPORT,
     'Outdoors'              : SPORT,
     'Poker'                 : GAME,
     'Pro wrestling'         : MARTIAL_ARTS,
@@ -191,7 +192,7 @@ TVHEADEND = {
     'Soccer'                : FOOTBALL,
     # 'Special'             :
     'Sports talk'           : SPORT,
-    # 'Talk'                :
+    'Talk'                  : TALK_SHOW,
     'Thriller'              : THRILLER,
     'Travel'                : TRAVEL,
     'Variety'               : VARIETY,

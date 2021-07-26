@@ -150,18 +150,19 @@ class ScheduleHTML:
                 '<a href="#" onclick=\'load_task_url("/pages/schedule.html?task=',
                 task_dict['taskid'], '")\'>',
                 '<div class="schedTitle">', task_dict['title'], '</div>',
-                '<div>Last ran ', lastran_delta, ' ago, ',
-                'taking ', dur_delta, '</div>'
+                '<div>Plugin: ', task_dict['namespace']
             ])
-
             if task_dict['active']:
                 html = ''.join([html,
+                    ' -- Currently Running</div>'
                     '<div class="progress-line"></div>'
                 ])
                 play_name = ''
                 play_icon = ''
             else:
                 html = ''.join([html,
+                    ' -- Last ran ', lastran_delta, ' ago, ',
+                    'taking ', dur_delta, '</div>'
                     '<div class=""></div>'
                 ])
                 play_name = '&run=1'
