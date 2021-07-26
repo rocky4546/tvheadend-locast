@@ -67,27 +67,39 @@ class DB:
 
     def add(self, _table, _values):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_ADD_ROW])]
-        cur = self.sql_exec(sqlcmd, _values)
-        DB.conn[self.db_name][threading.get_ident()].commit()
-        lastrow = cur.lastrowid
-        cur.close()
-        return lastrow
+        try:
+            cur = self.sql_exec(sqlcmd, _values)
+            DB.conn[self.db_name][threading.get_ident()].commit()
+            lastrow = cur.lastrowid
+            cur.close()
+            return lastrow
+        except sqlite3.OperationalError as e:
+            self.logger.warning('Add request ignored, {}'.format(e))
+            return None
 
     def delete(self, _table, _values):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_DELETE])]
-        cur = self.sql_exec(sqlcmd, _values)
-        DB.conn[self.db_name][threading.get_ident()].commit()
-        lastrow = cur.lastrowid
-        cur.close()
-        return lastrow
+        try:
+            cur = self.sql_exec(sqlcmd, _values)
+            DB.conn[self.db_name][threading.get_ident()].commit()
+            lastrow = cur.lastrowid
+            cur.close()
+            return lastrow
+        except sqlite3.OperationalError as e:
+            self.logger.warning('Delete request ignored, {}'.format(e))
+            return None
 
     def update(self, _table, _values=None):
         sqlcmd = self.sqlcmds[''.join([_table, SQL_UPDATE])]
-        cur = self.sql_exec(sqlcmd, _values)
-        DB.conn[self.db_name][threading.get_ident()].commit()
-        lastrow = cur.lastrowid
-        cur.close()
-        return lastrow
+        try:
+            cur = self.sql_exec(sqlcmd, _values)
+            DB.conn[self.db_name][threading.get_ident()].commit()
+            lastrow = cur.lastrowid
+            cur.close()
+            return lastrow
+        except sqlite3.OperationalError as e:
+            self.logger.warning('Update request ignored, {}'.format(e))
+            return None
 
     def commit(self):
         DB.conn[self.db_name][threading.get_ident()].commit()

@@ -39,6 +39,8 @@ class EPG:
         self.instance = _locast_instance.instance
         self.db = DBepg(self.locast_instance.config_obj.data)
         self.config_section = _locast_instance.config_section
+        self.episode_adj = int(self.locast_instance.config_obj.data \
+            [self.locast_instance.config_section]['epg-episode_adjustment'])
         if self.locast_instance.location.has_dma_changed:
             self.db.del_instance(
                 self.locast_instance.locast.name, self.instance)
@@ -116,7 +118,7 @@ class EPG:
         if json_data is not None:
             for ch_data in json_data:
                 for listing_data in ch_data['listings']:
-                    program_json = EPG.get_program(listing_data)
+                    program_json = self.get_program(listing_data)
                     program_list.append(program_json)
 
             # push the update to the database
@@ -124,8 +126,7 @@ class EPG:
             self.logger.debug('Refreshing EPG data for {}:{} day:{}'
                 .format(self.locast_instance.locast.name, self.instance, _day))
 
-    @staticmethod
-    def get_program(_program_data):
+    def get_program(self, _program_data):
         # https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd
 
         sid = str(_program_data['stationId'])
@@ -224,27 +225,32 @@ class EPG:
             season = _program_data['seasonNumber']
         else:
             season = None
+            
         if 'episodeNumber' in _program_data.keys():
-            episode = _program_data['episodeNumber']
+            episode = _program_data['episodeNumber'] + self.episode_adj
         else:
             progid_episode = int(prog_id[-3:])
             if progid_episode > 0:
-                episode = progid_episode
+                episode = progid_episode + self.episode_adj
             else:
                 episode = None
 
         if (season is None) and (episode is None):
             se_common = None
             se_xmltv_ns = None
+            se_prog_id = None
         elif (season is not None) and (episode is not None):
             se_common = 'S%02dE%02d' % (season, episode)
             se_xmltv_ns = ''.join([str(season - 1), '.', str(episode - 1), '.0/1'])
+            se_prog_id = _program_data['programId'][:10]+'.'+_program_data['programId'][10:]
         elif (season is None) and (episode is not None):
             se_common = 'S%02dE%02d' % (0, episode)
             se_xmltv_ns = ''.join(['0', '.', str(episode - 1), '.0/1'])
+            se_prog_id = _program_data['programId'][:10]+'.'+_program_data['programId'][10:]
         else:  # (season is not None) and (episode is None):
             se_common = 'S%02dE%02d' % (season, 0)
             se_xmltv_ns = ''.join([str(season - 1), '.', '0', '.0/1'])
+            se_prog_id = ''
 
         json_result = {'channel': sid, 'progid': prog_id, 'start': start_time, 'stop': end_time,
             'length': dur_min, 'title': title, 'subtitle': subtitle, 'entity_type': entity_type,
@@ -253,7 +259,8 @@ class EPG:
             'premiere': premiere,
             'air_date': air_date, 'formatted_date': formatted_date, 'icon': icon,
             'rating': rating, 'is_new': is_new, 'genres': genres, 'directors': directors, 'actors': actors,
-            'season': season, 'episode': episode, 'se_common': se_common, 'se_xmltv_ns': se_xmltv_ns}
+            'season': season, 'episode': episode, 'se_common': se_common, 'se_xmltv_ns': se_xmltv_ns,
+            'se_progid': se_prog_id}
         return json_result
 
 

@@ -198,7 +198,7 @@ class ConfigFormHTML:
                 option_html = ''.join(['<option value="">default</option>'])
                 for value in setting_data['values']:
                     option_html += ''.join([
-                        '<option value="', value, '">', value, '</option>'])
+                        '<option value=', str(value), '>', str(value), '</option>'])
                 input_html = ''.join([
                     '<select STYLE="background-color: ',
                     background_color, ';"', readonly,

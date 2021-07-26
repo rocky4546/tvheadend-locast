@@ -102,6 +102,14 @@
                         "level": 1,
                         "help": "If a number will ADD to the display channel number; otherwise, will prepend to the channel number as a string"
                     },
+                    "epg-episode_adjustment":{
+                        "label": "Adjusts Episode number",
+                        "type": "list",
+                        "default": 0,
+                        "values": [1000, 2000, 3000, 4000, 5000],
+                        "level": 1,
+                        "help": "Used to record the same episode on two different channels at the same time.  EX: Record the same channel from antenna and locast at the same time."
+                    },
                     "m3u-group_hdtv":{
                         "label": "HDTV Group Name",
                         "type": "string",

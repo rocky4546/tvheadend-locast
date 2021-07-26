@@ -81,14 +81,15 @@ class EPG:
                 day_data, ns, inst = self.epg_db.get_next_row()
             self.epg_db.close_query()
             if data_written:
-                self.webserver.wfile.write(b'</tv>')
+                self.webserver.wfile.write(b'</tv>\r\n')
             else:
-                self.webserver.wfile.write(b'<tv/>')
+                self.webserver.wfile.write(b'<tv/>\r\n')
             self.webserver.wfile.flush()
         except MemoryError as e:
             self.logger.error('MemoryError parsing large xml')
             raise e
         xml_out = None
+
 
     def write_xml(self, _xml, keep_xml_prolog=False):
         if self.config['epg']['epg_prettyprint']:
@@ -99,7 +100,7 @@ class EPG:
                 epg_dom = minidom.parseString(epg_dom).toprettyxml()[27:-6]
             else:
                 epg_dom = minidom.parseString(ElementTree.tostring(_xml, encoding='UTF-8', method='xml')).toprettyxml()[:-6]
-                if len(epg_dom) < 50:
+                if len(epg_dom) < 250:
                     return False
             self.webserver.wfile.write(epg_dom.encode())
         else:
@@ -109,7 +110,7 @@ class EPG:
                     return False
             else:
                 epg_dom = ElementTree.tostring(_xml)[:-5]
-                if len(epg_dom) < 50:
+                if len(epg_dom) < 250:
                     return False
             self.webserver.wfile.write(epg_dom+b'\r\n')
         epg_dom = None
@@ -222,6 +223,8 @@ class EPG:
                     _text=prog_data['se_xmltv_ns'])
                 EPG.sub_el(prog_out, 'episode-num', system='SxxExx',
                     _text=prog_data['se_common'])
+                EPG.sub_el(prog_out, 'episode-num', system='dd_progid',
+                    _text=prog_data['se_progid'])
 
             if prog_data['is_new']:
                 EPG.sub_el(prog_out, 'new')
