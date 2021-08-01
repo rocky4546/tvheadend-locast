@@ -33,7 +33,7 @@ import time
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.8a'
+VERSION = '0.8.8b'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 

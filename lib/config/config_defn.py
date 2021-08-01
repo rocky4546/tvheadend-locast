@@ -210,7 +210,7 @@ class ConfigDefn:
                 if section == _section:
                     for setting in list(self.config_defn[module]['sections'][section]['settings'].keys()):
                         if setting == _key:
-                            if _value in self.config_defn[module]['sections'][section]['settings'][setting]['values']:
+                            if _value in str(self.config_defn[module]['sections'][section]['settings'][setting]['values']):
                                 return True
                             else:
                                 return False
