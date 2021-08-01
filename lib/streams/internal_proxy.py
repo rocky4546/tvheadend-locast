@@ -18,6 +18,7 @@ substantial portions of the Software.
 
 import datetime
 import errno
+import http
 import re
 import urllib.request
 import time
@@ -137,9 +138,19 @@ class InternalProxy(Stream):
         for uri, data in _play_queue.items():
             if not data["played"]:
                 start_download = datetime.datetime.utcnow()
-                req = urllib.request.Request(uri)
-                with urllib.request.urlopen(req) as resp:
-                    chunk = resp.read()
+                chunk = None
+                count = 5
+                while count > 0:
+                    count -= 1
+                    try:
+                        req = urllib.request.Request(uri)
+                        with urllib.request.urlopen(req) as resp:
+                            chunk = resp.read()
+                            break
+                    except http.client.IncompleteRead as e:
+                        self.logger.info('Provider gave partial stream, trying again. {}'.format(e, len(e.partial)))
+                        chunk = e.partial
+                        time.sleep(1)
                 data['played'] = True
                 if not chunk:
                     self.logger.warning(f"Segment {uri} not available. Skipping..")

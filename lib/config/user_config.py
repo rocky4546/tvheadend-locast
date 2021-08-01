@@ -144,8 +144,10 @@ class TVHUserConfig:
             if val_type == 'boolean':
                 return self.config_handler.getboolean(_section, _key)
             elif val_type == 'list':
+                if isinstance(_value, str) and _value.isdigit():
+                    _value = int(_value)
                 if not self.defn_json.validate_list_item(_section, _key, _value):
-                    logging.warning('INVALID VALUE ({}) FOR CONFIG ITEM [{}][{}]'
+                    logging.info('INVALID VALUE ({}) FOR CONFIG ITEM [{}][{}]'
                         .format(_value, _section, _key))
                 return _value
             elif val_type == 'integer':
