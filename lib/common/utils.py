@@ -33,7 +33,7 @@ import time
 
 import lib.common.exceptions as exceptions
 
-VERSION = '0.8.8b'
+VERSION = '0.8.8c'
 CABERNET_URL = 'https://github.com/rocky4546/tvheadend-locast'
 CABERNET_NAME = 'cabernet'
 
@@ -93,6 +93,12 @@ def date_parse(date_secs, format_str):
         return date_secs
     dt_date = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=date_secs / 1000)
     dt_str = str(dt_date.strftime(format_str))
+    return dt_str
+
+def date_obj_parse(date_obj, format_str):
+    if not date_obj:
+        return date_obj
+    dt_str = str(date_obj.strftime(format_str))
     return dt_str
 
 

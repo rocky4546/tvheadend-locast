@@ -212,6 +212,15 @@ class EPG:
             if prog_data['icon'] and self.config['epg']['epg_program_icon']:
                 EPG.sub_el(prog_out, 'icon', src=prog_data['icon'])
 
+            if prog_data['actors'] or prog_data['directors']:
+                r = ElementTree.SubElement(prog_out, 'credits')
+                if prog_data['directors']:
+                    for actor in prog_data['directors']:
+                        EPG.sub_el(r, 'producer', _text=actor)
+                if prog_data['actors']:
+                    for actor in prog_data['actors']:
+                        EPG.sub_el(r, 'presenter', _text=actor)
+
             if prog_data['rating']:
                 r = ElementTree.SubElement(prog_out, 'rating')
                 EPG.sub_el(r, 'value', _text=prog_data['rating'])

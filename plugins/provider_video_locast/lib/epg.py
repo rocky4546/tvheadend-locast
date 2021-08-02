@@ -137,13 +137,6 @@ class EPG:
         entity_type = _program_data['entityType']
         prog_id = _program_data['programId']
 
-        if 'episodeTitle' in _program_data.keys():
-            subtitle = _program_data['episodeTitle']
-        elif _program_data['entityType'] == 'Movie' and 'releaseYear' in _program_data.keys():
-            subtitle = 'Movie: {}'.format(_program_data['releaseYear'])
-        else:
-            subtitle = None
-
         if 'description' not in _program_data.keys():
             description = 'Unavailable'
         elif not _program_data['description']:
@@ -187,6 +180,10 @@ class EPG:
         elif 'airdate' in _program_data.keys():
             air_date = utils.date_parse(_program_data['airdate'], '%Y%m%d')
             formatted_date = utils.date_parse(_program_data['airdate'], '%Y/%m/%d')
+        elif 'gameDate' in _program_data.keys():
+            date_obj = datetime.datetime.strptime(_program_data['gameDate'], '%Y-%m-%d')
+            air_date = utils.date_obj_parse(date_obj, '%Y%m%d')
+            formatted_date = utils.date_obj_parse(date_obj, '%Y/%m/%d')
         elif 'releaseDate' in _program_data.keys():
             air_date = utils.date_parse(_program_data['releaseDate'], '%Y%m%d')
             formatted_date = utils.date_parse(_program_data['releaseDate'], '%Y/%m/%d')
@@ -251,6 +248,19 @@ class EPG:
             se_common = 'S%02dE%02d' % (season, 0)
             se_xmltv_ns = ''.join([str(season - 1), '.', '0', '.0/1'])
             se_prog_id = ''
+
+        if episode is not None:
+            subtitle = 'E' + str(episode) + ' '
+        else:
+            subtitle = ''
+        if 'episodeTitle' in _program_data.keys():
+            subtitle += _program_data['episodeTitle']
+        elif 'eventTitle' in _program_data.keys():
+            subtitle += _program_data['eventTitle']
+        elif _program_data['entityType'] == 'Movie' and 'releaseYear' in _program_data.keys():
+            subtitle = 'Movie: {}'.format(_program_data['releaseYear'])
+        else:
+            subtitle = None
 
         json_result = {'channel': sid, 'progid': prog_id, 'start': start_time, 'stop': end_time,
             'length': dur_min, 'title': title, 'subtitle': subtitle, 'entity_type': entity_type,
