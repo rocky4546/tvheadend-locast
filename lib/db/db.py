@@ -75,6 +75,9 @@ class DB:
             return lastrow
         except sqlite3.OperationalError as e:
             self.logger.warning('Add request ignored, {}'.format(e))
+            DB.conn[self.db_name][threading.get_ident()].rollback()
+            if cur is not None:
+                cur.close()
             return None
 
     def delete(self, _table, _values):
@@ -87,6 +90,9 @@ class DB:
             return lastrow
         except sqlite3.OperationalError as e:
             self.logger.warning('Delete request ignored, {}'.format(e))
+            DB.conn[self.db_name][threading.get_ident()].rollback()
+            if cur is not None:
+                cur.close()
             return None
 
     def update(self, _table, _values=None):
@@ -99,6 +105,9 @@ class DB:
             return lastrow
         except sqlite3.OperationalError as e:
             self.logger.warning('Update request ignored, {}'.format(e))
+            DB.conn[self.db_name][threading.get_ident()].rollback()
+            if cur is not None:
+                cur.close()
             return None
 
     def commit(self):
