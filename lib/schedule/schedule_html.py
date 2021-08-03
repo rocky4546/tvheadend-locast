@@ -190,7 +190,7 @@ class ScheduleHTML:
     def get_task(self, _id):
         task_dict = self.scheduler_db.get_task(_id)
         if task_dict is None:
-            self.logger.warning('Invalid task id: {}'.format(_id))
+            self.logger.warning('get_task: Invalid task id: {}'.format(_id))
             return ''
 
         html = ''.join([
@@ -271,7 +271,7 @@ class ScheduleHTML:
     def get_trigger(self, _id):
         task_dict = self.scheduler_db.get_task(_id)
         if task_dict is None:
-            self.logger.warning('Invalid task id: {}'.format(_id))
+            self.logger.warning('get_trigger: Invalid task id: {}'.format(_id))
             return ''
         if task_dict['namespace'] is None:
             namespace = ""
@@ -468,28 +468,36 @@ class ScheduleHTML:
         return 'Interval Trigger deleted'
 
     def run_task(self, _taskid):
-        triggers = self.scheduler_db.get_triggers(_taskid)
-        if len(triggers) == 0:
-            self.logger.warning('Invalid taskid when requesting to run task')
-            return None
-
-        is_run = False
-        default_trigger = None
-        for trigger in triggers:
-            if trigger['timetype'] == 'startup':
-                continue
-            elif trigger['timetype'] == 'interval':
-                self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
-                time.sleep(0.1)
-                is_run = True
-                break
-            else:
-                default_trigger = trigger
-        if not is_run:
-            if default_trigger is not None:
-                self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
-                time.sleep(0.1)
-            else:
-                self.logger.warning('Need at least one non-startup trigger event to run manually')
+        self.queue.put({'cmd': 'runtask', 'taskid': _taskid })
         return None
+    
+        # triggers = self.scheduler_db.get_triggers(_taskid)
+        # if len(triggers) == 0:
+            # # check if the task has no triggers
+            # task = self.scheduler_db.get_task(_taskid)
+            # if task is not None:
+                # self.queue.put({'cmd': 'runtask', 'taskid': task['taskid'] })
+            # else:
+                # self.logger.warning('Invalid taskid when requesting to run task')
+            # return None
+
+        # is_run = False
+        # default_trigger = None
+        # for trigger in triggers:
+            # if trigger['timetype'] == 'startup':
+                # continue
+            # elif trigger['timetype'] == 'interval':
+                # self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
+                # time.sleep(0.1)
+                # is_run = True
+                # break
+            # else:
+                # default_trigger = trigger
+        # if not is_run:
+            # if default_trigger is not None:
+                # self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
+                # time.sleep(0.1)
+            # else:
+                # self.logger.warning('Need at least one non-startup trigger event to run manually')
+        # return None
 

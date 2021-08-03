@@ -26,6 +26,7 @@ import traceback
 from multiprocessing import Process
 from threading import Thread
 
+import lib.main as main
 import lib.schedule.schedule
 from lib.common.decorators import getrequest
 from lib.db.db_scheduler import DBScheduler
@@ -108,7 +109,7 @@ class Scheduler(Thread):
         """
         Main entry for the Schedule Job to run a task/event
         """
-        if self.scheduler_db.get_active_status(_trigger['uuid']):
+        if self.scheduler_db.get_active_status(_trigger['taskid']):
             self.logger.debug('Task currently running, ignored request {}:{}'.format(
                 _trigger['area'], _trigger['title']))
             return
@@ -283,7 +284,12 @@ class Scheduler(Thread):
     def run_task(self, _taskid):
         triggers = self.scheduler_db.get_triggers(_taskid)
         if len(triggers) == 0:
-            self.logger.warning('Invalid taskid when requesting to run task')
+            # check if the task has no triggers
+            task = self.scheduler_db.get_task(_taskid)
+            if task is not None:
+                self.exec_trigger(task)
+            else:
+                self.logger.warning('Invalid taskid when requesting to run task')
             return None
 
         is_run = False
