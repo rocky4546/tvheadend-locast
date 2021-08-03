@@ -41,6 +41,8 @@ class PluginHandler:
             PluginHandler.logger = logging.getLogger(__name__)
         self.plugin_defn = self.load_plugin_defn()
         self.collect_plugins(self.config_obj.data['paths']['internal_plugins_pkg'])
+        if PluginHandler.cls_plugins is not None:
+            del PluginHandler.cls_plugins
         PluginHandler.cls_plugins = self.plugins
 
     def collect_plugins(self, _plugins_pkg):

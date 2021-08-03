@@ -124,6 +124,12 @@ sqlcmds = {
         WHERE namespace LIKE ?
         ORDER BY task.area ASC, task.title ASC
         """,
+    'task_active_get':
+        """
+        SELECT active
+        FROM task
+        WHERE taskid = ?
+        """,
     'task_del':
         """
         DELETE FROM task WHERE
@@ -166,14 +172,6 @@ sqlcmds = {
         AND task.title = trigger.title
         WHERE trigger.timetype LIKE ?
         ORDER BY task.priority DESC
-        """,
-    'trigger_active_get':
-        """
-        SELECT task.active
-        FROM trigger 
-        INNER JOIN task ON task.area = trigger.area
-        AND task.title = trigger.title
-        WHERE trigger.uuid = ?
         """,
     'trigger_by_uuid_del':
         """
@@ -278,8 +276,8 @@ class DBScheduler(DB):
             _title,
         ))
 
-    def get_active_status(self, _uuid):
-        return self.get_dict(DB_TRIGGER_TABLE + '_active', (_uuid,))[0]['active']
+    def get_active_status(self, _taskid):
+        return self.get_dict(DB_TASK_TABLE + '_active', (_taskid,))[0]['active']
 
     def save_trigger(self, _area, _title, _timetype, timeofday=None, 
             dayofweek=None, interval=-1, timelimit=-1, randdur=-1):
