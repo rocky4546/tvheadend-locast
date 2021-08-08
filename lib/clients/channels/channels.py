@@ -93,17 +93,21 @@ def get_channels_m3u(_config, _base_url, _namespace, _instance):
             elif sid_data['json']['group_sdtv']:
                 groups += '|' + sid_data['json']['group_sdtv']
 
+            updated_chnum = utils.wrap_chnum(
+                str(sid_data['display_number']), sid_data['namespace'], 
+                sid_data['instance'], _config)
+            service_name = set_service_name(_config, sid_data)
             fakefile.write(
                 '%s\n' % (
                     record_marker + ':-1' + ' ' +
                     'channelID=\'' + sid + '\' ' +
-                    'tvg-num=\'' + sid_data['number'] + '\' ' +
-                    'tvg-chno=\'' + sid_data['number'] + '\' ' +
+                    'tvg-num=\'' + updated_chnum + '\' ' +
+                    'tvg-chno=\'' + updated_chnum + '\' ' +
                     'tvg-name=\'' + sid_data['display_name'] + '\' ' +
                     'tvg-id=\'' + sid + '\' ' +
                     (('tvg-logo=\'' + sid_data['thumbnail'] + '\' ')
                         if sid_data['thumbnail'] else '') +
-                    'group-title=\''+groups+'\',' + set_service_name(_config, sid_data)
+                    'group-title=\''+groups+'\',' + service_name
                 )
             )
             fakefile.write(
@@ -130,9 +134,12 @@ def get_channels_json(_config, _base_url, _namespace, _instance):
             sids_processed.append(sid)
             if not sid_data['enabled']:
                 continue
+            updated_chnum = utils.wrap_chnum(
+                str(sid_data['display_number']), sid_data['namespace'], 
+                sid_data['instance'], _config)
             return_json = return_json + \
                 ch_templates['jsonLineup'].format(
-                    sid_data['number'],
+                    updated_chnum,
                     sid_data['display_name'],
                     _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,
                     sid_data['json']['HD'])
@@ -152,9 +159,12 @@ def get_channels_xml(_config, _base_url, _namespace, _instance):
             sids_processed.append(sid)
             if not sid_data['enabled']:
                 continue
+            updated_chnum = utils.wrap_chnum(
+                str(sid_data['display_number']), sid_data['namespace'], 
+                sid_data['instance'], _config)
             return_xml = return_xml + \
                 ch_templates['xmlLineup'].format(
-                    sid_data['number'],
+                    updated_chnum,
                     escape(sid_data['display_name']),
                     _base_url + '/' + sid_data['namespace'] + '/watch/' + sid,
                     sid_data['json']['HD'])
@@ -220,7 +230,7 @@ def get_thumbnail_size(_thumbnail):
 # returns the service name used to sync with the EPG channel name
 def set_service_name(_config, _sid_data):
     updated_chnum = utils.wrap_chnum(
-        str(_sid_data['number']), _sid_data['namespace'], 
+        str(_sid_data['display_number']), _sid_data['namespace'], 
         _sid_data['instance'], _config)
     service_name = updated_chnum + \
         ' ' + _sid_data['display_name']

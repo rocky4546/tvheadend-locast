@@ -68,7 +68,7 @@
                         "type": "integer",
                         "default": 4,
                         "level": 2,
-                        "help": "Number of streams active at one time. Between 1 and 4"
+                        "help": "Number of streams active at one time"
                     },
                     "player-stream_type":{
                         "label": "stream_type",
@@ -130,7 +130,7 @@
                     "epg-days_start_refresh": {
                         "label": "EPG Days from Start to Refresh",
                         "type": "integer",
-                        "default": 1,
+                        "default": 2,
                         "level": 2,
                         "help": "Number of days including today to force refresh. Must be greater than zero."
                     },

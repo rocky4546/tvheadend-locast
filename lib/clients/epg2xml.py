@@ -133,7 +133,7 @@ class EPG:
                     (updated_chnum, ch_data['display_name']))
                 EPG.sub_el(c_out, 'display-name', _text='%s %s' % 
                     (updated_chnum, ch_data['json']['callsign']))
-                EPG.sub_el(c_out, 'display-name', _text=ch_data['display_number'])
+                EPG.sub_el(c_out, 'display-name', _text=updated_chnum)
                 EPG.sub_el(c_out, 'display-name', _text=ch_data['json']['callsign'])
                 EPG.sub_el(c_out, 'display-name', _text=ch_data['display_name'])
 
@@ -228,12 +228,12 @@ class EPG:
             if prog_data['se_common']:
                 EPG.sub_el(prog_out, 'episode-num', system='common',
                     _text=prog_data['se_common'])
+                EPG.sub_el(prog_out, 'episode-num', system='dd_progid',
+                    _text=prog_data['se_progid'])
                 EPG.sub_el(prog_out, 'episode-num', system='xmltv_ns',
                     _text=prog_data['se_xmltv_ns'])
                 EPG.sub_el(prog_out, 'episode-num', system='SxxExx',
                     _text=prog_data['se_common'])
-                EPG.sub_el(prog_out, 'episode-num', system='dd_progid',
-                    _text=prog_data['se_progid'])
 
             if prog_data['is_new']:
                 EPG.sub_el(prog_out, 'new')

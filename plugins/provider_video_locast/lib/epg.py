@@ -130,9 +130,9 @@ class EPG:
         # https://github.com/XMLTV/xmltv/blob/master/xmltv.dtd
 
         sid = str(_program_data['stationId'])
-        start_time = utils.tm_parse(_program_data['startTime'])
+        start_time = utils.tm_local_parse(_program_data['startTime'])
         dur_min = int(_program_data['duration'] / 60)
-        end_time = utils.tm_parse(_program_data['startTime'] + _program_data['duration'] * 1000)
+        end_time = utils.tm_local_parse(_program_data['startTime'] + _program_data['duration'] * 1000)
         title = _program_data['title']
         entity_type = _program_data['entityType']
         prog_id = _program_data['programId']
@@ -249,8 +249,10 @@ class EPG:
             se_xmltv_ns = ''.join([str(season - 1), '.', '0', '.0/1'])
             se_prog_id = ''
 
-        if episode is not None:
-            subtitle = 'E' + str(episode) + ' '
+        if season is not None:
+            subtitle = 'S%02dE%02d ' % (season, episode)
+        elif episode is not None:
+            subtitle = 'E%02d ' % (episode)
         else:
             subtitle = ''
         if 'episodeTitle' in _program_data.keys():

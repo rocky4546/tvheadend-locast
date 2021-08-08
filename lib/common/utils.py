@@ -88,6 +88,12 @@ def tm_parse(tm):
     return tm
 
 
+def tm_local_parse(tm):
+    tm_date = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=tm / 1000)
+    tm = str(tm_date.astimezone().strftime('%Y%m%d%H%M%S %z'))
+    return tm
+
+
 def date_parse(date_secs, format_str):
     if not date_secs:
         return date_secs
