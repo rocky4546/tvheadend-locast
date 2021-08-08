@@ -75,9 +75,12 @@ class Authenticate:
     @handle_json_except 
     @handle_url_except 
     def get_token(self):
-        login_url = "https://api.locastnet.org/api/user/login"
+        login_url = "https://api.locastnet.org/api/user/login?client_id=CqhAMsBw%2BnxTXSJMLGqyOw%3D%3D"
         login_headers = {'Content-Type': 'application/json', 'User-agent': constants.DEFAULT_USER_AGENT}
-        login_json = ('{"username":"' + self.username + '","password":"' + self.password + '"}').encode("utf-8")
+        login_json = ('{"username":"' + self.username 
+            + '","password":"' + self.password 
+            + '","captcha":"' + 'anything'
+            + '"}').encode("utf-8")
         login_req = urllib.request.Request(login_url, data=login_json, headers=login_headers)
         with urllib.request.urlopen(login_req) as resp:
             login_result = json.load(resp)
