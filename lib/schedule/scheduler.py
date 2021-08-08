@@ -155,7 +155,7 @@ class Scheduler(Thread):
                 call_f()
         end = time.time()
         duration = int(end - start)
-        time.sleep(1)
+        time.sleep(0.2)
         self.scheduler_db.finish_task(_trigger['area'], _trigger['title'], duration)
 
     def setup_triggers(self):

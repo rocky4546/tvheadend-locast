@@ -136,6 +136,7 @@ TVHEADEND = {
     'Baseball'              : SPORT_TEAM,
     'Basketball'            : SPORT_TEAM,
     'Biography'             : VIP,
+    'Boxing'                : SPORT,
     'Cartoon'               : CARTOON,
     'Children'              : KIDS,
     'Classic Sport Event'   : SPORT_SPECIAL,

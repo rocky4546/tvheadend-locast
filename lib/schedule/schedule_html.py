@@ -31,11 +31,11 @@ def get_schedule_html(_webserver):
     schedule_html = ScheduleHTML(_webserver.config, _webserver.sched_queue)
     if 'run' in _webserver.query_data:
         schedule_html.run_task(_webserver.query_data['task'])
-        time.sleep(0.51)
+        time.sleep(0.05)
         html = schedule_html.get()
     elif 'delete' in _webserver.query_data:
         schedule_html.del_trigger(_webserver.query_data['trigger'])
-        time.sleep(0.51)
+        time.sleep(0.05)
         html = schedule_html.get_task(_webserver.query_data['task'])
     elif 'trigger' in _webserver.query_data:
         html = schedule_html.get_trigger(_webserver.query_data['task'])
@@ -416,7 +416,7 @@ class ScheduleHTML:
                 'title': query_data['title'][0],
                 'timetype': query_data['timetype'][0]
             }})
-            time.sleep(0.1)
+            time.sleep(0.05)
             return 'Startup Trigger added'
 
         elif query_data['timetype'][0] == 'daily':
@@ -428,7 +428,7 @@ class ScheduleHTML:
                 'timetype': query_data['timetype'][0],
                 'timeofday': query_data['timeofdayhr'][0]+':'+query_data['timeofdaymin'][0]
             }})
-            time.sleep(0.1)
+            time.sleep(0.05)
             return 'Daily Trigger added'
 
         elif query_data['timetype'][0] == 'weekly':
@@ -443,7 +443,7 @@ class ScheduleHTML:
                 'timeofday': query_data['timeofdayhr'][0]+':'+query_data['timeofdaymin'][0],
                 'dayofweek': query_data['dayofweek'][0]
             }})
-            time.sleep(0.1)
+            time.sleep(0.05)
             return 'Weekly Trigger added'
 
         elif query_data['timetype'][0] == 'interval':
@@ -456,7 +456,7 @@ class ScheduleHTML:
                 'interval': query_data['interval'][0],
                 'randdur': query_data['randdur'][0]
             }})
-            time.sleep(0.1)
+            time.sleep(0.05)
             return 'Interval Trigger added'
         return 'UNKNOWN'
         
@@ -464,40 +464,10 @@ class ScheduleHTML:
         if self.scheduler_db.get_trigger(_uuid) is None:
             return None
         self.queue.put({'cmd': 'del', 'uuid': _uuid })
-        time.sleep(0.1)
+        time.sleep(0.05)
         return 'Interval Trigger deleted'
 
     def run_task(self, _taskid):
         self.queue.put({'cmd': 'runtask', 'taskid': _taskid })
         return None
-    
-        # triggers = self.scheduler_db.get_triggers(_taskid)
-        # if len(triggers) == 0:
-            # # check if the task has no triggers
-            # task = self.scheduler_db.get_task(_taskid)
-            # if task is not None:
-                # self.queue.put({'cmd': 'runtask', 'taskid': task['taskid'] })
-            # else:
-                # self.logger.warning('Invalid taskid when requesting to run task')
-            # return None
-
-        # is_run = False
-        # default_trigger = None
-        # for trigger in triggers:
-            # if trigger['timetype'] == 'startup':
-                # continue
-            # elif trigger['timetype'] == 'interval':
-                # self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
-                # time.sleep(0.1)
-                # is_run = True
-                # break
-            # else:
-                # default_trigger = trigger
-        # if not is_run:
-            # if default_trigger is not None:
-                # self.queue.put({'cmd': 'run', 'uuid': trigger['uuid'] })
-                # time.sleep(0.1)
-            # else:
-                # self.logger.warning('Need at least one non-startup trigger event to run manually')
-        # return None
 

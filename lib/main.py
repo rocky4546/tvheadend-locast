@@ -38,6 +38,7 @@ from lib.common.utils import clean_exit
 from lib.common.pickling import Pickling
 from lib.schedule.scheduler import Scheduler
 from lib.common.decorators import getrequest
+from lib.web.pages.templates import web_templates
 
 try:
     import pip
@@ -72,6 +73,17 @@ def restart_cabernet(_plugins):
     RESTART_REQUESTED = True
     while RESTART_REQUESTED:
         time.sleep(0.10)
+
+
+@getrequest.route('/pages/restart')
+def restart_api(_webserver):
+    scheduler_db = DBScheduler(_webserver.config)
+    tasks = scheduler_db.get_tasks('Applications', 'Restart')
+    if len(tasks) == 1:
+        _webserver.sched_queue.put({'cmd': 'runtask', 'taskid': tasks[0]['taskid'] })
+        _webserver.do_mime_response(200, 'text/html', 'Restarting Cabernet')
+    else:
+        _webserver.do_mime_response(404, 'text/html', web_templates['htmlError'].format('404 - Request Not Found'))
 
 
 def main(script_dir):
@@ -163,7 +175,9 @@ def main(script_dir):
         RESTART_REQUESTED = False
         while not RESTART_REQUESTED:            
             time.sleep(5)
+        RESTART_REQUESTED = False
         logger.info('Shutting Down...')
+        time.sleep(1)
         terminate_processes(config, hdhr_serverx, ssdp_serverx, webadmin, tuner, scheduler, config_obj)
 
     except KeyboardInterrupt:
