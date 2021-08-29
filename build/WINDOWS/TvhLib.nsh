@@ -213,7 +213,6 @@ Function InstallService
         MessageBox MB_OK "Unable to detect python install, aborting $pythonpath"
         Abort
     found:
-    SetOutPath "E:\Chad\Development\git\tvheadend-locast\"
     StrCpy $cmd '"$INSTDIR\lib\tvheadend\service\Windows\nssm.exe" install TVHeadend-Locast \
         "$pythonpath" "\""$INSTDIR\tvh_main.py\""" -c "\""$DataFolder\config.ini\"""'
     nsExec::ExecToStack '$cmd'
@@ -270,7 +269,6 @@ Function un.installService
     nsExec::ExecToStack '$cmd'
     Pop $0 ;return value
     Pop $1 ; status text
-    SetOutPath "E:\Chad\Development\git\tvheadend-locast\"
     StrCpy $cmd '"$INSTDIR\lib\tvheadend\service\Windows\nssm.exe" remove TVHeadend-Locast confirm'
     nsExec::ExecToStack '$cmd'
     Pop $0 ;return value
