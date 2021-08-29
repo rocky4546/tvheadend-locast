@@ -75,7 +75,7 @@ class Authenticate:
     @handle_json_except 
     @handle_url_except 
     def get_token(self):
-        login_url = "https://api.locastnet.org/api/user/login?client_id=CqhAMsBw%2BnxTXSJMLGqyOw%3D%3D"
+        login_url = "https://api.locastnet.org/api/user/login?client_id=9qXBrVzpTjUZmVGsZRnnWQ-7GvGeJ48QWtV9v%2Bbsen4%3D"
         login_headers = {'Content-Type': 'application/json', 'User-agent': constants.DEFAULT_USER_AGENT}
         login_json = ('{"username":"' + self.username 
             + '","password":"' + self.password 
